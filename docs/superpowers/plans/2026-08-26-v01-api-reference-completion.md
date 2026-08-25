@@ -109,13 +109,15 @@ Backend 实施计划明确 BE-040 必须以 `EndpointReference.md` 的全部 OPE
 
 运行 `git diff --check`（针对本轮文件），检查没有生成密钥、前端源代码或无关并行改动；单独报告已有 `FrontendImplementationPlan.md` 尾随空格，不将它带入暂存区。
 
-- [ ] **Step 3: 仅暂存可归属文档并提交**
+- [x] **Step 3: 仅暂存可归属文档并提交**
 
 暂存 `docs/api/APIContract.md`、`docs/api/EndpointReference.md`、`docs/backend/database-design.md`、`docs/backend/BackendArchitecture.md`、`docs/backend/BackendImplementationPlan.md`、`docs/product/PRD.md`、`docs/product/PageMap.md`、`docs/frontend/FrontendArchitecture.md`、`docs/frontend/FrontendDesign.md` 与本轮两份计划；不暂存 `frontend/` 或共享的 `FrontendImplementationPlan.md`。提交信息使用 `docs: complete v0.1 api reference`。
 
-- [ ] **Step 4: 推送并记录远端提交 SHA**
+- [x] **Step 4: 推送并记录远端提交 SHA**
 
 执行 `git push origin main`，读取命令退出码与 `git rev-parse HEAD`；只有推送成功才报告远端已更新。
+
+执行记录：本轮文档提交为 `e46c3cd`，已成功推送至 `origin/main`。本计划的完成记录在后续文档提交中保存。
 
 ## Self-Review
 
