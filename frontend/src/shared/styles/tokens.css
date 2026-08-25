@@ -1,0 +1,158 @@
+@theme static {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+
+  --color-primary-50: #eef6ff;
+  --color-primary-100: #ddebff;
+  --color-primary-200: #b8d7ff;
+  --color-primary-300: #86bbff;
+  --color-primary-400: #4d9bff;
+  --color-primary-500: #1677ff;
+  --color-primary-600: #0f6fe8;
+  --color-primary-700: #0b5fc7;
+  --color-primary-800: #094fad;
+  --color-primary-900: #083e88;
+  --color-primary-950: #052857;
+
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f5f7fb;
+  --color-neutral-200: #e5e9f0;
+  --color-neutral-300: #d8dee8;
+  --color-neutral-400: #a8b0bd;
+  --color-neutral-500: #6b7280;
+  --color-neutral-600: #3f4a5a;
+  --color-neutral-700: #303947;
+  --color-neutral-800: #1f2937;
+  --color-neutral-900: #111827;
+  --color-neutral-950: #0f1319;
+
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-300: #6ee7b7;
+  --color-success-400: #34d399;
+  --color-success-500: #12a36d;
+  --color-success-600: #0d8558;
+  --color-success-700: #0b6b49;
+  --color-success-800: #0b543c;
+  --color-success-900: #094533;
+  --color-success-950: #04281e;
+
+  --color-warning-50: #fff7ed;
+  --color-warning-100: #ffedd5;
+  --color-warning-200: #fed7aa;
+  --color-warning-300: #fdba74;
+  --color-warning-400: #fb923c;
+  --color-warning-500: #f08a24;
+  --color-warning-600: #d96b12;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+  --color-warning-950: #431407;
+
+  --color-danger-50: #fff1f2;
+  --color-danger-100: #ffe4e6;
+  --color-danger-200: #fecdd3;
+  --color-danger-300: #fda4af;
+  --color-danger-400: #fb7185;
+  --color-danger-500: #e5484d;
+  --color-danger-600: #d9363e;
+  --color-danger-700: #b82531;
+  --color-danger-800: #991b2a;
+  --color-danger-900: #821a28;
+  --color-danger-950: #460a12;
+
+  --color-canvas: #f5f7fb;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f8fafc;
+  --color-text-strong: #111827;
+  --color-text: #3f4a5a;
+  --color-text-muted: #6b7280;
+  --color-text-disabled: #a8b0bd;
+  --color-border: #e5e9f0;
+  --color-border-strong: #d8dee8;
+  --color-success: #12a36d;
+  --color-warning: #f08a24;
+  --color-danger: #e5484d;
+  --color-info: #1677ff;
+
+  --radius-control: 0.5rem;
+  --radius-card: 0.625rem;
+  --radius-surface: 0.75rem;
+  --container-platform: 90rem;
+}
+
+:root {
+  --ui-primary: var(--color-primary-600);
+  --ui-success: var(--color-success);
+  --ui-info: var(--color-info);
+  --ui-warning: var(--color-warning);
+  --ui-error: var(--color-danger);
+
+  --ui-text-dimmed: var(--color-text-disabled);
+  --ui-text-muted: var(--color-text-muted);
+  --ui-text-toned: var(--color-text);
+  --ui-text: var(--color-text);
+  --ui-text-highlighted: var(--color-text-strong);
+  --ui-text-inverted: var(--color-surface);
+
+  --ui-bg: var(--color-surface);
+  --ui-bg-muted: var(--color-surface-subtle);
+  --ui-bg-elevated: var(--color-surface);
+  --ui-bg-accented: var(--color-surface-subtle);
+  --ui-bg-inverted: var(--color-text-strong);
+
+  --ui-border: var(--color-border);
+  --ui-border-muted: var(--color-border);
+  --ui-border-accented: var(--color-border-strong);
+  --ui-border-inverted: var(--color-text-strong);
+
+  /* Nuxt UI uses rounded-md (1.5 x --ui-radius) for standard controls. */
+  --ui-radius: calc(var(--radius-control) / 1.5);
+  --ui-container: var(--container-platform);
+}
+
+.dark {
+  --color-canvas: #0f1319;
+  --color-surface: #161b22;
+  --color-surface-subtle: #1c232d;
+  --color-text-strong: #f2f4f7;
+  --color-text: #d3d9e2;
+  --color-text-muted: #9aa4b2;
+  --color-text-disabled: #5c6672;
+  --color-border: #2a3342;
+  --color-border-strong: #3b4657;
+  --color-primary-400: #4d9bff;
+  --color-primary-500: #3d8dff;
+  --color-primary-600: #1677ff;
+  --color-primary-700: #0f6fe8;
+  --color-success: #2fbf8f;
+  --color-warning: #f7a825;
+  --color-danger: #f05e63;
+  --color-info: #4d9bff;
+
+  --ui-primary: var(--color-primary-500);
+  --ui-success: var(--color-success);
+  --ui-info: var(--color-info);
+  --ui-warning: var(--color-warning);
+  --ui-error: var(--color-danger);
+
+  --ui-text-dimmed: var(--color-text-disabled);
+  --ui-text-muted: var(--color-text-muted);
+  --ui-text-toned: var(--color-text);
+  --ui-text: var(--color-text);
+  --ui-text-highlighted: var(--color-text-strong);
+  --ui-text-inverted: var(--color-canvas);
+
+  --ui-bg: var(--color-surface);
+  --ui-bg-muted: var(--color-surface-subtle);
+  --ui-bg-elevated: var(--color-surface-subtle);
+  --ui-bg-accented: var(--color-border);
+  --ui-bg-inverted: var(--color-text-strong);
+
+  --ui-border: var(--color-border);
+  --ui-border-muted: var(--color-border);
+  --ui-border-accented: var(--color-border-strong);
+  --ui-border-inverted: var(--color-text-strong);
+}
