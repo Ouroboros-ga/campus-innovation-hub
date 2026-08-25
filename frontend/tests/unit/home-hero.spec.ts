@@ -46,7 +46,7 @@ describe('FE-006 首页 Hero 与快捷入口', () => {
     const { wrapper } = await mountAppAt('/')
 
     const hrefs = wrapper
-      .findAll('main a')
+      .findAll('main ul a')
       .map(link => link.attributes('href'))
     expect(hrefs).toEqual([
       '/competitions',

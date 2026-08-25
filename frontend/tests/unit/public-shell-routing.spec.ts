@@ -76,10 +76,21 @@ describe('FE-004 公开应用外壳', () => {
   })
 
   it('通过移动端 Drawer 导航并在选择后关闭', async () => {
-    vi.stubGlobal('getComputedStyle', () => ({
-      animationName: 'none',
-      display: 'block'
-    }))
+    vi.stubGlobal('getComputedStyle', () => {
+      const base: Record<string, string> = {
+        animationName: 'none',
+        display: 'block'
+      }
+      return new Proxy(base, {
+        get(target, prop) {
+          if (prop in target) return target[prop as keyof typeof base]
+          if (prop === 'getPropertyValue') return () => '0px'
+          if (prop === 'getPropertyPriority') return () => ''
+          return ''
+        },
+        has: () => true
+      })
+    })
     const { router, wrapper } = await mountAt('/')
 
     await wrapper.get('button[aria-label="打开主菜单"]').trigger('click')

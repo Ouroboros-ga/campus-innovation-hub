@@ -82,6 +82,7 @@ UI 变更中，仅代码编译成功是不够的。
 | FE-004 应用外壳 | 已完成并提交 | 公开路由、Desktop Header、移动 Drawer、Footer、19 项测试与 `pnpm check` 通过；1440px 桌面与 390px 移动真实窄视口视觉验证通过；首页外壳与参考图对齐 | 无 |
 | FE-005 首页领域类型与 Fixtures | 已完成并提交 | 首页 9 类领域 View Model、首页 fixtures、共享日期/截止工具与 25 项单测通过；lint / typecheck / test / build 通过 | 无 |
 | FE-006 首页 Hero 与快捷入口 | 已完成并提交 | HomeHero 主信息、QuickEntry 四快捷入口、Hero 外壳与移动端 2x2 实现；组件/路由测试通过；1440/768/500px 视觉验证无横向溢出；`pnpm check` 全绿（47/47 测试、含生产路由集成测试） | 精确 390px 截图受 Chrome 最小窗口宽度（500px）限制；窄视口 2x2 已由 500px 截图验证 |
+| FE-007 首页轮播 | 已完成并提交 | HomeCarousel（UCarousel，3 张幻灯片、箭头、分页点、自动播放、悬停暂停、触摸/键盘、reduced-motion 关闭自动播放、16:9/2.8:1 预留图片区）；`pnpm check` 全绿（50/50 测试、含生产路由集成测试） | 详情路由（CTA 目标）属 FE-020+；真实校园图片未接入，暂以深色占位 |
 
 FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送；FE-005 已作为提交 `f7029da` 推送；FE-006 已作为提交 `4a4ba4d` 推送。
 

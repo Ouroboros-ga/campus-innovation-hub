@@ -1,9 +1,14 @@
 <script setup lang="ts">
+import HomeCarousel from '@/features/homepage/components/HomeCarousel.vue'
 import HomeHero from '@/features/homepage/components/HomeHero.vue'
 </script>
 
 <template>
-  <HomeHero />
+  <HomeHero>
+    <template #media>
+      <HomeCarousel />
+    </template>
+  </HomeHero>
 
   <section class="py-12 sm:py-16">
     <div class="page-container">
