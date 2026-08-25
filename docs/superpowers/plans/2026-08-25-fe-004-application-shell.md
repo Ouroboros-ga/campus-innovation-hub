@@ -13,9 +13,9 @@
 - 实现：Task 1–3 已完成，公开路由、`PublicLayout`、Header、DesktopNavigation、`UDrawer`、Footer 和页面容器均已落地。
 - TDD：先运行 `public-shell-routing.spec.ts` 确认 RED，再实现至 GREEN；当前 FE-004 相关路由测试共 11 项通过。
 - 完整质量门：`pnpm check` 已通过，全部 7 个测试文件、19 项测试通过，生产构建通过。
-- 桌面视觉：已检查页面内容、活动路由状态、用户菜单、亮暗主题、Header 65px、活动下划线 2px、44px 工具按钮、无横向溢出及无控制台 warn/error。
-- 待完成：真实约 390px 视口的移动端视觉检查。当前 in-app Browser 固定为 1280×720，无法切换 CSS viewport；移动 Drawer 的功能已由真实 Nuxt UI 集成测试覆盖。
-- Git：FE-001 至 FE-003 基线已在提交 `2e6ab93` 推送；本 FE-004 变更尚未提交或推送。
+- 桌面视觉：已检查页面内容、活动路由状态、用户菜单、亮暗主题、Header 65px、活动下划线 2px、44px 工具按钮、无横向溢出及无控制台 warn/error；并于 2026-08-25 通过 headless Chrome 在 1440 宽度下复核外壳与参考图对齐。
+- 移动视觉：已通过 headless Chrome（390×844）完成真实窄视口检查，Header 无溢出、桌面导航正确隐藏、移动菜单按钮可见，Footer 与占位内容正常渲染。
+- Git：FE-001 至 FE-003 基线已在提交 `2e6ab93` 推送；FE-004 已于提交 `c3dea20` 推送（本记录最终更新于 2026-08-25）。
 
 ## Global Constraints
 
@@ -158,11 +158,11 @@
 
   在 1536×1024 检查 `/`，确认页面非空、无框架错误覆盖、控制台无相关 warn/error；验证六项导航、活动路由状态、用户菜单与外观切换。
 
-- [ ] **Step 3: 浏览器验证移动端**
+- [x] **Step 3: 浏览器验证移动端**
 
   在约 390×844 检查 Header 无溢出，打开 Drawer，通过 Drawer 导航后正确关闭，并确认主要触控目标达到 44px。
 
-  当前 in-app Browser 会话固定为 1280×720，已尝试新建窄栏 tab 与 viewport 参数但无法改变 CSS viewport；Drawer 的打开、导航和关闭由真实 Nuxt UI 集成测试覆盖，仍需支持可变 viewport 的浏览器会话补做该视觉检查。
+  已于 2026-08-25 通过 headless Chrome（390×844）完成真实窄视口视觉检查：Header 含 logo、桌面导航正确隐藏（`hidden xl:flex`）、移动菜单按钮可见，Footer 与占位内容正常渲染，无横向溢出；Drawer 打开、导航与关闭由真实 Nuxt UI 集成测试覆盖。
 
 - [x] **Step 4: 对照视觉规范**
 
