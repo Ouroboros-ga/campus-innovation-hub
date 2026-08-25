@@ -2,7 +2,7 @@
 
 > Project: campus-innovation-hub  
 > Version: 0.3  
-> Status: FE-001–FE-012 已完成并提交；当前执行 FE-013（首页集成与视觉门禁）  
+> Status: FE-001–FE-013 已完成并提交；当前执行 FE-020（竞赛列表页）  
 > Execution model: One task at a time（一次只执行一个任务）  
 > Primary executor: Human developer or Codex-style coding agent  
 > Locale: 简体中文（zh-CN）— 所有产品 UI 文案遵循 FrontendDesign.md §0.1
@@ -89,6 +89,7 @@ UI 变更中，仅代码编译成功是不够的。
 | FE-010 首页信息栏 | 已完成并提交 | AnnouncementList / GuideList（列表而非卡片，单条底边分隔）；指南不显示虚构浏览量，只展示标题 / 类型 / 更新日期；单元测试覆盖列表结构；`pnpm check` 全绿 | 无 |
 | FE-011 首页社区区块 | 已完成并提交 | TeamRecruitmentList / OrganizationRecruitmentList / ActivityList / FaqList（均为紧凑列表而非卡片墙，单条底边分隔）；主栏三列社区 + 右侧栏常见问题；组队/组织/活动的招募与报名状态由日期或人数派生；不展示点赞 / 热度 / 回答数等虚构指标；`pnpm check` 全绿（67/67 测试、含生产路由集成测试） | 详情路由（组队 / 招新 / 活动 / Q&A）属对应 FE-0xx；真实 logo / 封面未接入，暂以图标占位 |
 | FE-012 全局搜索外壳 | 已完成并提交 | GlobalSearch（UModal + UCommandPalette）+ 跨页面打开状态的 Pinia store；搜索索引覆盖竞赛 / 组织 / 组队 / 活动 / FAQ / 指南 / 公告，结果行紧凑并显示结果类型；触发为 AppHeader 搜索按钮 + Ctrl/Cmd+K；选择后路由跳转并关闭；单元测试覆盖索引、快捷键 toggle、打开渲染与选择跳转；`pnpm check` 全绿（74/74 测试、含生产路由集成测试） | 搜索高亮 / 结果分组可进一步在 FE-013 视觉评审中打磨；详情路由属对应 FE-0xx |
+| FE-013 首页集成与视觉门禁 | 已完成并提交 | 全量首页区块评审记录 `docs/frontend/reviews/homepage-v1.md`；修复合规暗色图标容器（`dark:bg-primary-950/40` 等）；无 `NaN` 泄漏、`74/74` 测试通过；无 Blocking，记录 Major 3 / Minor 4 | 像素级截图受环境代理限制未完成；Major/Minor 项待后续评审与 API 任务处理 |
 
 FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送；FE-005 已作为提交 `f7029da` 推送；FE-006 已作为提交 `4a4ba4d` 推送；FE-007 已作为提交 `766e3c9` 推送；FE-008 / FE-009 / FE-010 已作为提交 `c1cc9ed` 推送；FE-011 已作为提交 `d88b974` 推送；FE-012 已作为提交 `163d018` 推送。
 

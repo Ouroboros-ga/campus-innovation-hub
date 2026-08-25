@@ -50,12 +50,12 @@ const statusMeta = computed(() => ({
           class="group flex gap-3 py-3"
         >
           <span
-            class="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary-50"
+            class="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary-50 dark:bg-primary-950/40"
             aria-hidden="true"
           >
             <UIcon
               :name="teamPostTypeIcon[item.postType]"
-              class="size-[18px] text-primary-600"
+              class="size-[18px] text-primary-600 dark:text-primary-400"
             />
           </span>
           <span class="min-w-0 flex-1">
