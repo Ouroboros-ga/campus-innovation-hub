@@ -1,0 +1,200 @@
+<script setup lang="ts">
+import {
+  computed,
+  onBeforeUnmount,
+  ref,
+  watch
+} from 'vue'
+
+import {
+  competitionCategoryOptions,
+  competitionFormatOptions,
+  competitionStatusOptions,
+  type CompetitionQuery
+} from '../lib/competitionFilters'
+
+/**
+ * 竞赛筛选（FE-020）。
+ *
+ * 设计来源：
+ * - FrontendDesign.md §34.5：桌面为搜索 + 下拉；手机为搜索 + 「筛选」按钮打开 UDrawer；
+ *   筛选值始终 URL-backed，不建独立手机筛选状态；Drawer 含完整控件 + 重置 + 查看结果；
+ * - §43 / §24：选项用语义状态与简短分类的简体中文。
+ */
+const props = defineProps<{ query: CompetitionQuery }>()
+const emit = defineEmits<{
+  change: [patch: Partial<CompetitionQuery>]
+  reset: []
+}>()
+
+const drawerOpen = ref(false)
+const localQ = ref(props.query.q ?? '')
+
+watch(
+  () => props.query.q,
+  value => {
+    localQ.value = value ?? ''
+  }
+)
+
+let debounce: ReturnType<typeof globalThis.setTimeout> | null = null
+function onSearchInput(value: string) {
+  localQ.value = value
+  if (debounce) globalThis.clearTimeout(debounce)
+  debounce = globalThis.setTimeout(() => emit('change', { q: value }), 300)
+}
+
+onBeforeUnmount(() => {
+  if (debounce) globalThis.clearTimeout(debounce)
+})
+
+const hasActiveFilters = computed(() =>
+  Boolean(
+    props.query.q ||
+      props.query.status ||
+      props.query.category ||
+      props.query.format
+  )
+)
+</script>
+
+<template>
+  <div>
+    <!-- 桌面筛选栏 -->
+    <div class="hidden flex-wrap items-center gap-3 md:flex">
+      <UInput
+        :model-value="localQ"
+        icon="i-lucide-search"
+        placeholder="搜索竞赛名称"
+        class="w-64"
+        @update:model-value="onSearchInput"
+      />
+      <USelect
+        :model-value="query.status ?? undefined"
+        :items="competitionStatusOptions"
+        placeholder="全部状态"
+        class="w-40"
+        @update:model-value="v => emit('change', { status: v || undefined })"
+      />
+      <USelect
+        :model-value="query.category ?? undefined"
+        :items="competitionCategoryOptions"
+        placeholder="全部分类"
+        class="w-44"
+        @update:model-value="v => emit('change', { category: v || undefined })"
+      />
+      <USelect
+        :model-value="query.format ?? undefined"
+        :items="competitionFormatOptions"
+        placeholder="全部形式"
+        class="w-40"
+        @update:model-value="v => emit('change', { format: v || undefined })"
+      />
+      <UButton
+        v-if="hasActiveFilters"
+        variant="ghost"
+        color="neutral"
+        icon="i-lucide-rotate-ccw"
+        @click="emit('reset')"
+      >
+        清除筛选
+      </UButton>
+    </div>
+
+    <!-- 手机：搜索 + 筛选按钮 -->
+    <div class="flex items-center gap-2 md:hidden">
+      <UInput
+        :model-value="localQ"
+        icon="i-lucide-search"
+        placeholder="搜索竞赛"
+        class="flex-1"
+        @update:model-value="onSearchInput"
+      />
+      <UButton
+        color="primary"
+        variant="solid"
+        icon="i-lucide-sliders-horizontal"
+        @click="drawerOpen = true"
+      >
+        筛选
+      </UButton>
+    </div>
+
+    <!-- 手机：筛选 Drawer -->
+    <UDrawer v-model:open="drawerOpen">
+      <template #content>
+        <div class="space-y-5 p-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-highlighted">
+              筛选
+            </h2>
+            <UButton
+              variant="ghost"
+              color="neutral"
+              icon="i-lucide-x"
+              aria-label="关闭筛选"
+              @click="drawerOpen = false"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <p class="text-sm font-medium text-muted">
+              状态
+            </p>
+            <USelect
+              :model-value="query.status ?? undefined"
+              :items="competitionStatusOptions"
+              placeholder="全部状态"
+              class="w-full"
+              @update:model-value="v => emit('change', { status: v || undefined })"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <p class="text-sm font-medium text-muted">
+              分类
+            </p>
+            <USelect
+              :model-value="query.category ?? undefined"
+              :items="competitionCategoryOptions"
+              placeholder="全部分类"
+              class="w-full"
+              @update:model-value="v => emit('change', { category: v || undefined })"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <p class="text-sm font-medium text-muted">
+              形式
+            </p>
+            <USelect
+              :model-value="query.format ?? undefined"
+              :items="competitionFormatOptions"
+              placeholder="全部形式"
+              class="w-full"
+              @update:model-value="v => emit('change', { format: v || undefined })"
+            />
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <UButton
+              variant="ghost"
+              color="neutral"
+              class="flex-1"
+              @click="emit('reset')"
+            >
+              重置
+            </UButton>
+            <UButton
+              color="primary"
+              class="flex-1"
+              @click="drawerOpen = false"
+            >
+              查看结果
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UDrawer>
+  </div>
+</template>

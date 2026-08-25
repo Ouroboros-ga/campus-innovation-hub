@@ -14,8 +14,7 @@ export const routes: RouteRecordRaw[] = [
         path: 'competitions',
         name: 'competitions',
         component: () =>
-          import('@/pages/placeholder/PublicPlaceholderPage.vue'),
-        props: { title: '竞赛中心' }
+          import('@/pages/competitions/CompetitionListPage.vue')
       },
       {
         path: 'organizations',
