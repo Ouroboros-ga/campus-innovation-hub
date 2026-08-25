@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import ActivityList from '@/features/homepage/components/ActivityList.vue'
 import AnnouncementList from '@/features/homepage/components/AnnouncementList.vue'
+import AnnouncementNoticeBar from '@/features/homepage/components/AnnouncementNoticeBar.vue'
 import DeadlineGrid from '@/features/homepage/components/DeadlineGrid.vue'
 import FaqList from '@/features/homepage/components/FaqList.vue'
 import GuideList from '@/features/homepage/components/GuideList.vue'
@@ -29,6 +30,8 @@ import PageContainer from '@/shared/components/layout/PageContainer.vue'
       <HomeCarousel />
     </template>
   </HomeHero>
+
+  <AnnouncementNoticeBar />
 
   <PageContainer>
     <div

@@ -47,6 +47,18 @@ describe('首页', () => {
     expect(wrapper.text()).toContain('常见问题')
   })
 
+  it('渲染主标题下方的「最新通知」通知栏', () => {
+    const wrapper = mount(HomePage, {
+      global: {
+        plugins: [router, ui]
+      }
+    })
+
+    expect(wrapper.text()).toContain('最新通知')
+    expect(wrapper.text()).toContain('查看通知')
+    expect(wrapper.text()).toContain('人工智能学院科创与就业服务平台正式上线')
+  })
+
   it('不渲染开发主题输入或空占位文案', () => {
     const wrapper = mount(HomePage, {
       global: {
