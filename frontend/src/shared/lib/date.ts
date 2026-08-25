@@ -190,3 +190,18 @@ export function formatFullDate(value: string | null | undefined): string {
     day: 'numeric'
   })
 }
+
+/** 紧凑日期，如「2026.08.31」，用于卡片 / 列表的截止与发布日期。 */
+export function formatCompactDate(
+  value: string | null | undefined
+): string {
+  const date = toDate(value)
+  if (!date) return ''
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+    .format(date)
+    .replace(/\//g, '.')
+}

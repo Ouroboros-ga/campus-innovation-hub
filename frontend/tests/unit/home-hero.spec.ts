@@ -45,8 +45,10 @@ describe('FE-006 首页 Hero 与快捷入口', () => {
   it('提供四个快捷入口，分别指向对应路由', async () => {
     const { wrapper } = await mountAppAt('/')
 
+    const quickLabels = ['找竞赛', '找队友', '找组织', '找活动']
     const hrefs = wrapper
-      .findAll('main ul a')
+      .findAll('main a')
+      .filter(link => quickLabels.some(label => link.text().includes(label)))
       .map(link => link.attributes('href'))
     expect(hrefs).toEqual([
       '/competitions',

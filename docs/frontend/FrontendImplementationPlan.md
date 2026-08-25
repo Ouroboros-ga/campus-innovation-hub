@@ -2,7 +2,7 @@
 
 > Project: campus-innovation-hub  
 > Version: 0.3  
-> Status: FE-001–FE-007 已完成并提交；当前执行 FE-004M（Mobile Web 适配）  
+> Status: FE-001–FE-010 已完成并提交；当前执行 FE-011（首页社区区块）  
 > Execution model: One task at a time（一次只执行一个任务）  
 > Primary executor: Human developer or Codex-style coding agent  
 > Locale: 简体中文（zh-CN）— 所有产品 UI 文案遵循 FrontendDesign.md §0.1
@@ -84,8 +84,11 @@ UI 变更中，仅代码编译成功是不够的。
 | FE-005 首页领域类型与 Fixtures | 已完成并提交 | 首页 9 类领域 View Model、首页 fixtures、共享日期/截止工具与 25 项单测通过；lint / typecheck / test / build 通过 | 无 |
 | FE-006 首页 Hero 与快捷入口 | 已完成并提交 | HomeHero 主信息、QuickEntry 四快捷入口、Hero 外壳与移动端 2x2 实现；组件/路由测试通过；1440/768/500px 视觉验证无横向溢出；`pnpm check` 全绿（47/47 测试、含生产路由集成测试） | 精确 390px 截图受 Chrome 最小窗口宽度（500px）限制；窄视口 2x2 已由 500px 截图验证 |
 | FE-007 首页轮播 | 已完成并提交 | HomeCarousel（UCarousel，3 张幻灯片、箭头、分页点、自动播放、悬停暂停、触摸/键盘、reduced-motion 关闭自动播放）；统一 16:9 画框 + `object-fit: cover` + 可选 `object-position` 焦点；`pnpm check` 全绿（50/50 测试、含生产路由集成测试）；同步更新 FrontendDesign §19 / database-design §25 | 详情路由（CTA 目标）属 FE-020+；真实校园图片未接入，暂以深色占位 |
+| FE-008 首页截止时间区块 | 已完成并提交 | 共享领域标签工具 `domain-labels.ts` 与紧凑日期 `formatCompactDate`；DeadlineText / DeadlineItem / DeadlineGrid；剩余时间由日期派生，紧急用文字 + 语义色（不只靠颜色）；单元测试覆盖未来 / 临近 / 已截止；`pnpm check` 全绿（62/62 测试、含生产路由集成测试） | 无 |
+| FE-009 首页竞赛区块 | 已完成并提交 | CompetitionCard / HomeCompetitionSection；默认封面受控模板（名称 + 分类处理 + 低调几何，不生成随机 AI 图）；最多 3 个徽标（级别 + 参赛形式 + 状态）；官网外链用 external-link 图标；单元测试覆盖状态派生与徽标上限；`pnpm check` 全绿 | 详情路由（卡片详情 / 官网）属 FE-020+；真实竞赛封面未接入，暂以受控默认封面 |
+| FE-010 首页信息栏 | 已完成并提交 | AnnouncementList / GuideList（列表而非卡片，单条底边分隔）；指南不显示虚构浏览量，只展示标题 / 类型 / 更新日期；单元测试覆盖列表结构；`pnpm check` 全绿 | 无 |
 
-FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送；FE-005 已作为提交 `f7029da` 推送；FE-006 已作为提交 `4a4ba4d` 推送；FE-007 已作为提交 `766e3c9` 推送。
+FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送；FE-005 已作为提交 `f7029da` 推送；FE-006 已作为提交 `4a4ba4d` 推送；FE-007 已作为提交 `766e3c9` 推送；FE-008 / FE-009 / FE-010 将作为后续提交推送。
 
 ---
 
