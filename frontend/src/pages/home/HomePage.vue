@@ -1,19 +1,15 @@
+<script setup lang="ts">
+import HomeHero from '@/features/homepage/components/HomeHero.vue'
+</script>
+
 <template>
+  <HomeHero />
+
   <section class="py-12 sm:py-16">
     <div class="page-container">
-      <div class="max-w-xl space-y-4">
-        <UIcon
-          name="i-lucide-graduation-cap"
-          class="size-10 text-primary"
-          aria-hidden="true"
-        />
-        <h1 class="text-3xl font-bold text-highlighted">
-          科创与就业服务平台
-        </h1>
-        <p class="text-base text-muted">
-          首页将在后续任务中逐步完善。
-        </p>
-      </div>
+      <p class="text-base text-muted">
+        首页其余区块将在后续任务中逐步完善。
+      </p>
     </div>
   </section>
 </template>

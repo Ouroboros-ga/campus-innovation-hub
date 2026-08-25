@@ -36,7 +36,7 @@ afterEach(() => {
 
 describe('FE-004 公开应用外壳', () => {
   it.each([
-    ['/', '科创与就业服务平台'],
+    ['/', '发现科创机会，成就无限可能'],
     ['/competitions', '竞赛中心'],
     ['/organizations', '社团与组织'],
     ['/teams', '组队广场'],
