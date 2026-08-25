@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# 前端通用兜底（frontend/ 内已由 frontend/.gitignore 覆盖）
+node_modules/
+.DS_Store
+Thumbs.db

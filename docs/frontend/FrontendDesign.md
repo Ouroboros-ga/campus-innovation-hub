@@ -1,12 +1,14 @@
 # FrontendDesign.md
 
 > 人工智能学院科创与就业服务平台前端设计与实现规范  
-> Version: 0.3  
+> Version: 0.4  
 > Status: Design Baseline  
 > Visual Direction: GitHub Education + Devpost + Modern Campus Public Service  
-> Scope: Student Web, Organization Management, Platform Operations  
+> Scope: Desktop Web, Mobile Web, Organization Management, Platform Operations  
 > Primary UI Stack: Vue 3 + Vite + TypeScript + Nuxt UI v4 + Tailwind CSS  
 > Locale: 简体中文（zh-CN）— the only supported product locale  
+> Responsive Baseline: Phone `<768px` / Tablet `768–1023px` / Desktop `>=1024px`  
+> Distribution Direction: Responsive Web first; future Capacitor wrapper compatible; native WeChat Mini Program is a separate frontend surface
 > Versioning note: the document version (0.3) is independent from the product milestone (V0.1). Every "V0.1" in this document refers to the first shippable product iteration, not to the document version.
 
 ---
@@ -479,18 +481,10 @@ Pages do not invent colors.
 ```css
 --color-primary-50: #EEF6FF;
 --color-primary-100: #DDEBFF;
---color-primary-200: #B8D7FF;
---color-primary-300: #86BBFF;
---color-primary-400: #4D9BFF;
 --color-primary-500: #1677FF;
 --color-primary-600: #0F6FE8;
 --color-primary-700: #0B5FC7;
---color-primary-800: #094FAD;
---color-primary-900: #083E88;
---color-primary-950: #052857;
 ```
-
-完整色阶以现有 50、100、500、600、700 为锚点补齐；400 同时作为暗色模式的高对比交互色。色阶从 50 到 950 的相对亮度必须单调递减，不允许局部跳色。
 
 Primary blue is used for:
 
@@ -542,19 +536,6 @@ Contrast check: `--color-text-muted` was deepened from #7C8799 to #6B7280 so tha
 --color-info: #1677FF;
 ```
 
-Nuxt UI semantic color alias 使用以下适配：
-
-```text
-primary -> primary
-success -> success
-info    -> primary
-warning -> warning
-error   -> danger
-neutral -> neutral（由项目覆盖完整 `--color-neutral-*` 色阶）
-```
-
-项目领域与设计文档继续使用 `danger` 表示危险、错误和破坏性状态；只有 Nuxt UI adapter 层使用组件库约定的 `error` 名称。表单校验错误可以消费 `error` alias，但破坏性操作仍必须同时使用明确文案和交互确认，不能只靠红色表达。
-
 Semantic colors are not decorative palette colors.
 
 Use them only when they describe state.
@@ -569,8 +550,8 @@ Dark mode uses Nuxt UI's native Color Mode support（底层为 @nuxtjs/color-mod
 
 Theming is implemented through the Nuxt UI theme layer, never per-page classes:
 
-- semantic color roles（primary、neutral、success 等）在 plain Vue + Vite 项目中通过 `vite.config.ts` 的 `ui({ ui: { colors } })` 映射；如果未来迁移到 Nuxt Framework，再使用 `app.config.ts`
-- dark overrides redeclare the same CSS custom properties from §7.1-7.3 inside the `.dark` scope in `tokens.css`
+- semantic color roles（primary、neutral、success 等）are mapped in `app.config.ts`（`ui.colors`）
+- dark overrides redeclare the same CSS custom properties from §7.1-7.3 inside the `.dark` scope in `main.css`
 - components consume the variables, so page components do not implement dark styles themselves（与 §52 集中配置一致）
 
 Dark token mapping（基线值，发布前必须逐项通过对比度验证）:
@@ -656,25 +637,13 @@ unless an optical correction is documented.
 Radius is a budget, not a decoration.
 
 ```text
-Small control: 8px
+Small control: 6 to 8px
 Button / input: 8px
-Normal content card: 10px
+Normal content card: 8 to 10px
 Major surface: 12px
 Hero carousel: 12 to 14px
 Avatar: circular
 ```
-
-共享 token 固定为：
-
-```css
---radius-control: 8px;
---radius-card: 10px;
---radius-surface: 12px;
-```
-
-Nuxt UI 的 `--ui-radius` 是圆角比例基数，而不是控件的最终圆角值。项目将其设为
-`calc(var(--radius-control) / 1.5)`，使标准控件默认使用的 `rounded-md` 精确落在 8px；
-普通卡片与主要表面仍分别直接消费 `--radius-card` 与 `--radius-surface`。
 
 Avoid:
 
@@ -877,7 +846,7 @@ Default desktop page gutters:
 Mobile gutter:
 
 ```text
-16px
+12px
 ```
 
 ---
@@ -901,6 +870,67 @@ min-height: 100dvh;
 This reduces layout jumps caused by mobile browser chrome.
 
 The campus platform generally does not require full-screen hero sections.
+
+## 13.1 Mobile Browser Safe Area
+
+The root HTML must include a mobile viewport configuration that supports safe areas:
+
+```html
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1, viewport-fit=cover"
+/>
+```
+
+Phone chrome that touches the screen edge must account for:
+
+```css
+env(safe-area-inset-top)
+env(safe-area-inset-right)
+env(safe-area-inset-bottom)
+env(safe-area-inset-left)
+```
+
+Typical bottom navigation spacing:
+
+```css
+padding-bottom: env(safe-area-inset-bottom);
+```
+
+Page content behind a fixed bottom bar must reserve:
+
+```text
+mobile tab height
++
+safe-area-inset-bottom
+```
+
+Do not hardcode an iPhone-specific pixel offset.
+
+## 13.2 Mobile Browser Compatibility
+
+Primary Web compatibility targets:
+
+```text
+iOS Safari
+Android Chrome
+WeChat in-app browser
+modern Chromium desktop browsers
+```
+
+The product must not require hover to discover a core action.
+
+Avoid depending on browser fingerprinting or device-model detection for layout.
+
+Responsive behavior is determined by:
+
+```text
+viewport
+CSS media queries
+feature detection when needed
+```
+
+not by user-agent model lists.
 
 ---
 
@@ -964,13 +994,25 @@ Do not create multi-step wizard flows unless the data genuinely needs multiple s
 
 # 16. Navigation
 
-Desktop Header height:
+Navigation is adaptive by device class.
+
+The mobile experience is not a collapsed copy of the desktop header.
+
+## 16.1 Desktop Navigation
+
+Applies at:
+
+```text
+>= 1024px
+```
+
+Header height:
 
 ```text
 64 to 68px
 ```
 
-Navigation:
+Primary navigation:
 
 ```text
 首页
@@ -1000,9 +1042,7 @@ Do not use:
 
 - large filled tab background
 - glowing navigation
-- icon above every navigation label
-
-Mobile navigation uses a Drawer.
+- icon above every desktop navigation label
 
 Approved components:
 
@@ -1011,8 +1051,202 @@ UNavigationMenu
 UButton
 UAvatar
 UDropdownMenu
-UDrawer
 ```
+
+## 16.2 Phone Navigation
+
+Applies at:
+
+```text
+< 768px
+```
+
+Phone root-level pages use a fixed / sticky bottom primary navigation.
+
+Approved five tabs:
+
+```text
+首页        House
+竞赛        Trophy
+组队        Users
+活动        CalendarDays
+我的        CircleUser
+```
+
+Routes:
+
+```text
+/               -> 首页
+/competitions   -> 竞赛
+/teams          -> 组队
+/activities     -> 活动
+/me             -> 我的
+```
+
+The bottom bar is intentionally limited to five high-frequency destinations.
+
+`社团组织` and `咨询指南` remain first-class product destinations but are reached through:
+
+```text
+首页 Quick Entry
+相关业务模块
+全局搜索
+“我的”或 contextual links where appropriate
+```
+
+Do not force six or more equal-width phone tabs into the bottom bar.
+
+Phone bottom navigation requirements:
+
+- icon + short Chinese label
+- Lucide SVG only
+- minimum 44 x 44 CSS px touch target
+- active state uses primary color and clear text/icon emphasis
+- inactive state remains readable
+- no floating glass tab bar
+- no oversized pill background
+- respect `env(safe-area-inset-bottom)`
+- content must reserve bottom-bar height so it is never covered
+
+Recommended logical height:
+
+```text
+60px + safe-area-inset-bottom
+```
+
+## 16.3 Phone Page Shells
+
+Phone pages use three main shell modes.
+
+### Root / Tab Shell
+
+Used for:
+
+```text
+/
+ /competitions
+ /teams
+ /activities
+ /me
+```
+
+Structure:
+
+```text
+Compact Header
+Main Content
+Bottom Primary Navigation
+```
+
+### Detail Shell
+
+Used for:
+
+```text
+/competitions/:id
+/teams/:id
+/organizations/:id
+/organizations/:id/recruitments/:recruitmentId
+/activities/:id
+```
+
+Structure:
+
+```text
+Back Header
+Main Content
+Sticky Primary Action Bar when the page has a meaningful action
+```
+
+Global phone bottom navigation is hidden on Detail Shell pages.
+
+Do not stack:
+
+```text
+Sticky CTA
++
+Global Bottom Navigation
++
+Browser Bottom Chrome
+```
+
+### Form / Task Shell
+
+Used for:
+
+```text
+/teams/create
+/qa/ask
+application forms
+profile editing
+organization management forms
+```
+
+Structure:
+
+```text
+Back Header
+Focused Form / Task
+Sticky Submit Action when useful
+```
+
+Global phone bottom navigation is hidden.
+
+Long forms must not be placed inside small modals.
+
+## 16.4 Tablet Navigation
+
+Applies at:
+
+```text
+768px to 1023px
+```
+
+Tablet uses:
+
+```text
+Compact Header
+Drawer navigation
+Full-width or 2-column content depending on task
+```
+
+Tablet does not use the phone five-tab bottom navigation by default.
+
+Approved components:
+
+```text
+UDrawer
+UButton
+UIcon
+UAvatar
+```
+
+## 16.5 Mobile Header
+
+Phone root pages:
+
+```text
+Page / Product Title
+Search
+Notifications
+Avatar when authenticated
+```
+
+Recommended height:
+
+```text
+52 to 56px
+```
+
+Phone detail / task pages:
+
+```text
+Back
+Short Page Title
+Context Action / More only when needed
+```
+
+Do not repeat the full desktop brand lockup on every phone page.
 
 ---
 
@@ -1072,14 +1306,17 @@ CircleHelp SVG  常见问题
 
 # 18. Homepage Composition
 
-Homepage baseline:
+Desktop and phone use the same product information but not the same composition.
+
+## 18.1 Desktop Homepage
+
+Baseline:
 
 ```text
 Header
 
 Hero
-├─ Main message
-├─ Quick Entry
+├─ Main message + Quick Entry
 └─ Campus Carousel
 
 Primary Content
@@ -1098,14 +1335,72 @@ Secondary Content
 Footer
 ```
 
-Do not add unrelated dashboard statistics.
+The accepted desktop direction remains:
 
-Do not add a second carousel below the first.
+> split hero, task-oriented left side, curated campus carousel on the right.
 
-One hero carousel is the maximum on the homepage.
+## 18.2 Phone Homepage
+
+Phone homepage prioritizes action and deadline information before visual promotion.
+
+Recommended order:
+
+```text
+Compact Header
+Search Entry
+Compact Hero Copy
+Quick Entry 2 x 2
+Deadline
+Campus Carousel 16:9
+Recommended Competitions
+Team Recruitment
+Organization Recruitment
+Activities
+Guides / FAQ
+Minimal Footer
+Bottom Primary Navigation
+```
+
+The phone hero must be smaller than desktop.
+
+Recommended phone H1:
+
+```text
+24 to 28px
+```
+
+The first viewport should expose or nearly expose the Quick Entry area.
+
+Do not spend half the phone viewport on marketing copy.
+
+## 18.3 Phone Search Entry
+
+On the homepage, a visible full-width search trigger may appear below the compact header.
+
+It opens the same Global Search experience.
+
+Do not build a separate mobile search backend.
+
+## 18.4 Phone Information Sections
+
+Phone sections prefer:
+
+```text
+compact list
+single-column content
+divider-based hierarchy
+```
+
+over:
+
+```text
+large stacked SaaS cards
+card inside card
+```
+
+Deadline, status and primary action remain visible before decorative media.
 
 ---
-
 # 19. Carousel
 
 Use:
@@ -1129,13 +1424,17 @@ Not:
 - fake achievements
 - decorative AI art
 
-Image frame ratio:
+Desktop target ratio:
 
 ```text
-single 16:9 frame on both desktop and mobile
+approximately 2.6:1 to 2.9:1
 ```
 
-Use a single `aspect-ratio: 16/9` image frame across breakpoints. Being the most common ratio, it keeps hero carousel assets easy to source and behaves consistently on mobile and desktop. Insert images with `object-fit: cover` (center-crop into the 16:9 safe area) so slides of differing ratios can be dropped in without layout shift; allow an optional per-slide crop-focus (`object-position`) for composition adjustment.
+Mobile:
+
+```text
+approximately 16:9
+```
 
 Behavior:
 
@@ -1644,38 +1943,162 @@ xl: 1280
 
 Do not create page-specific arbitrary breakpoints unless necessary.
 
-Desktop:
+The product-level navigation classes are:
 
 ```text
-full header
-two-column homepage
-4-column competition grid where space allows
+Phone:   < 768px
+Tablet:  768px to 1023px
+Desktop: >= 1024px
 ```
 
-Tablet:
+## 34.1 Desktop
 
 ```text
-collapsed navigation
+full top header
+desktop primary navigation
+two-column homepage where designed
+4-column competition grid only where content and width justify it
+right rail may exist
+```
+
+## 34.2 Tablet
+
+```text
+compact header
+navigation in Drawer
 hero becomes vertical
-2-column cards
+1–2 column content
 right rail moves below or becomes full width
+no phone bottom tab by default
 ```
 
-Mobile:
+## 34.3 Phone
 
 ```text
-single-column
+bottom primary navigation on root pages
+single-column content
 2 x 2 Quick Entry
 16:9 carousel
 lists preferred over mini-card grids
-filters open in Drawer
+filters open in bottom / side Drawer
+detail pages use back header
 primary action may use sticky bottom action bar
 ```
 
-Mobile is not the desktop page shrunk.
+Phone is not the desktop page shrunk.
+
+## 34.4 Phone List Pattern
+
+Desktop card grids should not automatically become one giant full-width card per row.
+
+For competitions, activities, teams and organization results, prefer compact content rows when appropriate:
+
+```text
+thumbnail / logo
+title
+status
+deadline / date
+essential metadata
+```
+
+Use whitespace and one divider strategy.
+
+Do not create a vertical tower of oversized cards.
+
+## 34.5 Phone Filters
+
+Desktop filter bars may become:
+
+```text
+search field / search trigger
+1–2 active quick filters
+Filter button
+```
+
+The Filter button opens `UDrawer`.
+
+The Drawer contains:
+
+```text
+complete filter controls
+Reset
+Apply / View results
+```
+
+Filter values remain URL-backed.
+
+Do not create a separate phone-only filter state.
+
+## 34.6 Phone Detail Pages
+
+Detail pages should reduce card nesting.
+
+Preferred structure:
+
+```text
+Page identity
+Divider / whitespace
+Section title
+Content
+Divider / whitespace
+Next section
+```
+
+Use cards only when a visual boundary communicates real grouping.
+
+## 34.7 Sticky Mobile Action Bar
+
+Use only when a page has a clear primary action.
+
+Examples:
+
+```text
+Team Detail        -> 申请加入
+Recruitment Detail -> 申请加入
+Activity Detail    -> 报名参加
+Competition Detail -> 查看官网 / 查看组队 / 发布组队 depending on context
+```
+
+Rules:
+
+- hide global phone tab bar on these detail pages
+- reserve bottom space
+- include `safe-area-inset-bottom`
+- do not cover form fields or browser controls
+- disable / change label when action is unavailable
+- status must not be communicated by disabled color alone
+
+## 34.8 Mobile Forms
+
+Long forms use a dedicated page / full task shell.
+
+Do not put a 6-field application form in a small modal.
+
+Keep:
+
+```text
+label above field
+one column
+clear validation
+sticky submit only when it improves completion
+```
+
+## 34.9 Representative Validation Widths
+
+Required visual checks:
+
+```text
+360px phone
+390px phone
+430px large phone
+768px tablet boundary
+1024px desktop boundary
+1440px desktop
+```
+
+At least one real or emulated iOS Safari-sized viewport and one Android Chrome-sized viewport should be checked before release.
 
 ---
-
 # 35. Touch Targets
 
 Minimum practical touch target:
@@ -1683,10 +2106,6 @@ Minimum practical touch target:
 ```text
 44 x 44 CSS px
 ```
-
-标准 button、input 与 select 的交互高度固定为 44px。Checkbox 与 Radio 的可见
-indicator 可以保持 16–20px，但包含 indicator 与 label 的整行可点击区域高度不得低于
-44px；纯文本链接在作为独立操作时也使用至少 44px 的交互高度。
 
 Small icon geometry may be 18px, but clickable area should remain large enough.
 
@@ -2144,23 +2563,6 @@ Tailwind theme
 CSS custom properties
 ```
 
-plain Vue + Vite 的 Nuxt UI role token 对照如下：
-
-```text
-Project token          Nuxt UI token
---color-surface        --ui-bg
---color-surface-subtle --ui-bg-muted / --ui-bg-accented
---color-text           --ui-text / --ui-text-toned
---color-text-strong    --ui-text-highlighted
---color-text-muted     --ui-text-muted
---color-text-disabled  --ui-text-dimmed
---color-border         --ui-border / --ui-border-muted
---color-border-strong  --ui-border-accented
---color-danger         --ui-error
-```
-
-`--color-canvas` 用于页面 body 背景，不映射为 `--ui-bg`；`--ui-bg` 保持 surface 语义，避免普通 Nuxt UI 组件错误消费页面画布色。
-
 Do not redefine the blue color separately in:
 
 ```text
@@ -2264,6 +2666,54 @@ Never hide the deadline while preserving a decorative image.
 
 ---
 
+# 56.1 Future App Distribution Compatibility
+
+V0.1 is a responsive Web product.
+
+The Web UI should remain compatible with a future native wrapper, but V0.1 must not add native runtime dependencies solely for hypothetical distribution.
+
+## Android / iOS Wrapper
+
+A future Capacitor wrapper may reuse the responsive Vue application.
+
+Therefore:
+
+- do not make desktop hover a required interaction
+- keep platform-sensitive behaviors behind small adapters when they appear
+- use Web-standard navigation and form semantics
+- do not install Capacitor until an explicit native packaging task exists
+
+## WeChat Mini Program
+
+A true native WeChat Mini Program is a separate frontend surface.
+
+Do not assume:
+
+```text
+Nuxt UI
+DOM-dependent Vue components
+browser CSS behavior
+```
+
+can be compiled unchanged into Mini Program UI.
+
+A future Mini Program may reuse:
+
+```text
+Django API
+business rules
+status enums
+validation semantics
+copy
+selected TypeScript contracts
+```
+
+A WebView shell is a separate distribution choice and must be evaluated when the project actually needs WeChat delivery.
+
+Do not introduce `uni-app`, Taro, Mini Program SDKs or bridge code in Web V0.1 without an explicit architecture decision.
+
+---
+
 # 57. Performance Rules
 
 The UI should remain usable on ordinary student phones and mobile networks.
@@ -2311,8 +2761,9 @@ Review requires:
 
 1. functional flow
 2. desktop render
-3. mobile render
-4. keyboard navigation
+3. phone render at representative widths
+4. tablet boundary render
+5. keyboard navigation
 5. loading state
 6. empty state
 7. error state
@@ -2474,13 +2925,15 @@ Recommended first implementation order:
 Theme Tokens（亮色 + 暗色，§7）
 AppLogo
 AppHeader
+MobileBottomNav
+MobilePageHeader
+MobileActionBar
 GlobalSearch
 HomeCarousel
 QuickEntry
 SectionHeader
 StatusBadge
-CompetitionCard
-CompactList
+CompetitionCard / CompactList mobile variants
 AppFooter
 ```
 
@@ -2517,16 +2970,14 @@ The following open-source frontend skill patterns were intentionally adapted:
 - production quality
 - responsive and cohesive implementation
 
-**Microsoft frontend-design-review**
+**Microsoft frontend-design review guidance**
 - design-system compliance
-- design token usage instead of hardcoded values
-- efficient task completion (≤3 interactions, one clear primary action)
-- responsive design checks
-- accessibility review
-- blocking / major / minor issue grading
-- avoid generic AI aesthetics
+- token usage instead of hardcoded values
+- efficient task completion
+- keyboard navigation
+- accessibility and trustworthy error behavior
 
-Source: https://github.com/microsoft/skills/blob/main/.github/skills/frontend-design-review/SKILL.md
+Verified upstream reference: `microsoft/skills/.github/skills/frontend-design-review/SKILL.md`. The project adapts its design-system compliance, task-flow, responsive, accessibility and issue-severity review principles. `microsoft/GitHubCopilot_Customized` is a separate real repository and is not used as a substitute source for this Skill.
 
 **Strict anti-template frontend skills**
 - discourage emoji in product UI

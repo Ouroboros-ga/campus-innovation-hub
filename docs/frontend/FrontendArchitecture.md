@@ -2,9 +2,10 @@
 
 > Project: campus-innovation-hub  
 > Product: 人工智能学院科创与就业服务平台  
-> Version: 0.2  
+> Version: 0.3  
 > Status: Architecture Baseline  
 > Frontend: Vue 3 + Vite + TypeScript + Nuxt UI v4  
+> Web Targets: Desktop Web + Responsive Mobile Web  
 > Production mode: Static SPA served by Nginx  
 > Backend boundary: Django REST Framework API  
 > Locale: 简体中文（zh-CN）— 唯一产品语言，前端不引入 i18n 框架
@@ -420,6 +421,62 @@ meta: {
 }
 ```
 
+## Mobile Shell Meta
+
+Phone presentation is route-driven rather than detected from business component code.
+
+Recommended route meta:
+
+```ts
+type MobileShell = 'tab' | 'detail' | 'form' | 'manage'
+
+meta: {
+  mobileShell: 'tab',
+  mobileTab: 'home'
+}
+```
+
+Approved phone root tabs:
+
+```text
+home
+competitions
+teams
+activities
+me
+```
+
+Examples:
+
+```ts
+/                  -> { mobileShell: 'tab',    mobileTab: 'home' }
+/competitions      -> { mobileShell: 'tab',    mobileTab: 'competitions' }
+/competitions/:id  -> { mobileShell: 'detail' }
+/teams             -> { mobileShell: 'tab',    mobileTab: 'teams' }
+/teams/create      -> { mobileShell: 'form' }
+/teams/:id         -> { mobileShell: 'detail' }
+/activities        -> { mobileShell: 'tab',    mobileTab: 'activities' }
+/activities/:id    -> { mobileShell: 'detail' }
+/me                -> { mobileShell: 'tab',    mobileTab: 'me' }
+/manage/*           -> { mobileShell: 'manage' }
+/ops/*              -> { mobileShell: 'manage' }
+```
+
+`mobileShell` is UI composition metadata only.
+
+It is not permission metadata.
+
+The same route remains the same product page on desktop and phone.
+
+Do not create:
+
+```text
+/m/competitions
+/mobile/teams
+```
+
+as duplicate mobile routes.
+
 重要：
 
 > 客户端路由守卫不是安全边界。
@@ -427,6 +484,136 @@ meta: {
 Django 必须在每个受保护的 API 请求上强制权限。
 
 前端可以出于用户体验隐藏或拦截 UI，但不能授予授权。
+
+---
+
+# 移动 Web Shell 架构（Mobile Web Shell Architecture）
+
+Responsive Mobile Web is part of the primary V0.1 frontend.
+
+It is not a separate application.
+
+## Device Classes
+
+```text
+Phone   < 768px
+Tablet  768–1023px
+Desktop >= 1024px
+```
+
+These are layout classes, not device fingerprints.
+
+Use CSS media queries and feature detection.
+
+Do not branch layout by phone model or user-agent string.
+
+## Shared Components
+
+Add shared shell components:
+
+```text
+AppHeader.vue
+DesktopNavigation.vue
+TabletNavigationDrawer.vue
+MobileBottomNav.vue
+MobilePageHeader.vue
+MobileActionBar.vue
+PageContainer.vue
+```
+
+Business pages do not implement their own independent bottom bars.
+
+## Root Phone Shell
+
+```text
+Compact Header
+Router View
+MobileBottomNav
+```
+
+Root tabs are persistent only for:
+
+```text
+/
+/competitions
+/teams
+/activities
+/me
+```
+
+## Detail Phone Shell
+
+```text
+MobilePageHeader(back)
+Router View
+MobileActionBar(optional)
+```
+
+No global bottom navigation.
+
+## Form / Task Phone Shell
+
+```text
+MobilePageHeader(back)
+Focused Task Content
+MobileActionBar(optional submit)
+```
+
+No global bottom navigation.
+
+## Tablet Shell
+
+Tablet keeps:
+
+```text
+Compact Header
+UDrawer navigation
+Router View
+```
+
+Tablet does not inherit the five-tab phone navigation by default.
+
+## Safe Area
+
+`index.html` must include:
+
+```html
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1, viewport-fit=cover"
+/>
+```
+
+Shared CSS defines safe-area helpers using:
+
+```text
+env(safe-area-inset-*)
+```
+
+Fixed / sticky bottom UI must reserve safe area and content height.
+
+Use:
+
+```text
+100dvh
+```
+
+when full viewport height is genuinely needed.
+
+Do not use fixed iPhone-specific offsets.
+
+## Mobile Browser Targets
+
+Primary Web validation targets:
+
+```text
+iOS Safari
+Android Chrome
+WeChat in-app browser
+```
+
+No core interaction may depend on hover.
+
 
 ---
 
@@ -775,6 +962,10 @@ frontend/
 │   ├── shared/
 │   │   ├── api/
 │   │   ├── components/
+│   │   │   ├── AppHeader.vue
+│   │   │   ├── MobileBottomNav.vue
+│   │   │   ├── MobilePageHeader.vue
+│   │   │   └── MobileActionBar.vue
 │   │   ├── composables/
 │   │   ├── lib/
 │   │   ├── styles/
@@ -1153,6 +1344,7 @@ else index.html
 目标用户体验：
 
 - 在普通 Android 手机上流畅响应
+- 在 iOS Safari、Android Chrome 与微信内置浏览器中完成核心学生流程
 - 在校园 Wi-Fi 与移动网络下可用
 - 媒体加载不产生可见布局位移
 - 无巨型初始图片载荷
@@ -1603,6 +1795,57 @@ ADR 只用于未来维护者可能合理质疑的决策。
 - 上传由服务端校验
 - 认证写操作开始时集成 CSRF
 - 后端校验保持权威
+
+---
+
+# 未来分发兼容性（Future Distribution Compatibility）
+
+V0.1 仍然是：
+
+```text
+Responsive Vue Web SPA
+```
+
+## Capacitor
+
+未来如需要 Android APK / AAB 或 iOS 包装，可通过独立 ADR 和任务引入 Capacitor。
+
+当前架构保持 wrapper-friendly：
+
+- 业务页面不依赖 hover
+- API 层集中
+- 认证、分享、文件等平台敏感能力未来可通过 adapter 隔离
+- 不在普通页面散布 native 判断
+
+V0.1 不安装 Capacitor，也不生成 `android/` / `ios/` 项目。
+
+## 微信小程序
+
+真正的微信小程序视为独立前端 surface。
+
+Web 项目未来可与 Mini Program 共享：
+
+```text
+API contract
+业务状态枚举
+验证语义
+文案
+部分 TypeScript contract
+```
+
+但不假设 Nuxt UI / DOM 组件可直接复用。
+
+V0.1 不引入：
+
+```text
+uni-app
+Taro
+微信小程序 SDK
+WebView bridge
+```
+
+除非出现明确的小程序交付任务。
+
 
 ---
 

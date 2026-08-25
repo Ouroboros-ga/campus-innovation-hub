@@ -2,7 +2,7 @@
 
 > 产品：人工智能学院科创与就业服务平台  
 > 仓库：`campus-innovation-hub`  
-> 文档版本：0.3  
+> 文档版本：0.4  
 > 产品里程碑：V0.1  
 > 状态：Frontend Foundation Ready  
 > Locale：简体中文（zh-CN），V0.1 唯一产品语言  
@@ -1732,6 +1732,134 @@ object storage key
 组织 Logo：512×512
 用户头像：512×512
 ```
+
+---
+
+# Mobile Web 产品要求
+
+V0.1 的“学生 Web”同时包含：
+
+```text
+Desktop Web
+Responsive Mobile Web
+```
+
+手机网页不是后续附加版本，而是首版正式交付面。
+
+## Phone 一级导航
+
+Phone `<768px` 的一级高频导航固定为：
+
+```text
+首页
+竞赛
+组队
+活动
+我的
+```
+
+使用底部导航栏。
+
+`社团组织` 与 `咨询指南` 不从产品中降级，它们通过首页 Quick Entry、搜索和上下文入口访问。
+
+Tablet `768–1023px` 使用紧凑 Header + Drawer。
+
+Desktop `>=1024px` 使用现有顶部导航。
+
+---
+
+## 手机页面类型
+
+根级页面：
+
+```text
+Compact Header
+Content
+Bottom Navigation
+```
+
+详情页：
+
+```text
+Back Header
+Content
+Sticky Primary Action（需要时）
+```
+
+表单 / 申请 / 编辑页：
+
+```text
+Back Header
+Focused Task
+Sticky Submit（需要时）
+```
+
+详情页与表单页不同时显示全局底部 Tab。
+
+---
+
+## 手机信息优先级
+
+移动端减少空间时优先保留：
+
+```text
+标题
+状态
+截止 / 时间
+主要操作
+关键元信息
+```
+
+优先移除：
+
+```text
+装饰媒体
+次要标签
+冗余说明
+```
+
+竞赛、活动、组队等列表在手机端优先使用紧凑列表，而不是把桌面大卡片机械堆成一列。
+
+---
+
+## 移动浏览器
+
+正式兼容目标：
+
+```text
+iOS Safari
+Android Chrome
+微信内置浏览器
+```
+
+不使用浏览器指纹或手机型号检测决定布局。
+
+使用：
+
+```text
+CSS responsive layout
+viewport
+safe-area
+feature detection when necessary
+```
+
+---
+
+## Future Native Distribution
+
+V0.1 不要求 APK 或微信小程序。
+
+架构必须允许未来：
+
+```text
+Responsive Web
+-> Capacitor wrapper
+-> Android / iOS
+```
+
+真正原生微信小程序视为独立 frontend surface，不要求现有 Nuxt UI 页面直接编译成小程序。
+
+未来原生端可以复用后端 API 与业务契约，但不能反向绑架当前 Web V0.1 的技术选型。
 
 ---
 

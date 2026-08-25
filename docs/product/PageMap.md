@@ -1,7 +1,7 @@
 # PageMap.md
 
 > 产品：人工智能学院科创与就业服务平台  
-> 文档版本：0.3  
+> 文档版本：0.4  
 > 产品里程碑：V0.1  
 > Locale：简体中文（zh-CN）  
 > 用途：定义网站页面结构、主要区块、按钮、字段、页面操作与页面之间的跳转关系  
@@ -156,6 +156,124 @@ Unicode 箭头代替通用图标
 
 ---
 
+# Mobile Web 页面壳
+
+## Phone `<768px`
+
+Phone 使用三种页面壳。
+
+### Tab Shell
+
+适用：
+
+```text
+/
+ /competitions
+ /teams
+ /activities
+ /me
+```
+
+结构：
+
+```text
+Compact Header
+Content
+Bottom Navigation
+```
+
+Bottom Navigation：
+
+```text
+首页
+竞赛
+组队
+活动
+我的
+```
+
+### Detail Shell
+
+适用：
+
+```text
+/competitions/:id
+/teams/:id
+/organizations/:id
+/organizations/:id/recruitments/:recruitmentId
+/activities/:id
+```
+
+结构：
+
+```text
+Back Header
+Content
+Sticky Primary Action（如存在）
+```
+
+不显示全局 Bottom Navigation。
+
+### Form / Task Shell
+
+适用：
+
+```text
+/teams/create
+/qa/ask
+申请表单
+资料编辑
+组织管理编辑
+```
+
+结构：
+
+```text
+Back Header
+Form / Task
+Sticky Submit（如适合）
+```
+
+不显示全局 Bottom Navigation。
+
+---
+
+## Tablet `768–1023px`
+
+```text
+Compact Header
+Drawer Navigation
+Content
+```
+
+不使用 Phone Bottom Navigation。
+
+---
+
+## Desktop `>=1024px`
+
+保持现有：
+
+```text
+Full Header
+Top Primary Navigation
+Content
+```
+
+---
+
+## Phone Safe Area
+
+Bottom Navigation 和 Sticky Action 必须考虑：
+
+```text
+env(safe-area-inset-bottom)
+```
+
+页面内容必须预留相应空间，不能被固定底栏遮挡。
+
+---
+
 # 全站 Header
 
 所有学生端公开页面共享。
@@ -203,17 +321,28 @@ Logo
 退出登录
 ```
 
-移动端：
+Phone：
 
 ```text
-Logo
+页面 / 平台短标题
+搜索
+消息
+头像（登录后）
+```
+
+Phone 一级导航不进入 Drawer，而使用底部五项导航。
+
+Tablet：
+
+```text
+紧凑 Header
 搜索
 消息
 头像
 菜单
 ```
 
-主导航进入 Drawer。
+Tablet 主导航进入 Drawer。
 
 ---
 
@@ -505,6 +634,34 @@ Enter -> 打开
 查看回答
 进入 Q&A
 ```
+
+---
+
+## Phone 首页顺序
+
+Phone 首页不直接复制 Desktop split hero。
+
+顺序：
+
+```text
+Compact Header
+搜索入口
+精简 Hero
+Quick Entry 2 x 2
+即将截止
+校园轮播 16:9
+推荐竞赛
+正在组队
+正在招新的组织
+近期活动
+指南 / FAQ
+Minimal Footer
+Bottom Navigation
+```
+
+Phone 端“即将截止”优先于大图轮播。
+
+Hero 不占据大半首屏。
 
 ---
 
@@ -2090,6 +2247,85 @@ docs/backend/database-design.md
 
 ---
 
+# Mobile 页面级交互规则
+
+## 筛选
+
+Phone 列表页：
+
+```text
+搜索
+少量 Quick Filter
+[筛选]
+```
+
+“筛选”打开 `UDrawer`。
+
+完整筛选值仍写入 URL Query。
+
+---
+
+## Detail Sticky Action
+
+以下页面在 Phone 可使用 Sticky Bottom Action：
+
+```text
+Team Detail        -> 申请加入
+Recruitment Detail -> 申请加入
+Activity Detail    -> 报名参加
+Competition Detail -> 根据上下文显示最重要动作
+```
+
+显示 Sticky Action 时隐藏全局 Bottom Navigation。
+
+---
+
+## 长表单
+
+Phone 上以下操作使用独立任务页或全屏任务面：
+
+```text
+发布组队
+申请加入队伍
+申请组织
+提交咨询
+编辑完整资料
+```
+
+不要塞入小尺寸 Modal。
+
+---
+
+## 手机运营与组织管理
+
+组织负责人常见操作必须在 Phone 可完成：
+
+```text
+查看申请
+接受
+拒绝
+发布 / 结束招新
+编辑组织基础资料
+```
+
+Platform Operations：
+
+```text
+手机可用
+Desktop 优先
+```
+
+Phone 不展示 8–10 列横向巨型表格。
+
+应降级为：
+
+```text
+summary row / list
+-> detail / edit
+```
+
+---
+
 # 页面级通用验收
 
 所有数据驱动页面都必须明确处理：
@@ -2105,9 +2341,12 @@ Disabled（需要时）
 所有页面在进入开发完成状态前至少验证：
 
 ```text
-Desktop
-Tablet
-Mobile
+1440 Desktop
+1024 Boundary
+768 Tablet
+430 Large Phone
+390 Phone
+360 Small Phone
 Keyboard
 Light mode
 Dark mode

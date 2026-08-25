@@ -1,8 +1,8 @@
 # FrontendImplementationPlan.md
 
 > Project: campus-innovation-hub  
-> Version: 0.1  
-> Status: FE-004 verification in progress  
+> Version: 0.3  
+> Status: FE-001–FE-007 已完成并提交；当前执行 FE-004M（Mobile Web 适配）  
 > Execution model: One task at a time（一次只执行一个任务）  
 > Primary executor: Human developer or Codex-style coding agent  
 > Locale: 简体中文（zh-CN）— 所有产品 UI 文案遵循 FrontendDesign.md §0.1
@@ -43,6 +43,7 @@ docs/frontend/FrontendDesign.md
 docs/frontend/FrontendArchitecture.md
 docs/product/PRD.md
 docs/product/PageMap.md
+docs/backend/database-design.md（涉及领域字段、枚举、fixture 或状态语义时）
 ```
 
 原型文件与截图只是视觉参考。
@@ -82,7 +83,7 @@ UI 变更中，仅代码编译成功是不够的。
 | FE-004 应用外壳 | 已完成并提交 | 公开路由、Desktop Header、移动 Drawer、Footer、19 项测试与 `pnpm check` 通过；1440px 桌面与 390px 移动真实窄视口视觉验证通过；首页外壳与参考图对齐 | 无 |
 | FE-005 首页领域类型与 Fixtures | 已完成并提交 | 首页 9 类领域 View Model、首页 fixtures、共享日期/截止工具与 25 项单测通过；lint / typecheck / test / build 通过 | 无 |
 | FE-006 首页 Hero 与快捷入口 | 已完成并提交 | HomeHero 主信息、QuickEntry 四快捷入口、Hero 外壳与移动端 2x2 实现；组件/路由测试通过；1440/768/500px 视觉验证无横向溢出；`pnpm check` 全绿（47/47 测试、含生产路由集成测试） | 精确 390px 截图受 Chrome 最小窗口宽度（500px）限制；窄视口 2x2 已由 500px 截图验证 |
-| FE-007 首页轮播 | 已完成并提交 | HomeCarousel（UCarousel，3 张幻灯片、箭头、分页点、自动播放、悬停暂停、触摸/键盘、reduced-motion 关闭自动播放）；统一 16:9 画框 + `object-fit: cover` + 可选 `object-position` 焦点（适配不同比例图片、素材易得）；`pnpm check` 全绿（50/50 测试、含生产路由集成测试）；同步更新 FrontendDesign §19 / database-design §25 | 详情路由（CTA 目标）属 FE-020+；真实校园图片未接入，暂以深色占位 |
+| FE-007 首页轮播 | 已完成并提交 | HomeCarousel（UCarousel，3 张幻灯片、箭头、分页点、自动播放、悬停暂停、触摸/键盘、reduced-motion 关闭自动播放）；统一 16:9 画框 + `object-fit: cover` + 可选 `object-position` 焦点；`pnpm check` 全绿（50/50 测试、含生产路由集成测试）；同步更新 FrontendDesign §19 / database-design §25 | 详情路由（CTA 目标）属 FE-020+；真实校园图片未接入，暂以深色占位 |
 
 FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送；FE-005 已作为提交 `f7029da` 推送；FE-006 已作为提交 `4a4ba4d` 推送；FE-007 已作为提交 `766e3c9` 推送。
 
@@ -463,7 +464,7 @@ FE-003 后停止。
 
 ## 目标（Goal）
 
-实现学生端页面共享的持久外壳。
+实现 Desktop / Tablet / Phone 共用的响应式应用外壳。
 
 ## 依赖（Depends On）
 
@@ -477,7 +478,10 @@ FE-003
 AppHeader
 AppLogo
 DesktopNavigation
-MobileNavigation
+TabletNavigationDrawer
+MobileBottomNav
+MobilePageHeader
+MobileActionBar
 SearchButton
 NotificationButton
 UserMenu placeholder
@@ -486,40 +490,105 @@ PublicLayout
 PageContainer
 ```
 
-## 导航（Navigation）
-
-路由：
+## Desktop
 
 ```text
-首页
-竞赛
-社团组织
-组队广场
-活动
-咨询指南（Q&A）
+>= 1024px
 ```
 
-## 要求（Requirements）
+要求：
 
-桌面端：
-
-- 64 到 68px header
-- 活动路由指示
+- 64–68px Header
+- 顶部一级导航
+- active route indicator
 - 搜索
 - 通知
 - 头像
 
-移动端：
+## Tablet
 
-- 紧凑 header
-- 菜单使用 Nuxt UI Drawer
-- 键盘 / 触摸可用
+```text
+768–1023px
+```
+
+要求：
+
+- Compact Header
+- `UDrawer` 一级导航
+- 不显示 Phone Bottom Navigation
+
+## Phone
+
+```text
+< 768px
+```
+
+### Root Tab Shell
+
+Bottom Navigation 固定五项：
+
+```text
+首页
+竞赛
+组队
+活动
+我的
+```
+
+路由：
+
+```text
+/
+/competitions
+/teams
+/activities
+/me
+```
+
+### Detail Shell
+
+```text
+Back Header
+Content
+MobileActionBar(optional)
+```
+
+不显示 Bottom Navigation。
+
+### Form / Task Shell
+
+```text
+Back Header
+Focused Task
+Sticky Submit(optional)
+```
+
+不显示 Bottom Navigation。
+
+## Route Meta
+
+引入：
+
+```ts
+mobileShell: 'tab' | 'detail' | 'form' | 'manage'
+mobileTab?: 'home' | 'competitions' | 'teams' | 'activities' | 'me'
+```
+
+不得建立 `/mobile/*` 重复路由。
+
+## Safe Area
+
+配置：
+
+```text
+viewport-fit=cover
+env(safe-area-inset-bottom)
+100dvh when genuinely needed
+```
 
 ## 使用（Use）
 
-优先 Nuxt UI 组件。
-
-示例：
+优先 Nuxt UI：
 
 ```text
 UButton
@@ -534,17 +603,28 @@ UDrawer
 - 真实认证
 - 通知 API
 - 全局搜索结果
-- feature 内容
-- 后端
+- 业务页面内容
+- Capacitor
+- APK
+- uni-app
+- 微信小程序
+- PWA
 
 ## 验收标准（Acceptance Criteria）
 
-- 占位路由间导航可用
-- 活动路由状态正确
-- 移动端 drawer 可用
+- Desktop 顶部导航可用
+- Tablet Drawer 可用
+- Phone 五项 Bottom Navigation 可用
+- active tab 正确
+- Detail / Form Shell 隐藏全局 Bottom Navigation
+- Safe Area 不遮挡内容
+- Back behavior 正确
+- 360 / 390 / 430px 无横向溢出
+- 768 / 1024 边界切换稳定
 - 焦点状态可见
+- Touch target >= 44 x 44 CSS px
 - 无 emoji 产品图标
-- 移动宽度无布局溢出
+- 无 core action 依赖 hover
 
 验证：
 
@@ -555,11 +635,61 @@ pnpm test
 pnpm build
 ```
 
+视觉验证：
+
+```text
+360
+390
+430
+768
+1024
+1440
+```
+
 FE-004 后停止。
 
 ---
 
+# FE-004M：既有前端的 Mobile Web 适配任务
+
+> 如果 FE-004 已经在代码中完成但仍采用“Mobile Drawer + Desktop Layout Shrink”方案，则执行本任务。  
+> 如果 FE-004 尚未实现，则把本节验收要求直接合并进 FE-004，不重复实现两次。
+
+## 目标
+
+把既有 Web Shell 调整为最新版 `FrontendDesign.md` 的 Phone / Tablet / Desktop 导航模型。
+
+## 必须修改
+
+```text
+Phone Bottom Navigation
+Phone Root / Detail / Form Shell
+Tablet Drawer
+Mobile Safe Area
+Mobile Header
+Sticky Action infrastructure
+```
+
+## 禁止
+
+- 不重写业务 API
+- 不引入 Capacitor
+- 不引入 uni-app
+- 不创建 phone-only duplicate routes
+- 不改变 Desktop 已批准视觉方向
+- 不启动后续业务页面重构
+
+## 验收
+
+同 FE-004 Mobile 验收。
+
+完成后停止。
+
+---
+
 # FE-005：定义首页领域类型与 Fixtures
+
+> 字段、枚举和持久化语义必须对照 `docs/backend/database-design.md`；不要把手机端 display state 建成新的数据库字段。
 
 ## 目标（Goal）
 
@@ -679,6 +809,15 @@ QuickEntry
 - 文案保持事实性
 - 移动端 2x2 快捷入口
 - 简体中文文案（§0.1 / §43）
+
+## Phone Requirements
+
+- Hero 主标题 24–28px
+- Hero copy 明显短于 Desktop
+- Quick Entry 2 x 2
+- 首屏应快速暴露 Quick Entry
+- 不复制 Desktop split hero
+- 无 Hover-only behavior
 
 ## 范围外（Out of Scope）
 

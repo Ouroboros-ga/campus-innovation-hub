@@ -8,3 +8,6 @@ coverage/
 auto-imports.d.ts
 components.d.ts
 *.tsbuildinfo
+
+*.log
+.DS_Store

@@ -518,6 +518,78 @@ primary action（主操作）
 
 ---
 
+# 移动端 Web 规则（Mobile Web Rules）
+
+响应式移动端 Web 是 V0.1 的生产面（production surface），不是后续打磨步骤。
+
+设备布局分级：
+
+```text
+Phone   < 768px
+Tablet  768–1023px
+Desktop >= 1024px
+```
+
+Phone 根级导航固定五项：
+
+```text
+首页
+竞赛
+组队
+活动
+我的
+```
+
+使用 `MobileBottomNav` 仅限已批准的根级 Tab 路由。
+
+Phone 详情 / 表单路由必须隐藏全局 Bottom Navigation，改用：
+
+```text
+MobilePageHeader
+MobileActionBar（有用时）
+```
+
+Tablet 使用 Drawer 导航。
+
+不要：
+
+- 把桌面顶部导航压缩成手机 Header
+- 在底部栏放六个或更多同级 Tab
+- 创建 `/mobile/*` 重复路由
+- 用机型 / 浏览器指纹判断布局
+- 核心操作依赖 hover
+- 把长移动表单放进小 Modal
+- 让固定底部 UI 遮挡内容
+- 忽略 iOS safe area（`env(safe-area-inset-bottom)`）
+- 在任务未明确要求分发目标时引入 Capacitor、uni-app、Taro、微信 SDK 或 PWA 依赖
+
+Phone UI 变更至少验证：
+
+```text
+360
+390
+430
+768
+1024
+1440
+```
+
+并检查：
+
+```text
+safe area
+touch targets（触摸目标）
+scroll（滚动）
+keyboard focus（键盘焦点）
+light mode（亮色）
+dark mode（暗色）
+primary task completion（主任务完成路径）
+```
+
+当响应式行为与旧原型冲突时，以最新 `FrontendDesign.md` 与 `PageMap.md` 为准。
+
+---
+
 # 加载与失败状态（Loading and Failure States）
 
 对于数据驱动的 UI，实现或明确考虑：
