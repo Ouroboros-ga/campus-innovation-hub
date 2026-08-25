@@ -1129,17 +1129,13 @@ Not:
 - fake achievements
 - decorative AI art
 
-Desktop target ratio:
+Image frame ratio:
 
 ```text
-approximately 2.6:1 to 2.9:1
+single 16:9 frame on both desktop and mobile
 ```
 
-Mobile:
-
-```text
-approximately 16:9
-```
+Use a single `aspect-ratio: 16/9` image frame across breakpoints. Being the most common ratio, it keeps hero carousel assets easy to source and behaves consistently on mobile and desktop. Insert images with `object-fit: cover` (center-crop into the 16:9 safe area) so slides of differing ratios can be dropped in without layout shift; allow an optional per-slide crop-focus (`object-position`) for composition adjustment.
 
 Behavior:
 

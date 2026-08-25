@@ -109,10 +109,12 @@ export type EventPhase = 'UPCOMING' | 'IN_PROGRESS' | 'ENDED'
 // 首页领域视图模型（Domain View Models）
 // ---------------------------------------------------------------------------
 
-/** 图片引用。src 在占位 / 未上传时可空，正式实现来自 MediaAsset。 */
+/** 图片引用。src 在占位 / 未上传时可空，正式实现来自 MediaAsset。
+ *  position（可选）为 `object-position` 值，用于不同比例图片裁切的焦点微调。 */
 export interface HomepageImage {
   alt: string
   src: string | null
+  position?: string
 }
 
 /** 校园轮播（PageMap 首页-校园轮播；§15.1 content_homepage_banner） */

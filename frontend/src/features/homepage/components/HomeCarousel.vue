@@ -9,15 +9,15 @@ import type { CarouselSlide } from '@/shared/types/homepage'
  *
  * 设计来源：docs/frontend/FrontendDesign.md
  * - §19：使用 UCarousel（不手写轮播 JS）；内容为校园主题 / 竞赛 / 组织招新；
- *   桌面约 2.6–2.9:1、移动约 16:9；5–6 秒自动播放、悬停暂停、手动箭头、分页点、触摸滑动、键盘可访问；
  *   一张幻灯片最多一个类别标签 + 一条标题 + 一句说明 + 一个可选 CTA；
  * - §33：`prefers-reduced-motion` 时关闭自动播放；
- * - §34：移动端 16:9；
  * - §9：轮播为主表面，圆角 12px（rounded-surface）；
  * - §38：预留图片尺寸、`object-fit: cover`、懒加载。
  *
- * 真实校园图片尚未接入（fixture 的 image.src 为空），此处以品牌中性深色背景预留图片区，
- * 文字叠加其上；接入真实媒体后再替换为图片 + 可读性 scrim（FE-013）。
+ * 图片比例：统一使用 16:9（`aspect-video`）画框，移动端与 PC 端一致，素材最易获得；
+ * 不同比例图片以 `object-fit: cover` 居中裁切填充，并可经 `image.position`（`object-position`）
+ * 微调裁切焦点。真实校园图片尚未接入（fixture 的 image.src 为空），以中性深色背景预留图片区，
+ * 文字叠加其上；接入真实媒体后由文案层（浅色 scrim）保证可读性（FE-013）。
  */
 const props = withDefaults(
   defineProps<{ slides?: CarouselSlide[] }>(),
@@ -86,9 +86,7 @@ const autoplay = computed(() => {
     }"
   >
     <template #default="{ item }">
-      <article
-        class="relative aspect-[16/9] overflow-hidden md:aspect-[2.8/1]"
-      >
+      <article class="relative aspect-video overflow-hidden">
         <div
           v-if="item.image.src"
           class="absolute inset-0"
@@ -97,6 +95,9 @@ const autoplay = computed(() => {
             :src="item.image.src"
             :alt="item.image.alt"
             class="size-full object-cover"
+            :style="{
+              objectPosition: item.image.position ?? 'center'
+            }"
             loading="lazy"
           >
         </div>
