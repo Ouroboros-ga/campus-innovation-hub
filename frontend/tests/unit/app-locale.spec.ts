@@ -1,5 +1,6 @@
 import ui from '@nuxt/ui/vue-plugin'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia } from 'pinia'
 import { describe, expect, it } from 'vitest'
 
 import App from '@/app/App.vue'
@@ -13,8 +14,8 @@ describe('应用语言', () => {
     const wrapper = mount(App, {
       attachTo: document.body,
       global: {
-        plugins: [router, ui]
-      }
+      plugins: [router, ui, createPinia()]
+    }
     })
 
     await wrapper.get('button[aria-label="打开确认对话框"]').trigger('click')

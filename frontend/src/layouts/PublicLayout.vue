@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GlobalSearch from '@/features/search/components/GlobalSearch.vue'
 import AppFooter from '@/shared/components/app/AppFooter.vue'
 import AppHeader from '@/shared/components/app/AppHeader.vue'
 </script>
@@ -10,5 +11,6 @@ import AppHeader from '@/shared/components/app/AppHeader.vue'
       <RouterView />
     </main>
     <AppFooter />
+    <GlobalSearch />
   </div>
 </template>
