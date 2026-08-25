@@ -82,7 +82,7 @@ UI 变更中，仅代码编译成功是不够的。
 | FE-004 应用外壳 | 已完成并提交 | 公开路由、Desktop Header、移动 Drawer、Footer、19 项测试与 `pnpm check` 通过；1440px 桌面与 390px 移动真实窄视口视觉验证通过；首页外壳与参考图对齐 | 无 |
 | FE-005 首页领域类型与 Fixtures | 已完成并提交 | 首页 9 类领域 View Model、首页 fixtures、共享日期/截止工具与 25 项单测通过；lint / typecheck / test / build 通过 | 无 |
 
-FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送。
+FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送；FE-005 已作为提交 `f7029da` 推送。
 
 ---
 
