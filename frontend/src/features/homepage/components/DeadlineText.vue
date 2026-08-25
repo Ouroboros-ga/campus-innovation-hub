@@ -18,7 +18,7 @@ const props = withDefaults(
     /** 测试用「当前时间」，默认取运行时 now。 */
     now?: Date
   }>(),
-  {}
+  { now: () => new Date() }
 )
 
 const nowDate = computed(() => props.now ?? new Date())

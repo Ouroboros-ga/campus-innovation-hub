@@ -34,6 +34,19 @@ describe('首页', () => {
     expect(wrapper.text()).toContain('查看全部')
   })
 
+  it('渲染社区与常见问题区块标题', () => {
+    const wrapper = mount(HomePage, {
+      global: {
+        plugins: [router, ui]
+      }
+    })
+
+    expect(wrapper.text()).toContain('正在组队')
+    expect(wrapper.text()).toContain('正在招新的组织')
+    expect(wrapper.text()).toContain('近期活动')
+    expect(wrapper.text()).toContain('常见问题')
+  })
+
   it('不渲染开发主题输入或空占位文案', () => {
     const wrapper = mount(HomePage, {
       global: {

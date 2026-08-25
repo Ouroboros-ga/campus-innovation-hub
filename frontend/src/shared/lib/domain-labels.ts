@@ -13,13 +13,17 @@
  */
 
 import type {
+  ActivityType,
   CompetitionCategory,
   CompetitionLevel,
   DeadlineKind,
   EventPhase,
+  FaqCategory,
   GuideCategory,
+  OrganizationType,
   ParticipationMode,
-  RegistrationState
+  RegistrationState,
+  TeamPostType
 } from '@/shared/types/homepage'
 
 /** 截止条目类型（竞赛 / 活动 / 招新）展示标签。 */
@@ -106,4 +110,78 @@ export const competitionCategoryIcon: Record<CompetitionCategory, string> = {
   ELECTRONICS: 'i-lucide-circuit-board',
   ROBOTICS: 'i-lucide-bot',
   OTHER: 'i-lucide-award'
+}
+
+/** 组队帖类型展示标签。 */
+export const teamPostTypeLabel: Record<TeamPostType, string> = {
+  TEAM_RECRUITING: '队伍招人',
+  PERSON_LOOKING: '寻找队伍'
+}
+
+/** 组队帖类型对应的 Lucide 图标名。 */
+export const teamPostTypeIcon: Record<TeamPostType, string> = {
+  TEAM_RECRUITING: 'i-lucide-users',
+  PERSON_LOOKING: 'i-lucide-user-search'
+}
+
+/** 组织类型展示标签。 */
+export const organizationTypeLabel: Record<OrganizationType, string> = {
+  COLLEGE_DEPARTMENT: '学院部门',
+  STUDENT_CLUB: '学生社团',
+  LABORATORY: '实验室',
+  INNOVATION_TEAM: '创新团队',
+  OTHER: '其他'
+}
+
+/** 组织类型对应的 Lucide 图标名（用于列表行图标）。 */
+export const organizationTypeIcon: Record<OrganizationType, string> = {
+  COLLEGE_DEPARTMENT: 'i-lucide-building-2',
+  STUDENT_CLUB: 'i-lucide-users',
+  LABORATORY: 'i-lucide-flask-conical',
+  INNOVATION_TEAM: 'i-lucide-lightbulb',
+  OTHER: 'i-lucide-network'
+}
+
+/** 活动类型展示标签。 */
+export const activityTypeLabel: Record<ActivityType, string> = {
+  COMPETITION_BRIEFING: '赛前宣讲',
+  TECH_SHARING: '技术分享',
+  RESEARCH_LECTURE: '科研讲座',
+  FURTHER_STUDY: '升学分享',
+  ENTERPRISE: '企业参访',
+  TRAINING: '培训',
+  OTHER: '活动'
+}
+
+/** 活动类型对应的 Lucide 图标名（用于列表行图标）。 */
+export const activityTypeIcon: Record<ActivityType, string> = {
+  COMPETITION_BRIEFING: 'i-lucide-presentation',
+  TECH_SHARING: 'i-lucide-monitor-play',
+  RESEARCH_LECTURE: 'i-lucide-microscope',
+  FURTHER_STUDY: 'i-lucide-graduation-cap',
+  ENTERPRISE: 'i-lucide-building',
+  TRAINING: 'i-lucide-book-open',
+  OTHER: 'i-lucide-calendar-days'
+}
+
+/** FAQ 分类展示标签。 */
+export const faqCategoryLabel: Record<FaqCategory, string> = {
+  COMPETITION: '竞赛',
+  TEAM: '组队',
+  ORGANIZATION: '组织',
+  ACTIVITY: '活动',
+  FURTHER_STUDY: '升学',
+  CERTIFICATE: '证书',
+  OTHER: '其他'
+}
+
+/** FAQ 分类对应的 Lucide 图标名（用于列表行图标）。 */
+export const faqCategoryIcon: Record<FaqCategory, string> = {
+  COMPETITION: 'i-lucide-trophy',
+  TEAM: 'i-lucide-users',
+  ORGANIZATION: 'i-lucide-building-2',
+  ACTIVITY: 'i-lucide-calendar-days',
+  FURTHER_STUDY: 'i-lucide-graduation-cap',
+  CERTIFICATE: 'i-lucide-award',
+  OTHER: 'i-lucide-circle-help'
 }

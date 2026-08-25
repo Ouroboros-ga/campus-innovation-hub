@@ -205,3 +205,24 @@ export function formatCompactDate(
     .format(date)
     .replace(/\//g, '.')
 }
+
+/** 紧凑日期时间，如「2026.09.02 19:00」，用于活动开始时间。 */
+export function formatDateTimeCompact(
+  value: string | null | undefined
+): string {
+  const date = toDate(value)
+  if (!date) return ''
+  const datePart = new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+    .format(date)
+    .replace(/\//g, '.')
+  const timePart = new Intl.DateTimeFormat('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(date)
+  return `${datePart} ${timePart}`
+}

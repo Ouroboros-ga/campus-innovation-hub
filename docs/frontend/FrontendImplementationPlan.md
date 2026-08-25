@@ -2,7 +2,7 @@
 
 > Project: campus-innovation-hub  
 > Version: 0.3  
-> Status: FE-001–FE-010 已完成并提交；当前执行 FE-011（首页社区区块）  
+> Status: FE-001–FE-011 已完成并提交；当前执行 FE-012（全局搜索外壳）  
 > Execution model: One task at a time（一次只执行一个任务）  
 > Primary executor: Human developer or Codex-style coding agent  
 > Locale: 简体中文（zh-CN）— 所有产品 UI 文案遵循 FrontendDesign.md §0.1
@@ -87,8 +87,9 @@ UI 变更中，仅代码编译成功是不够的。
 | FE-008 首页截止时间区块 | 已完成并提交 | 共享领域标签工具 `domain-labels.ts` 与紧凑日期 `formatCompactDate`；DeadlineText / DeadlineItem / DeadlineGrid；剩余时间由日期派生，紧急用文字 + 语义色（不只靠颜色）；单元测试覆盖未来 / 临近 / 已截止；`pnpm check` 全绿（62/62 测试、含生产路由集成测试） | 无 |
 | FE-009 首页竞赛区块 | 已完成并提交 | CompetitionCard / HomeCompetitionSection；默认封面受控模板（名称 + 分类处理 + 低调几何，不生成随机 AI 图）；最多 3 个徽标（级别 + 参赛形式 + 状态）；官网外链用 external-link 图标；单元测试覆盖状态派生与徽标上限；`pnpm check` 全绿 | 详情路由（卡片详情 / 官网）属 FE-020+；真实竞赛封面未接入，暂以受控默认封面 |
 | FE-010 首页信息栏 | 已完成并提交 | AnnouncementList / GuideList（列表而非卡片，单条底边分隔）；指南不显示虚构浏览量，只展示标题 / 类型 / 更新日期；单元测试覆盖列表结构；`pnpm check` 全绿 | 无 |
+| FE-011 首页社区区块 | 已完成并提交 | TeamRecruitmentList / OrganizationRecruitmentList / ActivityList / FaqList（均为紧凑列表而非卡片墙，单条底边分隔）；主栏三列社区 + 右侧栏常见问题；组队/组织/活动的招募与报名状态由日期或人数派生；不展示点赞 / 热度 / 回答数等虚构指标；`pnpm check` 全绿（67/67 测试、含生产路由集成测试） | 详情路由（组队 / 招新 / 活动 / Q&A）属对应 FE-0xx；真实 logo / 封面未接入，暂以图标占位 |
 
-FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送；FE-005 已作为提交 `f7029da` 推送；FE-006 已作为提交 `4a4ba4d` 推送；FE-007 已作为提交 `766e3c9` 推送；FE-008 / FE-009 / FE-010 已作为提交 `c1cc9ed` 推送。
+FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送；FE-005 已作为提交 `f7029da` 推送；FE-006 已作为提交 `4a4ba4d` 推送；FE-007 已作为提交 `766e3c9` 推送；FE-008 / FE-009 / FE-010 已作为提交 `c1cc9ed` 推送；FE-011 将作为后续提交推送。
 
 ---
 

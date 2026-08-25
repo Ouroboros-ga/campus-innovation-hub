@@ -48,7 +48,7 @@ describe('FE-006 首页 Hero 与快捷入口', () => {
     const quickLabels = ['找竞赛', '找队友', '找组织', '找活动']
     const hrefs = wrapper
       .findAll('main a')
-      .filter(link => quickLabels.some(label => link.text().includes(label)))
+      .filter(link => quickLabels.some(label => link.text().startsWith(label)))
       .map(link => link.attributes('href'))
     expect(hrefs).toEqual([
       '/competitions',
