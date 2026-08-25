@@ -357,6 +357,7 @@ createWebHistory()
  /organizations/:id/recruitments/:recruitmentId
  /activities
  /activities/:id
+ /activities/announcements/:announcementId
  /qa
 ```
 
@@ -369,7 +370,6 @@ createWebHistory()
 /me/applications
 /me/activities
 /me/questions
-/me/organizations
 /me/settings
 ```
 
@@ -390,8 +390,13 @@ createWebHistory()
 /ops/activities
 /ops/questions
 /ops/guides
-/ops/announcements
 ```
+
+`/activities` 的展示名为“校园动态”，通过 URL query `tab=all|activities|announcements` 在同一学生端一级入口内浏览活动与公告。`/activities/announcements/:announcementId` 是公告详情子路由，不构成一级导航。路由注册时必须先声明静态 `announcements` 子路径，再声明 `/activities/:id` 动态路径。
+
+`/organizations` 登录后按需展示“我的组织”上下文区块；`/me/organizations` 不存在。LEADER 从该区块携带具体 `organizationId` 进入 `/manage/organizations/:organizationId`；不能依赖无作用域的全局组织管理入口。
+
+`/ops/activities` 的展示名为“校园动态管理”，在页内管理活动与公告；前端不建立 `/ops/announcements` 页面路由，但仍通过各自的后端 API 管理两个领域。
 
 第一个前端里程碑不要求所有路由都存在。
 
@@ -457,6 +462,7 @@ Examples:
 /teams/:id         -> { mobileShell: 'detail' }
 /activities        -> { mobileShell: 'tab',    mobileTab: 'activities' }
 /activities/:id    -> { mobileShell: 'detail' }
+/activities/announcements/:announcementId -> { mobileShell: 'detail' }
 /me                -> { mobileShell: 'tab',    mobileTab: 'me' }
 /manage/*           -> { mobileShell: 'manage' }
 /ops/*              -> { mobileShell: 'manage' }
@@ -659,6 +665,13 @@ computed
 /competitions?status=open&category=ai&page=2
 ```
 
+校园动态同样使用 URL，而不以 Pinia 保存 tab 或筛选：
+
+```text
+/activities?tab=announcements&publisher_scope=UNIVERSITY&page=2
+/activities?tab=activities&status=OPEN&activity_type=TECH_SHARING
+```
+
 收益：
 
 - 浏览器后退可用
@@ -708,6 +721,7 @@ organizationStore
 - team posts（组队帖子）
 - organization data（组织数据）
 - activities（活动）
+- announcements（公告）
 - applications（申请）
 - FAQ / guides
 - notifications（通知）
@@ -1439,6 +1453,8 @@ type OrganizationRole = 'member' | 'leader'
 
 一个用户可以有多个组织成员关系。
 
+组织身份由 session API 提供，仅用于 `/organizations` 中“我的组织”区块和 LEADER 管理入口的 UX。后端仍必须在每个 `/api/manage/organizations/{organizationId}/…` 请求上验证具体组织作用域；前端不能从“看到进入管理按钮”推导出授权。
+
 不要把以下内容扁平化为全局应用角色：
 
 ```text
@@ -1672,6 +1688,8 @@ show badge
 load list on demand
 mark read
 ```
+
+`notifications` 是按用户定向的 Header 小铃铛与 `/notifications` 数据源。公开 Announcement 由校园动态 feature 读取，默认不写入 notification store；活动取消、提醒和申请状态等服务端流程可以提供指向活动或公告详情的 `action_path`。
 
 实时传输不是初始前端架构的一部分。
 

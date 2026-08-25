@@ -1069,7 +1069,7 @@ Approved five tabs:
 首页        House
 竞赛        Trophy
 组队        Users
-活动        CalendarDays
+动态        CalendarDays
 我的        CircleUser
 ```
 
@@ -1079,9 +1079,11 @@ Routes:
 /               -> 首页
 /competitions   -> 竞赛
 /teams          -> 组队
-/activities     -> 活动
+/activities     -> 校园动态
 /me             -> 我的
 ```
+
+`/activities` 的产品展示名为“校园动态”：页面内清晰区分可报名的“活动”和可阅读的“公告”。底部标签保持简短的“动态”，不新增第六个公告 tab。
 
 The bottom bar is intentionally limited to five high-frequency destinations.
 
@@ -1148,6 +1150,7 @@ Used for:
 /organizations/:id
 /organizations/:id/recruitments/:recruitmentId
 /activities/:id
+/activities/announcements/:announcementId
 ```
 
 Structure:
@@ -2005,6 +2008,15 @@ Use whitespace and one divider strategy.
 
 Do not create a vertical tower of oversized cards.
 
+校园动态的 Phone 列表遵循同一紧凑行模式，但活动与公告不可伪装为同一类型：
+
+```text
+活动：标题 + 时间 / 地点 + 报名状态
+公告：标题 + 来源 / 日期 + 可选站外原文标识
+```
+
+“全部 / 活动 / 公告”使用可见文字 tab、可见键盘焦点与明确选中态；不能依赖无提示横向滑动发现公告或筛选。
+
 ## 34.5 Phone Filters
 
 Desktop filter bars may become:
@@ -2058,6 +2070,8 @@ Recruitment Detail -> 申请加入
 Activity Detail    -> 报名参加
 Competition Detail -> 查看官网 / 查看组队 / 发布组队 depending on context
 ```
+
+公告详情没有 Sticky Mobile Action；若有 `external_url`，在正文后的普通链接/按钮区提供“查看原文”，并标记为站外跳转。
 
 Rules:
 

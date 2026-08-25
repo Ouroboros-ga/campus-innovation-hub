@@ -1,7 +1,7 @@
 # PageMap.md
 
 > 产品：人工智能学院科创与就业服务平台  
-> 文档版本：0.4  
+> 文档版本：0.5
 > 产品里程碑：V0.1  
 > Locale：简体中文（zh-CN）  
 > 用途：定义网站页面结构、主要区块、按钮、字段、页面操作与页面之间的跳转关系  
@@ -29,16 +29,18 @@
 │       └── 组队详情
 │
 ├── /organizations
-│   ├── 组织列表
+│   ├── 组织列表（登录且有身份时显示“我的组织”）
 │   └── /organizations/:id
 │       ├── 组织主页
 │       └── /organizations/:id/recruitments/:recruitmentId
 │           └── 招新详情
 │
 ├── /activities
-│   ├── 活动列表
-│   └── /activities/:id
+│   ├── 校园动态（全部 / 活动 / 公告）
+│   ├── /activities/:id
 │       └── 活动详情
+│   └── /activities/announcements/:announcementId
+│       └── 公告详情
 │
 ├── /qa
 │   ├── FAQ / 指南
@@ -61,7 +63,6 @@
 │   ├── /me/applications
 │   ├── /me/activities
 │   ├── /me/questions
-│   ├── /me/organizations
 │   └── /me/settings
 │
 ├── /manage/organizations/:organizationId
@@ -73,10 +74,10 @@
 └── /ops
     ├── 运营中心
     ├── /competitions
-    ├── /activities
+    ├── /activities（校园动态管理：活动 / 公告）
     ├── /questions
     ├── /guides
-    └── /announcements
+    └── 其余运营任务
 ```
 
 系统级管理：
@@ -188,7 +189,7 @@ Bottom Navigation：
 首页
 竞赛
 组队
-活动
+动态
 我的
 ```
 
@@ -202,6 +203,7 @@ Bottom Navigation：
 /organizations/:id
 /organizations/:id/recruitments/:recruitmentId
 /activities/:id
+/activities/announcements/:announcementId
 ```
 
 结构：
@@ -288,7 +290,7 @@ Logo
 竞赛
 社团组织
 组队广场
-活动
+校园动态
 咨询指南（Q&A）
 
 搜索
@@ -315,11 +317,11 @@ Logo
 
 ```text
 个人中心
-我的组织（有组织身份时）
-组织管理（是负责人时）
 平台运营（是 OPERATOR 时）
 退出登录
 ```
+
+“我的组织”固定从 `/organizations` 的登录态上下文区块进入；负责人也只能先选择自己负责的具体组织，再进入该组织工作台，避免 Header 出现无作用域的“组织管理”入口。
 
 Phone：
 
@@ -532,8 +534,8 @@ Enter -> 打开
 操作：
 
 ```text
-点击 -> 通知详情 / 关联页面
-查看全部
+点击 -> 公告详情 / 关联页面
+查看全部 -> /activities?tab=announcements
 ```
 
 ---
@@ -615,7 +617,7 @@ Enter -> 打开
 
 ```text
 查看活动
-查看全部
+查看全部 -> /activities?tab=activities
 ```
 
 ---
@@ -654,6 +656,7 @@ Quick Entry 2 x 2
 正在组队
 正在招新的组织
 近期活动
+最新公告
 指南 / FAQ
 Minimal Footer
 Bottom Navigation
@@ -1007,6 +1010,28 @@ V0.1 可不做草稿。
 
 # 组织列表 `/organizations`
 
+登录态上下文区块（仅有有效组织身份时显示，位于列表筛选之前）：
+
+```text
+H2：我的组织
+组织名称
+成员身份
+职位名称
+查看组织
+进入管理（仅 LEADER）
+```
+
+规则：
+
+```text
+无组织身份：整个区块不渲染，不显示空状态
+1–4 个组织：全部紧凑展示
+超过 4 个：显示“查看全部（n）”，原位展开 / 收起
+不使用横向滚动或滚动提示
+```
+
+MEMBER 只能进入组织主页；LEADER 的“进入管理”必须携带该项 `organizationId`，进入 `/manage/organizations/:organizationId`。这也是组织负责人进入管理工作的唯一产品入口。
+
 顶部：
 
 ```text
@@ -1070,14 +1095,6 @@ Banner
 当前招新
 ```
 
-负责人看到：
-
-```text
-[管理组织]
-```
-
----
-
 # 招新详情 `/organizations/:id/recruitments/:recruitmentId`
 
 顶部：
@@ -1133,20 +1150,51 @@ Banner
 
 ---
 
-# 活动列表 `/activities`
+# 校园动态 `/activities`
+
+页面展示名：
+
+```text
+校园动态
+```
+
+路由保持 `/activities`，不新增学生端“公告”一级导航。公开浏览状态由 URL query 表达：
+
+```text
+/activities?tab=all             默认
+/activities?tab=activities      活动
+/activities?tab=announcements   公告
+```
 
 顶部：
 
 ```text
-H1：活动中心
+H1：校园动态
 搜索
-状态筛选
-活动类型筛选
+全部 / 活动 / 公告
+```
+
+`tab=all` 按以下两个独立区块呈现，不把具有报名操作的活动和纯信息公告混成一种列表项：
+
+```text
+近期活动
+最新公告
 ```
 
 ---
 
-## 活动项
+## 活动列表 `tab=activities`
+
+筛选：
+
+```text
+报名中
+即将开始
+已结束
+活动类型
+```
+
+活动项：
 
 ```text
 封面
@@ -1163,6 +1211,32 @@ H1：活动中心
 ```text
 查看详情
 ```
+
+---
+
+## 公告列表 `tab=announcements`
+
+筛选：
+
+```text
+学院公告
+学校公告
+平台公告
+```
+
+公告项：
+
+```text
+来源
+标题
+摘要
+发布日期
+置顶状态（如存在）
+关联活动 / 竞赛 / 组织 / 招新（如存在）
+站外原文标识（如存在）
+```
+
+公告不是个人未读消息；点击进入公告详情。
 
 ---
 
@@ -1194,6 +1268,7 @@ H1：活动中心
 主讲人
 内容
 注意事项
+相关公告
 ```
 
 按钮未报名：
@@ -1220,6 +1295,21 @@ H1：活动中心
 ```text
 报名已结束
 ```
+
+---
+
+# 公告详情 `/activities/announcements/:announcementId`
+
+```text
+来源（学院 / 学校 / 平台）
+标题
+发布日期
+公告正文
+查看原文（有 external_url 时）
+查看关联对象（有关联对象时）
+```
+
+`查看原文` 是明确的站外跳转，不抓取、镜像或 iframe 嵌入学校官网内容。
 
 ---
 
@@ -1340,6 +1430,8 @@ Tab / 分类：
 
 # 消息中心 `/notifications`
 
+Header 小铃铛进入本页。它只展示当前登录用户的个人消息，不混入学院、学校或平台的公开公告。
+
 筛选：
 
 ```text
@@ -1395,7 +1487,6 @@ Avatar
 我的申请
 我的活动
 我的咨询
-我的组织
 账号设置
 ```
 
@@ -1532,32 +1623,6 @@ Tab：
 ```
 
 ---
-
-# 我的组织 `/me/organizations`
-
-组织身份卡：
-
-```text
-组织
-身份
-职位名称
-```
-
-成员：
-
-```text
-查看组织
-```
-
-负责人：
-
-```text
-查看组织
-进入管理
-```
-
----
-
 
 # 账号设置 `/me/settings`
 
@@ -1810,9 +1875,32 @@ SUPERADMIN
 
 ---
 
-# 运营活动管理 `/ops/activities`
+# 校园动态管理 `/ops/activities`
 
-表格：
+该页是 OPERATOR / SUPERADMIN 的统一发布与管理入口，页面内使用：
+
+```text
+活动
+公告
+```
+
+tab，而不是新增 `/ops/announcements` 前端页面路由。两个 tab 调用各自的 API 与管理字段，不能把 Activity 和 Announcement 合并成一个通用表。
+
+主操作：
+
+```text
+发布动态
+```
+
+发布动态打开类型选择：
+
+```text
+发布活动
+发布公告
+发布活动并同步生成关联公告
+```
+
+活动 tab 表格：
 
 ```text
 名称
@@ -1823,7 +1911,7 @@ SUPERADMIN
 主办组织
 ```
 
-操作：
+活动操作：
 
 ```text
 发布
@@ -1833,6 +1921,27 @@ SUPERADMIN
 结束
 导出名单
 ```
+
+公告 tab 表格：
+
+```text
+来源
+标题
+发布时间
+状态
+关联对象
+站外原文
+```
+
+公告操作：
+
+```text
+发布
+编辑
+归档
+```
+
+“发布活动并同步生成关联公告”由后端一个事务完成；失败时不可留下只创建活动或只创建公告的半成品。
 
 ---
 
@@ -1885,27 +1994,6 @@ SUPERADMIN
 新建
 编辑
 发布
-归档
-```
-
----
-
-# 通知管理 `/ops/announcements`
-
-列表：
-
-```text
-标题
-发布时间
-状态
-关联对象
-```
-
-操作：
-
-```text
-发布
-编辑
 归档
 ```
 
@@ -2112,6 +2200,7 @@ Empty / Error
 
 ```text
 标题
+我的组织（有有效身份时，至多 4 项 + 查看全部）
 搜索 / 类型 / 招新筛选
 组织列表
 分页
@@ -2125,7 +2214,6 @@ Empty / Error
 负责人 / 指导老师 / 公开联系方式
 当前招新
 近期活动
-负责人管理入口
 ```
 
 ### `Recruitment Detail`
@@ -2141,10 +2229,12 @@ Empty / Error
 ### `/activities`
 
 ```text
-标题
-搜索 / 状态 / 类型筛选
-活动列表
-分页
+校园动态标题
+全部 / 活动 / 公告
+搜索
+当前 tab 的筛选
+活动或公告列表
+分页（单独 tab）
 ```
 
 ### `/activities/:id`
@@ -2156,6 +2246,15 @@ Empty / Error
 主讲人
 注意事项
 报名信息
+```
+
+### `/activities/announcements/:announcementId`
+
+```text
+来源 + 标题 + 日期
+公告正文
+关联对象入口（如存在）
+站外原文入口（如存在）
 ```
 
 ### `/qa`
@@ -2298,6 +2397,19 @@ Phone 上以下操作使用独立任务页或全屏任务面：
 
 ## 手机运营与组织管理
 
+`/organizations` 仍是 Phone 根级 Tab Shell；“我的组织”只在存在身份时置于组织列表前方。成员点按进入组织主页，负责人点按“进入管理”后切换到管理 Shell，不能同时保留全局 Bottom Navigation。
+
+Phone 的校园动态：
+
+```text
+底部导航标签：动态
+页面内：全部 / 活动 / 公告
+活动项：紧凑行 + 时间 / 地点 / 报名状态
+公告项：紧凑行 + 来源 / 日期 / 外链标识
+```
+
+tab 必须有可见文字、选中态与键盘可达性；不把关键 tab 或筛选隐藏在无提示的横向滑动区域。活动详情与公告详情均使用 Back Header；只有可报名活动才有 Sticky Bottom Action。
+
 组织负责人常见操作必须在 Phone 可完成：
 
 ```text
@@ -2307,6 +2419,8 @@ Phone 上以下操作使用独立任务页或全屏任务面：
 发布 / 结束招新
 编辑组织基础资料
 ```
+
+负责人和运营长表单（新建招新、发布动态、编辑活动、编辑公告）使用独立任务页或全屏任务面，不放进小 Modal。
 
 Platform Operations：
 
@@ -2323,6 +2437,8 @@ Phone 不展示 8–10 列横向巨型表格。
 summary row / list
 -> detail / edit
 ```
+
+运营“校园动态管理”在 Phone 先选择“活动 / 公告”tab；各记录降级为摘要行，点击后进入详情或编辑任务页。报名名单、申请处理和长正文编辑不得通过横向巨型表格完成。
 
 ---
 

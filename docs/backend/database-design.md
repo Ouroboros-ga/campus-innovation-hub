@@ -6,7 +6,7 @@
 > 产品里程碑：V0.1  
 > 数据库：PostgreSQL  
 > ORM：Django ORM  
-> 状态：Database Baseline  
+> 状态：Database Baseline（BE-000 已冻结）
 > 文档职责：定义 V0.1 领域模型、数据库表、字段、约束、索引、状态机、隐私边界、删除策略和 Migration 规则  
 > 上游事实来源：`docs/product/PRD.md`、`docs/product/PageMap.md`  
 > 下游约束对象：Django Models、DRF Schema、Frontend Domain Types、APIContract、Migration、测试
@@ -352,7 +352,7 @@ body_md
 answer_md
 ```
 
-禁止数据库保存未经审核的任意 HTML 作为正式正文来源。
+禁止数据库保存未经审核的任意 HTML 作为正式正文来源。V0.1 Markdown renderer 必须默认禁用 raw HTML；Markdown 转换出的 HTML 在渲染边界必须 sanitize。API 只传输 Markdown source，不传输未经清洗的 HTML。
 
 渲染：
 
@@ -589,6 +589,9 @@ index(platform_role, is_active)
 ### 规则
 
 - 学生注册必须提供 `student_no` 和 `real_name`；
+- 自助注册时 `username = student_no`，创建 `platform_role = STUDENT`、`is_active = false` 的 User，并在同一事务创建 UserProfile；
+- `is_active = false` 表示账号不可登录，可能是待审核或被停用；公开认证错误不得区分两种内部原因；
+- 仅 Django Admin 中的 SUPERADMIN 启用待审核账号；V0.1 不建立注册审核表、学生名单校验、学校统一认证或自助密码重置；
 - 系统维护账号可以 `student_no = null`；
 - OPERATOR 不自动拥有 Django Admin 权限；
 - 禁用账号不删除历史业务数据。
@@ -643,13 +646,15 @@ Serializer 必须校验：
 
 PostgreSQL 不保存二进制文件。
 
-真实文件：
+真实文件使用如下已冻结的对象存储接口：
 
 ```text
-Object Storage
+ObjectStorage
+├─ LocalStorageBackend（仅 development）
+└─ S3CompatibleStorageBackend（production）
 ```
 
-数据库只保存元数据与 object key。
+数据库只保存元数据与 object key。生产使用托管 S3-compatible 服务，按部署环境选择 OSS、COS、R2、S3 或其他兼容服务；不得在 2C2G 应用服务器自建 MinIO。
 
 | 字段 | 类型 | Null | 约束 |
 |---|---|---:|---|
@@ -700,6 +705,17 @@ avif（浏览器 / 处理链支持时）
 ```
 
 前后端限制必须一致，服务端是最终权威。
+
+### 存储与公开 DTO 边界
+
+业务代码通过 ObjectStorage 的保存、公开 URL 获取与删除语义操作对象，不得在 Competition、Activity、Organization 或 Serializer 中直接调用云厂商 SDK。`object_key`、`sha256`、创建者、状态和供应商信息是内部元数据；公开 API 中的 MediaRef 只返回：
+
+```json
+{
+  "id": "uuid",
+  "url": "https://media.example.edu/path/image.webp"
+}
+```
 
 ---
 
@@ -1578,6 +1594,7 @@ Service 校验 link_type 与 URL 字段匹配。
 | `publication_state` | varchar(20) | 否 |
 | `published_at` | timestamptz | 是 |
 | `is_pinned` | bool | 否 |
+| `publisher_scope` | varchar(20) | 否 |
 | `competition_id` | uuid | 是 |
 | `activity_id` | uuid | 是 |
 | `organization_id` | uuid | 是 |
@@ -1596,6 +1613,27 @@ PUBLISHED
 ARCHIVED
 ```
 
+### publisher_scope
+
+```text
+ACADEMY      学院公告
+UNIVERSITY   学校公告
+PLATFORM     平台公告
+```
+
+`publisher_scope` 表示公告的正式发布来源，不从是否存在关联对象或外链推断。它用于公开列表的来源标识与筛选；发布者用户仍由 `created_by_id` / `updated_by_id` 记录。
+
+### 外链规则
+
+`external_url` 可为空：
+
+```text
+有 external_url：平台保存简短导读或完整 Markdown 正文，向用户明确显示“查看原文”的站外跳转。
+无 external_url：公告正文完全由平台 Markdown 承载。
+```
+
+平台不抓取、镜像或 iframe 嵌入学校官网正文；外部 URL 不是平台内容事实来源，也不替代 `body_md` 的安全渲染边界。
+
 ### 关系约束
 
 一个 Announcement 最多直接关联一个核心业务对象。
@@ -1610,6 +1648,8 @@ recruitment_id
 ```
 
 非 null 数量 <= 1。
+
+全部关联字段为空是合法的学院、学校或平台通用公告。若 `activity_id` 非空，该 Announcement 是活动的相关公告；Activity 仍是时间、地点、报名和容量的唯一事实来源，Announcement 不复制这些可变事实字段。
 
 ### 索引
 
@@ -1652,6 +1692,16 @@ PROCESS
 EXPERIENCE
 OTHER
 ```
+
+publication_state：
+
+```text
+DRAFT
+PUBLISHED
+ARCHIVED
+```
+
+只有 `PUBLISHED` Guide 出现在公开列表、详情、首页与相关竞赛内容中。`published_at` 在首次发布时由服务端写入；归档不清除该时间，且不再对公众可读。
 
 索引：
 
@@ -1706,6 +1756,28 @@ unique(guide_id, competition_id)
 | `updated_at` | timestamptz | 否 |
 
 不保存虚假的浏览量作为排序依据。
+
+category：
+
+```text
+COMPETITION
+RESEARCH
+FURTHER_STUDY
+CERTIFICATE
+PROCESS
+EXPERIENCE
+OTHER
+```
+
+publication_state：
+
+```text
+DRAFT
+PUBLISHED
+ARCHIVED
+```
+
+只有 `PUBLISHED` FAQ 可由公开 FAQ、首页 FAQ 和全站搜索读取。FAQ 没有独立 `published_at`，公开排序仍以 `sort_order` 和更新规则决定。
 
 ---
 
@@ -1849,6 +1921,8 @@ team-application:<application_id>:submitted
 ```
 
 V0.1 不使用 WebSocket。
+
+`notifications_notification` 是按 `recipient_id` 定向的个人消息，不是公开公告的副本。发布 `content_announcement` 默认不创建 Notification；仅活动取消、活动临近、申请状态变化等明确的受影响人群流程创建个人消息。个人消息可用 `action_path` 跳到活动详情或校园动态中的公告详情。
 
 ---
 
@@ -2033,6 +2107,39 @@ CLOSED
 
 ---
 
+## 19.7 Activity
+
+```text
+DRAFT
+  |
+  v
+PUBLISHED
+  | \
+  |  -> CANCELLED
+  |
+  -> ARCHIVED
+
+CANCELLED -> ARCHIVED
+```
+
+`registration_state` 与 `event_phase` 始终从时间、容量和 `publication_state` 派生，不作为写入状态。活动取消时拒绝新的报名，并由 Service 为已报名用户创建定向 Notification；普通发布和归档不产生面向全体用户的 Notification。
+
+## 19.8 Announcement / Guide / FAQ
+
+```text
+DRAFT
+  |
+  v
+PUBLISHED
+  |
+  v
+ARCHIVED
+```
+
+这三类内容只能通过运营 action endpoint 改变 `publication_state`；普通 PATCH 不接受该字段。公开 Announcement 默认不创建 Notification，Guide/FAQ 发布也不创建个人 Notification。
+
+---
+
 # 20. 表单字段约束
 
 这些是前后端共同校验下限。
@@ -2143,7 +2250,7 @@ announcement.body_md   1–20000
 关注竞赛
 发布组队
 申请队伍
-申请组织
+提交招新申请
 活动报名
 提交咨询
 ```
@@ -2433,6 +2540,8 @@ Important followed competition announcement
 Competition deadline reminder（如启用定时任务）
 Activity upcoming reminder（如启用定时任务）
 ```
+
+发布公开 Announcement 本身不在此列表中：它先进入校园动态的公告浏览面；只有上述明确的受影响人群规则，或后续经单独批准的定向系统消息，才创建 `notifications_notification`。
 
 没有 Redis / Celery 也可以：
 
@@ -2839,16 +2948,16 @@ API Contract 可以隐藏数据库内部字段，但不得与数据库业务语�
 
 开始写 Django Models 前必须完成：
 
-- [ ] `AUTH_USER_MODEL` 冻结
+- [x] `AUTH_USER_MODEL = accounts.User` 已冻结，且首条业务 Migration 必须使用 Custom User
 - [ ] PostgreSQL 开发环境可用
-- [ ] 本文 25 张业务表无范围争议
+- [x] 本文 25 张业务表无范围争议
 - [ ] 枚举值写入代码常量 / TextChoices
 - [ ] 所有 Unique / Check Constraint 命名
 - [ ] `on_delete` 明确
-- [ ] Markdown 内容渲染策略明确
-- [ ] Object Storage 接口明确
+- [x] Markdown 内容渲染策略明确：Markdown canonical source、raw HTML 禁用、HTML render boundary sanitize
+- [x] Object Storage 接口明确：development 使用 LocalStorageBackend，production 使用 S3CompatibleStorageBackend
 - [ ] Migration 测试使用 PostgreSQL
-- [ ] 申请通过与活动报名事务方案有测试计划
+- [x] 申请通过与活动报名事务方案已有测试计划（BackendImplementationPlan.md 的 BE-005 / BE-006）
 
 ---
 

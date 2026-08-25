@@ -2,19 +2,19 @@
 
 > 产品：人工智能学院科创与就业服务平台  
 > 仓库：`campus-innovation-hub`  
-> 文档版本：0.1  
-> 状态：Draft（草稿，供前后端并行开发评审）  
+> 文档版本：1.0
+> 状态：Canonical Contract（BE-000 已冻结，待后端实现）
 > 产品里程碑：V0.1  
 > 传输协议：REST / JSON over HTTPS  
 > 上游事实来源：`docs/backend/database-design.md`（字段与约束）、`docs/product/PageMap.md`（页面与操作）、`docs/product/PRD.md`（业务规则）  
 > 下游约束对象：前端 `src/shared/api`（HTTP 客户端）、Feature API 模块、Frontend Domain Types（FE-005）、后端 DRF Serializer / View / Service  
-> 职责：冻结 V0.1 全部 HTTP 接口的 method、path、请求 / 响应结构、权限、分页、排序、错误形状与日期格式
+> 职责：冻结 V0.1 全部 HTTP 接口的 method、path、请求 / 响应结构、权限、分页、排序、错误形状与日期格式；逐端点字段见 [`EndpointReference.md`](EndpointReference.md)
 
 ---
 
 # 0. 文档职责与冲突处理
 
-本文件是 V0.1 传输层（transport layer）的事实来源。
+本文件是 V0.1 传输层（transport layer）的总览事实来源；[`EndpointReference.md`](EndpointReference.md) 是同一契约的逐端点细化参考。
 
 它回答：
 
@@ -40,7 +40,8 @@
 1. 字段语义以 `database-design.md` 为数据库依据，本文件不得与其矛盾；
 2. API 可以隐藏数据库内部字段（不暴露），但不得发明数据库不存在的"持久字段"语义；
 3. 页面操作归属以 `PageMap.md` 为准；本文件只是它的传输表达；
-4. 本文件变更必须先评审，再同步修改前端 API 模块与后端 Serializer，禁止单侧静默修改。
+4. 本文件与 `EndpointReference.md` 共同变更并先评审，再同步修改前端 API 模块与后端 Serializer，禁止单侧静默修改；
+5. 两份 API 文档内部冲突时，以更具体的 `EndpointReference.md` 为准，但两者都不得违背 `database-design.md`。
 
 ---
 
@@ -70,7 +71,7 @@ https://platform.example.edu/api/*
 
 ## 1.2 认证（Auth Expectation）
 
-方向已冻结，细节待认证设计评审：
+认证方案已冻结：
 
 ```text
 HttpOnly secure session cookie
@@ -82,7 +83,10 @@ HttpOnly secure session cookie
 - 登录状态通过 cookie 自动携带，前端不手动附加 token；
 - 前端对写请求（POST / PATCH / DELETE）必须附带 `X-CSRFToken`；
 - 未登录写请求返回 `401`；
-- 认证方案冻结前，`auth/login`、`auth/logout` 的行为以占位形式给出（见 §3.1），其余端点不依赖其细节；
+- `GET /api/auth/csrf` 负责确保浏览器获得 CSRF cookie；
+- `POST /api/auth/register` 只创建 `is_active=false` 的待审核账号，注册成功不创建 Session；
+- Django Admin 中的 SUPERADMIN 启用账号后才可登录；
+- 所有 inactive 账号登录统一返回 `403 ACCOUNT_UNAVAILABLE`，不暴露待审核、停用或其他内部原因；
 - 禁止在 localStorage / sessionStorage / Pinia 持久化认证密钥。
 
 ## 1.3 权限模型与标注
@@ -246,6 +250,22 @@ SENSITIVE   仅本人或必要运营人员
 - `contact_value`（组队联系方式）、真实姓名、学号等仅在申请通过后的"必要对象可见"场景返回；
 - PRIVATE 咨询仅本人 / OPERATOR / SUPERADMIN 可见，其余一律 `404`。
 
+## 1.11 媒体引用（MediaRef）
+
+公开响应中的图片统一使用语义化字段名承载 `MediaRef`，例如 `cover`、`logo`、`banner`、`avatar`、`image`：
+
+```json
+{
+  "id": "uuid",
+  "url": "https://media.example.edu/path/image.webp"
+}
+```
+
+- `url` 是当前可公开访问的资源地址；
+- `object_key`、`sha256`、存储供应商、创建者与删除状态均为内部 MediaAsset 元数据，不出现在公开 DTO 或上传响应；
+- 写入 body 仍可使用明确命名的 `cover_asset_id`、`logo_asset_id`、`banner_asset_id`、`avatar_asset_id`，其值必须是已存在且可用的 MediaAsset UUID；
+- 未配置媒体时，相关 `MediaRef` 返回 `null`。
+
 ---
 
 # 2. 端点总览
@@ -264,20 +284,22 @@ GET  /api/organizations/{id}/recruitments           组织招新列表
 GET  /api/recruitments/{id}                         招新详情
 GET  /api/activities                                活动列表
 GET  /api/activities/{id}                           活动详情
-GET  /api/announcements                             通知公告列表
-GET  /api/announcements/{id}                        通知公告详情
+GET  /api/announcements                             公告列表
+GET  /api/announcements/{id}                        公告详情
 GET  /api/guides                                    指南列表
 GET  /api/guides/{id}                               指南详情
-GET  /api/faq                                       FAQ 列表
+GET  /api/faqs                                      FAQ 列表
 GET  /api/qa/public                                 公开问答列表
 GET  /api/search                                    全站搜索
 ```
 
-## 2.2 认证与个人域（LOGIN）
+## 2.2 认证与个人域
 
 ```text
-POST /api/auth/login                                登录（占位）
-POST /api/auth/logout                               登出（占位）
+GET  /api/auth/csrf                                 初始化 CSRF cookie（PUBLIC）
+POST /api/auth/register                             注册并提交审核（PUBLIC）
+POST /api/auth/login                                登录（PUBLIC）
+POST /api/auth/logout                               登出（LOGIN）
 GET  /api/auth/me                                   当前用户 + 权限上下文
 GET  /api/me                                        个人中心概览
 GET  /api/me/profile                                我的资料（读取）
@@ -303,8 +325,8 @@ GET    /api/teams/{id}/applications                 查看申请（作者）
 POST   /api/team-applications/{id}/accept           接受申请（作者）
 POST   /api/team-applications/{id}/reject           拒绝申请（作者）
 POST   /api/team-applications/{id}/withdraw         撤回申请（申请人）
-POST   /api/organizations/{id}/applications         申请加入组织
 POST   /api/recruitments/{id}/applications          提交招新申请
+POST   /api/recruitment-applications/{id}/withdraw  撤回招新申请（申请人）
 POST   /api/activities/{id}/register                报名活动
 POST   /api/activities/{id}/cancel-registration     取消报名
 POST   /api/consultations                           提交咨询
@@ -316,7 +338,7 @@ POST   /api/notifications/read-all                  全部已读
 POST   /api/media/upload                            图片上传
 ```
 
-## 2.4 组织管理域（LEADER(org) / OPERATOR / SUPERADMIN）
+## 2.4 组织管理域（LEADER(org) / SUPERADMIN）
 
 ```text
 GET    /api/manage/organizations/{orgId}/profile                 组织资料读取
@@ -328,6 +350,7 @@ PATCH  /api/manage/organizations/{orgId}/recruitments/{rid}      编辑招新
 POST   /api/manage/organizations/{orgId}/recruitments/{rid}/publish      发布招新
 POST   /api/manage/organizations/{orgId}/recruitments/{rid}/cancel       取消招新
 POST   /api/manage/organizations/{orgId}/recruitments/{rid}/complete     标记完成
+POST   /api/manage/organizations/{orgId}/recruitments/{rid}/archive      归档招新
 GET    /api/manage/organizations/{orgId}/applications            申请管理列表
 POST   /api/manage/organizations/{orgId}/applications/{aid}/accept      接受申请
 POST   /api/manage/organizations/{orgId}/applications/{aid}/reject      拒绝申请
@@ -356,9 +379,12 @@ GET    /api/ops/activities/{id}                   管理详情
 PATCH  /api/ops/activities/{id}                   编辑活动
 POST   /api/ops/activities/{id}/publish           发布
 POST   /api/ops/activities/{id}/cancel            取消
+POST   /api/ops/activities/{id}/archive           归档
 POST   /api/ops/activities/{id}/close-registration 关闭报名
+PATCH  /api/ops/activities/{id}/featured          设置 / 取消推荐
 GET    /api/ops/activities/{id}/registrations     报名名单
 POST   /api/ops/activities/{id}/export-registrations 导出名单
+POST   /api/ops/dynamics/activity-with-announcement 同步创建活动与关联公告
 
 咨询：
 GET    /api/ops/consultations                     咨询管理列表
@@ -366,15 +392,28 @@ GET    /api/ops/consultations/{id}                咨询详情
 POST   /api/ops/consultations/{id}/replies        回复咨询
 
 内容：
+GET    /api/ops/guides                            管理列表
+GET    /api/ops/guides/{id}                       管理详情
 POST   /api/ops/guides                            新建指南
 PATCH  /api/ops/guides/{id}                       编辑指南
 POST   /api/ops/guides/{id}/publish               发布
 POST   /api/ops/guides/{id}/archive               归档
+PATCH  /api/ops/guides/{id}/featured              设置 / 取消推荐
+GET    /api/ops/faq                               管理列表
+GET    /api/ops/faq/{id}                          管理详情
 POST   /api/ops/faq                               新建 FAQ
 PATCH  /api/ops/faq/{id}                          编辑 FAQ
-POST   /api/ops/announcements                     发布通知
-PATCH  /api/ops/announcements/{id}                编辑通知
+POST   /api/ops/faq/{id}/publish                  发布
+POST   /api/ops/faq/{id}/archive                  归档
+PATCH  /api/ops/faq/{id}/featured                 设置 / 取消推荐
+GET    /api/ops/announcements                     管理列表
+GET    /api/ops/announcements/{id}                管理详情
+POST   /api/ops/announcements                     创建公告
+PATCH  /api/ops/announcements/{id}                编辑公告
+POST   /api/ops/announcements/{id}/publish        发布
 POST   /api/ops/announcements/{id}/archive        归档
+GET    /api/ops/banners                           管理列表
+GET    /api/ops/banners/{id}                      管理详情
 POST   /api/ops/banners                           新建轮播
 PATCH  /api/ops/banners/{id}                      编辑轮播
 
@@ -388,14 +427,14 @@ Django Admin（不开发独立管理前端）
 
 ```text
 banners      <= 4
-deadline     <= 6
-featured     <= 8（热门竞赛）
+deadlines    <= 6
+featured_competitions <= 8（热门竞赛）
 announcements <= 6
-guides       <= 6
-teams        <= 6
-organizations <= 6
+featured_guides <= 6
+team_posts   <= 6
+recruiting_organizations <= 6
 activities   <= 6
-faq          <= 6
+faqs         <= 6
 ```
 
 响应结构：
@@ -403,24 +442,63 @@ faq          <= 6
 ```json
 {
   "banners": [],
-  "deadline": [],
+  "deadlines": [],
   "featured_competitions": [],
   "announcements": [],
-  "guides": [],
+  "featured_guides": [],
   "team_posts": [],
   "recruiting_organizations": [],
   "activities": [],
-  "faq": []
+  "faqs": []
 }
 ```
 
-各模块条目结构与对应列表端点一致。首页聚合端点 PUBLIC。
+各模块条目结构与对应列表端点一致。`GET /api/home` 是 PUBLIC Read Model，不对应数据库表，后端负责限数、排序和关联预取；前端不得以九个首屏请求替代该端点。
 
 ---
 
 # 3. 端点详情
 
-## 3.1 Auth（占位）
+## 3.1 Auth
+
+### 初始化 CSRF
+
+```text
+GET /api/auth/csrf
+权限：PUBLIC
+```
+
+Response `204`：通过 `Set-Cookie` 确保浏览器具有 CSRF cookie。前端从 cookie 读取值，并在后续 `POST` / `PATCH` / `DELETE` 请求中以 `X-CSRFToken` 发送；该 cookie 不是登录凭据。
+
+### 注册并提交审核
+
+```text
+POST /api/auth/register
+权限：PUBLIC
+```
+
+Request body：
+
+```json
+{
+  "student_no": "20240001",
+  "real_name": "张三",
+  "password": "***"
+}
+```
+
+后端在一个事务内创建 `accounts.User` 与 `accounts.UserProfile`：`username` 固定等于 `student_no`，`platform_role=STUDENT`，`is_active=false`。注册成功不创建 Session。
+
+Response `201`：
+
+```json
+{
+  "status": "pending_approval",
+  "message": "注册已提交，请等待管理员审核。"
+}
+```
+
+错误：`400`（字段校验）、`409 ACCOUNT_EXISTS`（学号或用户名已存在）。响应不得泄露已有账号的审核状态、真实姓名或其他资料。SUPERADMIN 仅通过 Django Admin 启用账号；V0.1 不提供邮件、短信、验证码、学生名单校验或自助密码重置 API。
 
 ### 登录
 
@@ -429,7 +507,7 @@ POST /api/auth/login
 权限：PUBLIC
 ```
 
-Request body（占位，认证方案冻结后可能调整）：
+Request body：
 
 ```json
 {
@@ -440,7 +518,7 @@ Request body（占位，认证方案冻结后可能调整）：
 
 Response `200`：登录成功，Set-Cookie session。Body 返回 `GET /api/auth/me` 结构。
 
-错误：`401`（凭据错误）、`403`（账号停用）。
+错误：`401`（凭据错误）；所有 inactive 账号统一返回 `403`、code `ACCOUNT_UNAVAILABLE`、message `账号尚未启用，请联系管理员。`，不区分待审核和停用。
 
 ### 登出
 
@@ -471,7 +549,7 @@ Response `200`：
     "is_superuser": false,
     "profile": {
       "nickname": "阿三",
-      "avatar_asset_id": null,
+      "avatar": null,
       "major": "人工智能",
       "grade": 2,
       "bio": "",
@@ -615,6 +693,8 @@ results：
 }
 ```
 
+此 API 是 `/organizations` 页面登录态“我的组织”上下文区块的数据来源，不对应 `/me/organizations` 独立前端路由。没有有效组织身份时返回空数组；LEADER 用 `organization_id` 进入对应的组织负责人工作台。
+
 ## 3.3 Competitions（竞赛）
 
 ### 竞赛列表
@@ -656,7 +736,10 @@ results 列表项：
   "suitable_grade_max": 4,
   "direction": "数学建模",
   "summary": "……",
-  "cover_asset_id": "uuid",
+  "cover": {
+    "id": "uuid",
+    "url": "https://media.example.edu/competition-cover.webp"
+  },
   "registration_start_at": "2026-09-01T00:00:00+08:00",
   "registration_end_at": "2026-10-01T23:59:59+08:00",
   "event_start_at": "2026-11-01T00:00:00+08:00",
@@ -755,7 +838,7 @@ results 列表项：
   "author": {
     "id": "uuid",
     "nickname": "阿三",
-    "avatar_asset_id": null
+    "avatar": null
   },
   "created_at": "2026-09-01T10:00:00+08:00"
 }
@@ -886,7 +969,10 @@ results 列表项：
   "name": "人工智能协会",
   "organization_type": "STUDENT_CLUB",
   "short_intro": "……",
-  "logo_asset_id": "uuid",
+  "logo": {
+    "id": "uuid",
+    "url": "https://media.example.edu/organization-logo.webp"
+  },
   "is_recruiting": true
 }
 ```
@@ -965,14 +1051,14 @@ Request body：
 
 约束：`self_intro` 5-3000、`motivation` 5-3000。重复有效申请返回 `409`（partial unique）。
 
-### 申请加入组织（无招新时）
+### 撤回招新申请
 
 ```text
-POST /api/organizations/{id}/applications
-权限：LOGIN
+POST /api/recruitment-applications/{id}/withdraw
+权限：LOGIN（申请人）
 ```
 
-与招新申请同结构；组织无对应招新时由后端按该组织默认流程处理（V0.1 若组织仅通过招新接收成员，本端点返回 `422`，code `NO_ACTIVE_RECRUITMENT`）。此行为需在评审时与 PRD 对齐。
+仅 `PENDING` 状态的申请可撤回，成功 `204`；非申请人返回 `403`，申请不存在或按隐私隐藏返回 `404`，非 `PENDING` 返回 `409 INVALID_STATE`。V0.1 不提供直接申请组织端点；唯一正规链路是 Organization -> Recruitment -> RecruitmentPosition -> RecruitmentApplication。
 
 ## 3.6 Activities（活动）
 
@@ -1000,7 +1086,10 @@ results 列表项：
   "location": "信息楼 A101",
   "start_at": "2026-09-10T14:00:00+08:00",
   "end_at": "2026-09-10T16:00:00+08:00",
-  "cover_asset_id": "uuid",
+  "cover": {
+    "id": "uuid",
+    "url": "https://media.example.edu/activity-cover.webp"
+  },
   "registration_required": true,
   "registration_state": "OPEN",
   "capacity": 100,
@@ -1039,7 +1128,7 @@ POST /api/activities/{id}/cancel-registration
 ```text
 GET /api/announcements
 权限：PUBLIC
-Query: q, page, page_size
+Query: q, publisher_scope, page, page_size
 ```
 
 results 列表项：
@@ -1051,6 +1140,8 @@ results 列表项：
   "summary": "……",
   "published_at": "2026-08-30T09:00:00+08:00",
   "is_pinned": true,
+  "publisher_scope": "ACADEMY | UNIVERSITY | PLATFORM",
+  "external_url": "https://www.example.edu/notice/2026-01",
   "linked_object": {
     "type": "COMPETITION",
     "id": "uuid",
@@ -1059,7 +1150,9 @@ results 列表项：
 }
 ```
 
-详情 `GET /api/announcements/{id}` 返回 `body_md` 全文。
+`linked_object` 可为 `null`，表示学院、学校或平台的通用公告。`external_url` 可为 `null`；有值时前端将其呈现为明确的站外“查看原文”操作，不抓取、镜像或嵌入站外正文。
+
+详情 `GET /api/announcements/{id}` 返回列表字段和 `body_md` 全文。公开公告供校园动态页浏览；它不会因为发布而自动出现在任何用户的 `/api/notifications` 列表中。
 
 ### 指南
 
@@ -1075,7 +1168,7 @@ GET /api/guides/{id}
 ### FAQ
 
 ```text
-GET /api/faq
+GET /api/faqs
 权限：PUBLIC
 Query: q, category, page, page_size
 ```
@@ -1150,6 +1243,8 @@ POST /api/notifications/read-all
 
 未读数 `{"count": 3}`。已读操作返回 `204`。
 
+`/api/notifications` 只返回当前登录用户作为 `recipient` 的个人消息。公开 Announcement 属于 `/api/announcements`，默认不复制到消息中心；活动取消、活动临近、申请状态变化等定向流程可把 `action_path` 指向活动详情或公告详情。
+
 ## 3.10 Media（媒体）
 
 ### 上传
@@ -1173,7 +1268,6 @@ Response `201`：
 ```json
 {
   "id": "uuid",
-  "object_key": "…",
   "url": "https://cdn.example.edu/…",
   "original_name": "photo.jpg",
   "mime_type": "image/jpeg",
@@ -1249,18 +1343,56 @@ PATCH  /api/ops/competitions/{id}/timeline-events/{eid}
 DELETE /api/ops/competitions/{id}/timeline-events/{eid}
 ```
 
-### 活动管理
+### 校园动态管理：活动 API
 
 ```text
 GET  /api/ops/activities?page=&page_size=&status=&q=
 POST /api/ops/activities
 GET  /api/ops/activities/{id}
 PATCH /api/ops/activities/{id}
-POST /api/ops/activities/{id}/publish | /cancel | /close-registration
+POST /api/ops/activities/{id}/publish | /cancel | /archive | /close-registration
+PATCH /api/ops/activities/{id}/featured
 GET  /api/ops/activities/{id}/registrations?page=&page_size=&status=
 POST /api/ops/activities/{id}/export-registrations
 权限：OPERATOR / SUPERADMIN
 ```
+
+### 校园动态组合发布
+
+运营端“发布动态”可选择仅创建活动、仅创建公告，或同步创建一场活动及其关联公告。前两种分别继续使用现有的 `/api/ops/activities` 与 `/api/ops/announcements`；只有第三种使用：
+
+```text
+POST /api/ops/dynamics/activity-with-announcement
+权限：OPERATOR / SUPERADMIN
+```
+
+请求：
+
+```json
+{
+  "activity": { "活动创建字段": "与 POST /api/ops/activities 相同" },
+  "announcement": {
+    "title": "大模型技术分享会报名开启",
+    "summary": "……",
+    "body_md": "……",
+    "publisher_scope": "ACADEMY",
+    "external_url": null,
+    "is_pinned": false
+  },
+  "publish": true
+}
+```
+
+服务端忽略客户端提供的 `announcement.activity_id`，改为绑定本次创建的 Activity；以一个事务创建两个对象，`publish=true` 时同时设为 `PUBLISHED`，否则同时为 `DRAFT`。成功 `201`：
+
+```json
+{
+  "activity": { "id": "uuid", "publication_state": "PUBLISHED" },
+  "announcement": { "id": "uuid", "activity_id": "uuid", "publication_state": "PUBLISHED" }
+}
+```
+
+任一字段或写入失败均回滚，禁止留下只创建活动或只创建公告的半成品；该操作写两条 AuditLog。组合发布不自动向全体用户创建个人 Notification。
 
 报名名单项（SENSITIVE，仅运营）：
 
@@ -1291,24 +1423,39 @@ POST /api/ops/consultations/{id}/replies
 
 回复 body：`{"body_md": "……"}`（1-10000）。回复后咨询 `status -> ANSWERED`。PRIVATE 咨询仅运营可见。
 
-### 指南 / FAQ / 通知 / 轮播管理
+### 指南 / FAQ / 公告 / 轮播管理
 
 字段与公开读取一致，增加 `publication_state` 管理与状态操作：
 
 ```text
+GET    /api/ops/guides                管理列表
+GET    /api/ops/guides/{id}           管理详情
 POST   /api/ops/guides                创建
 PATCH  /api/ops/guides/{id}           编辑
 POST   /api/ops/guides/{id}/publish   发布
 POST   /api/ops/guides/{id}/archive   归档
+PATCH  /api/ops/guides/{id}/featured  设置 / 取消推荐
+GET    /api/ops/faq                   管理列表
+GET    /api/ops/faq/{id}              管理详情
 POST   /api/ops/faq                   创建
 PATCH  /api/ops/faq/{id}              编辑
-POST   /api/ops/announcements         创建（可关联一个核心对象，非 null 数 <= 1）
+POST   /api/ops/faq/{id}/publish      发布
+POST   /api/ops/faq/{id}/archive      归档
+PATCH  /api/ops/faq/{id}/featured     设置 / 取消推荐
+GET    /api/ops/announcements         管理列表
+GET    /api/ops/announcements/{id}    管理详情
+POST   /api/ops/announcements         创建（必填 publisher_scope；可关联一个核心对象，非 null 数 <= 1）
 PATCH  /api/ops/announcements/{id}    编辑
+POST   /api/ops/announcements/{id}/publish
 POST   /api/ops/announcements/{id}/archive
+GET    /api/ops/banners               管理列表
+GET    /api/ops/banners/{id}          管理详情
 POST   /api/ops/banners               创建轮播（link_type 与 URL 字段匹配）
 PATCH  /api/ops/banners/{id}          编辑
 权限：OPERATOR / SUPERADMIN
 ```
+
+公告创建/编辑还接受 `external_url`（可空）。`publisher_scope` 仅为 `ACADEMY`、`UNIVERSITY` 或 `PLATFORM`；若运营人员选择“活动并同步公告”，改用上一节组合发布端点，而不是先在客户端创建活动再补写公告。
 
 ## 3.13 Manage（组织管理，LEADER）
 
@@ -1340,6 +1487,7 @@ PATCH  /api/manage/organizations/{orgId}/recruitments/{rid}
 POST   /api/manage/organizations/{orgId}/recruitments/{rid}/publish
 POST   /api/manage/organizations/{orgId}/recruitments/{rid}/cancel
 POST   /api/manage/organizations/{orgId}/recruitments/{rid}/complete
+POST   /api/manage/organizations/{orgId}/recruitments/{rid}/archive
 ```
 
 招新 body（含 positions 嵌套数组），约束见 database-design.md §20。`complete` 写 `completed_at`（状态机 §19.2）。
@@ -1377,7 +1525,8 @@ accept 必须走事务 Service（§26 / §11.3）：确认 PENDING、校验岗�
 
 ```text
 AUTH_REQUIRED          401  需要登录
-ACCOUNT_DISABLED       403  账号已停用
+ACCOUNT_UNAVAILABLE    403  账号尚未启用或不可用（不暴露内部原因）
+ACCOUNT_EXISTS          409  学号或用户名已存在
 PERMISSION_DENIED      403  无权限
 NOT_FOUND              404  不存在或按隐私策略隐藏
 VALIDATION_ERROR       400  参数校验失败（含 fieldErrors）
@@ -1412,25 +1561,26 @@ APIContract.md（本文件：传输契约）
 
 ---
 
-# 6. 开放问题与占位（评审项）
+# 6. 已冻结的实施说明
 
-1. **认证细节**：`auth/login`、`auth/logout` 为占位；最终以认证方案评审结果为准（方向：HttpOnly session cookie + CSRF）。
-2. **组织申请（无招新）**：`POST /api/organizations/{id}/applications` 的行为需与 PRD 对齐（默认走招新，还是允许自由申请）。
-3. **导出名单格式**：CSV 编码（UTF-8 with BOM 兼容 Excel）在实现时确认。
-4. **首页聚合**：`GET /api/home` 若后端聚合复杂，允许前端改为并发调用各模块端点（限数按 §2.6）；二选一在 FE-013 前定案。
-5. **媒体删除**：`media_asset` 的 PENDING_DELETE / DELETED 流转由运营管理，V0.1 无前端删除入口。
-6. **排序**：`ordering` 参数允许字段以评审后列表为准，超出范围返回 `400`。
-7. **限流**：429 预留，是否启用由部署阶段决定。
+1. **认证**：同源 Django Session、HttpOnly cookie 与 CSRF；自助注册创建 inactive 待审核账号，Django Admin 审核启用；忘记密码固定联系管理员。
+2. **组织申请**：V0.1 只接受 Recruitment 下带 `position_id` 的申请；不存在直接申请组织端点。
+3. **首页**：`GET /api/home` 是唯一首屏聚合 Read Model；不得改用多个首屏模块请求。
+4. **媒体删除**：`media_asset` 的 PENDING_DELETE / DELETED 流转由运营或系统管理，V0.1 无公开删除端点。
+5. **排序**：各端点只接受正文列出的 `ordering` 值，其他值返回 `400`。
+6. **导出名单**：CSV 固定使用 UTF-8 with BOM，保证 Excel 兼容。
+7. **限流**：`429` 保留在错误模型中；是否在部署层启用不改变任何端点语义。
+8. **逐端点参考**：`EndpointReference.md` 是每个端点的 request body、response DTO、错误与副作用依据；新增或修改 API 必须同时更新两份 API 文档。
 
 ---
 
 # 7. 评审通过条件
 
-本文件从 Draft 转 Baseline 需满足：
+本文件已在 BE-000 转为 Baseline。后续变更必须同时满足：
 
 ```text
 所有端点 method / path 评审通过
-认证方案冻结（或明确标注占位且不影响其余端点）
+认证方案、隐私字段、错误码与状态码映射不被静默修改
 隐私字段边界评审通过
 错误码与状态码映射评审通过
 前后端代表确认可按此并行开发
