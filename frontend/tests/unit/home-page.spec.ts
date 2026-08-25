@@ -47,16 +47,16 @@ describe('首页', () => {
     expect(wrapper.text()).toContain('常见问题')
   })
 
-  it('渲染主标题下方的「最新通知」通知栏', () => {
+  it('渲染 Hero 左列的「为你推荐」补充块', () => {
     const wrapper = mount(HomePage, {
       global: {
         plugins: [router, ui]
       }
     })
 
-    expect(wrapper.text()).toContain('最新通知')
-    expect(wrapper.text()).toContain('查看通知')
-    expect(wrapper.text()).toContain('人工智能学院科创与就业服务平台正式上线')
+    expect(wrapper.text()).toContain('为你推荐')
+    expect(wrapper.text()).toContain('重要竞赛')
+    expect(wrapper.text()).toContain('热门指南')
   })
 
   it('不渲染开发主题输入或空占位文案', () => {

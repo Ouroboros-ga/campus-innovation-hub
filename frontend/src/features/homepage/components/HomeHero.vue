@@ -2,6 +2,7 @@
 import { computed, useSlots } from 'vue'
 
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
+import HeroRecommendation from './HeroRecommendation.vue'
 import QuickEntry from './QuickEntry.vue'
 
 /**
@@ -42,6 +43,7 @@ const hasMedia = computed(() => Boolean(slots.media))
             连接竞赛、伙伴、组织与活动，助力你的成长与探索
           </p>
           <QuickEntry class="mt-8" />
+          <HeroRecommendation class="mt-8 hidden md:block" />
         </div>
         <slot name="media" />
       </div>
