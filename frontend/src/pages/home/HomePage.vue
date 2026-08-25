@@ -1,5 +1,5 @@
 <template>
-  <main class="flex min-h-dvh items-center py-12">
+  <section class="py-12 sm:py-16">
     <div class="page-container">
       <div class="max-w-xl space-y-4">
         <UIcon
@@ -15,5 +15,5 @@
         </p>
       </div>
     </div>
-  </main>
+  </section>
 </template>

@@ -1,0 +1,9 @@
+<template>
+  <UButton
+    aria-label="查看通知"
+    icon="i-lucide-bell"
+    color="neutral"
+    variant="ghost"
+    class="text-default"
+  />
+</template>

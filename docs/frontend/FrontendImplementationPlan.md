@@ -2,7 +2,7 @@
 
 > Project: campus-innovation-hub  
 > Version: 0.1  
-> Status: Ready for frontend foundation  
+> Status: FE-004 verification in progress  
 > Execution model: One task at a time（一次只执行一个任务）  
 > Primary executor: Human developer or Codex-style coding agent  
 > Locale: 简体中文（zh-CN）— 所有产品 UI 文案遵循 FrontendDesign.md §0.1
@@ -69,6 +69,20 @@ Read
 没有验证的任务不得声称完成。
 
 UI 变更中，仅代码编译成功是不够的。
+
+---
+
+# 当前执行进度（2026-08-25）
+
+| 任务 | 状态 | 已验证证据 | 后续动作 |
+| --- | --- | --- | --- |
+| FE-001 初始化 Vue 前端基础 | 已完成并提交 | Vue / Vite / TypeScript / Nuxt UI 基线、路由与质量门已建立 | 无 |
+| FE-002 Theme Tokens | 已完成并提交 | 亮暗 token、Nuxt UI 语义映射、44px 触控目标与 hover 色阶已验证 | 无 |
+| FE-003 开发设计系统页面 | 已完成并提交 | 开发路由、生产剔除测试、组件活体参考与亮暗视觉验证已完成 | 无 |
+| FE-004 应用外壳 | 已完成并提交 | 公开路由、Desktop Header、移动 Drawer、Footer、19 项测试与 `pnpm check` 通过；1440px 桌面与 390px 移动真实窄视口视觉验证通过；首页外壳与参考图对齐 | 无 |
+| FE-005 首页领域类型与 Fixtures | 未启动 | 不适用 | 仅在 FE-004 移动端视觉门禁关闭后开始 |
+
+FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`。FE-004 尚未单独提交或推送。
 
 ---
 
