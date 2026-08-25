@@ -12,7 +12,7 @@
 
 - 实现：Task 1–3 已完成，`HomeHero`（主信息 + 媒体插槽）与 `QuickEntry`（四快捷入口）均已落地，首页 `HomePage` 已接入。
 - TDD：为 Hero / 快捷入口编写路由与导航测试，组件与 App 级渲染测试通过。
-- 完整质量门：lint 通过（含格式化告警清除）、`vue-tsc --build` 通过、全量测试 46/47 通过（唯一失败为需 `pnpm` 环境变量的生产路由集成测试，其断言已通过 `dist/` 手动核实）、`vite build` 通过（823 模块）。
+- 完整质量门：`pnpm check` 全绿（lint、`vue-tsc --build`、`vitest run` 47/47 通过、含 `production-route.spec.ts` 生产路由集成测试、`vite build` 通过 823 模块）。
 - 视觉验证：1440 桌面与 768 平板截图确认 Hero 主信息、快捷入口一行/响应式正确、无横向溢出；窄屏（headless 实际渲染视口）经 DOM 布局测量确认无横向溢出。
 - Git：本 FE-006 变更尚未提交或推送（本记录完成时提交）。
 
@@ -96,7 +96,7 @@
 
 - [x] **Step 3: 运行完整校验**
 
-  Run: lint、`vue-tsc --build`、`vitest run`、`vite build`。期望 lint / typecheck / build 退出码 0；测试 46/47（唯一失败为需 `pnpm` 的生产路由集成测试）。
+  Run: `pnpm check`。期望 lint、typecheck、全量测试（含生产路由集成测试）、build 全部退出码 0。
 
 ---
 
