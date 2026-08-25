@@ -17,6 +17,13 @@ export const routes: RouteRecordRaw[] = [
           import('@/pages/competitions/CompetitionListPage.vue')
       },
       {
+        path: 'competitions/:id',
+        name: 'competition-detail',
+        component: () =>
+          import('@/pages/competitions/CompetitionDetailPage.vue'),
+        meta: { mobileShell: 'detail' }
+      },
+      {
         path: 'organizations',
         name: 'organizations',
         component: () =>

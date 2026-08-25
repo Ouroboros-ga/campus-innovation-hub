@@ -13,6 +13,7 @@ describe('应用路由', () => {
     expect(publicRouteNames).toEqual([
       'home',
       'competitions',
+      'competition-detail',
       'organizations',
       'teams',
       'activities',

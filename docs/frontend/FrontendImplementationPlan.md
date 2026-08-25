@@ -2,7 +2,7 @@
 
 > Project: campus-innovation-hub  
 > Version: 0.3  
-> Status: FE-001–FE-020 已完成并提交；当前执行 FE-021（竞赛详情页）  
+> Status: FE-001–FE-021 已完成并提交；当前执行 FE-030（组队广场列表）  
 > Execution model: One task at a time（一次只执行一个任务）  
 > Primary executor: Human developer or Codex-style coding agent  
 > Locale: 简体中文（zh-CN）— 所有产品 UI 文案遵循 FrontendDesign.md §0.1
@@ -91,6 +91,7 @@ UI 变更中，仅代码编译成功是不够的。
 | FE-012 全局搜索外壳 | 已完成并提交 | GlobalSearch（UModal + UCommandPalette）+ 跨页面打开状态的 Pinia store；搜索索引覆盖竞赛 / 组织 / 组队 / 活动 / FAQ / 指南 / 公告，结果行紧凑并显示结果类型；触发为 AppHeader 搜索按钮 + Ctrl/Cmd+K；选择后路由跳转并关闭；单元测试覆盖索引、快捷键 toggle、打开渲染与选择跳转；`pnpm check` 全绿（74/74 测试、含生产路由集成测试） | 搜索高亮 / 结果分组可进一步在 FE-013 视觉评审中打磨；详情路由属对应 FE-0xx |
 | FE-013 首页集成与视觉门禁 | 已完成并提交 | 全量首页区块评审记录 `docs/frontend/reviews/homepage-v1.md`；修复合规暗色图标容器（`dark:bg-primary-950/40` 等）；无 `NaN` 泄漏、`74/74` 测试通过；无 Blocking，记录 Major 3 / Minor 4 | 像素级截图受环境代理限制未完成；Major/Minor 项待后续评审与 API 任务处理 |
 | FE-020 竞赛列表页 | 已完成并提交 | `/competitions` 真实列表页：搜索 + 状态/分类/形式筛选 + 分页 + 空/加载/错误态；筛选与分页由 URL 承载；桌面复用 CompetitionCard 卡格、手机用紧凑列表行（§34.4）；筛选选项 / 派生状态 / 分页为纯函数；`pnpm check` 全绿（82/82 测试、含生产路由集成测试）；渲染快照确认列表页内容完整且无 `NaN` 泄漏 | 详情路由（卡片 / 列表目的地）属 FE-021；真实封面未接入，沿用受控默认封面 |
+| FE-021 竞赛详情页 | 已完成并提交 | `/competitions/:id` 详情页：名称 / 状态 / 报名截止 / 剩余时间；基本信息、比赛简介、谁适合参加、时间线（UTimeline）、相关通知、相关指南、正在组队预览；主任务明显（查看组队 / 官网 / 报名方式）且含返回入口；页面标识 + 分隔线 + 区块（§34.6），避免卡片嵌套；无专详情的 id 由摘要派生兜底；`pnpm check` 全绿（88/88 测试、含生产路由集成测试）；渲染快照确认详情页完整且无 `NaN` 泄漏 | 手机端粘性主操作栏（§34.7）未实现；关注/报名为 mock 状态；相关详情路由属对应任务 |
 
 FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送；FE-005 已作为提交 `f7029da` 推送；FE-006 已作为提交 `4a4ba4d` 推送；FE-007 已作为提交 `766e3c9` 推送；FE-008 / FE-009 / FE-010 已作为提交 `c1cc9ed` 推送；FE-011 已作为提交 `d88b974` 推送；FE-012 已作为提交 `163d018` 推送；FE-013 已作为提交 `45ec3f8` 推送；FE-020 已作为提交 `a6b52d4` 推送。
 
