@@ -185,7 +185,7 @@ done
 curl --fail --silent --show-error http://127.0.0.1:8000/api/health >/dev/null
 curl --fail --silent --show-error http://127.0.0.1:8000/api/ready >/dev/null
 
-non_loopback_listeners="$(ss -ltnH | awk '$4 ~ /:(8000|5432)$/ && $4 !~ /^127\\.0\\.0\\.1:/ {print $4}')"
+non_loopback_listeners="$(ss -ltnH | awk '$4 ~ /:(8000|5432)$/ && $4 !~ /^127\.0\.0\.1:/ {print $4}')"
 [[ -z "$non_loopback_listeners" ]] || fail "检测到非 loopback 开发监听：$non_loopback_listeners"
 
 echo "开发运行面已启动：commit=$release_sha，Gunicorn 与 PostgreSQL 仅监听 loopback。"
