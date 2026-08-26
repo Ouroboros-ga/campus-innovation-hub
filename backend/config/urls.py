@@ -1,12 +1,20 @@
-"""Root URL configuration for infrastructure endpoints only in BE-001."""
+"""Root URL configuration for BE-001 infrastructure and BE-002 authentication."""
 
+from django.contrib import admin
 from django.urls import path
 
+from apps.accounts import views as account_views
 from apps.core.views import HealthCheckView
 
 
 urlpatterns = [
     path("api/health", HealthCheckView.as_view(), name="api-health"),
+    path("api/auth/csrf", account_views.csrf, name="auth-csrf"),
+    path("api/auth/register", account_views.register, name="auth-register"),
+    path("api/auth/login", account_views.sign_in, name="auth-login"),
+    path("api/auth/logout", account_views.sign_out, name="auth-logout"),
+    path("api/auth/me", account_views.me, name="auth-me"),
+    path("admin/", admin.site.urls),
 ]
 
 handler400 = "apps.core.errors.api_bad_request"

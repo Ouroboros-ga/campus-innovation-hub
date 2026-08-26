@@ -564,8 +564,8 @@ Response `200`：
     }
   },
   "permissions": {
-    "platformRole": "STUDENT",
-    "organizationMemberships": [
+    "platform_role": "STUDENT",
+    "organization_memberships": [
       {
         "organization_id": "uuid",
         "role": "LEADER",
