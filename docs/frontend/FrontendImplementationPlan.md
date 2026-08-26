@@ -93,7 +93,7 @@ UI 变更中，仅代码编译成功是不够的。
 | FE-020 竞赛列表页 | 已完成并提交 | `/competitions` 真实列表页：搜索 + 状态/分类/形式筛选 + 分页 + 空/加载/错误态；筛选与分页由 URL 承载；桌面复用 CompetitionCard 卡格、手机用紧凑列表行（§34.4）；筛选选项 / 派生状态 / 分页为纯函数；`pnpm check` 全绿（82/82 测试、含生产路由集成测试）；渲染快照确认列表页内容完整且无 `NaN` 泄漏 | 详情路由（卡片 / 列表目的地）属 FE-021；真实封面未接入，沿用受控默认封面 |
 | FE-021 竞赛详情页 | 已完成并提交 | `/competitions/:id` 详情页：名称 / 状态 / 报名截止 / 剩余时间；基本信息、比赛简介、谁适合参加、时间线（UTimeline）、相关通知、相关指南、正在组队预览；主任务明显（查看组队 / 官网 / 报名方式）且含返回入口；页面标识 + 分隔线 + 区块（§34.6），避免卡片嵌套；无专详情的 id 由摘要派生兜底；`pnpm check` 全绿（88/88 测试、含生产路由集成测试）；渲染快照确认详情页完整且无 `NaN` 泄漏 | 手机端粘性主操作栏（§34.7）未实现；关注/报名为 mock 状态；相关详情路由属对应任务 |
 
-FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送；FE-005 已作为提交 `f7029da` 推送；FE-006 已作为提交 `4a4ba4d` 推送；FE-007 已作为提交 `766e3c9` 推送；FE-008 / FE-009 / FE-010 已作为提交 `c1cc9ed` 推送；FE-011 已作为提交 `d88b974` 推送；FE-012 已作为提交 `163d018` 推送；FE-013 已作为提交 `45ec3f8` 推送；FE-020 已作为提交 `a6b52d4` 推送；FE-021 已作为提交 `30cc079` 推送。
+FE-001 至 FE-003 已作为提交 `2e6ab93` 推送至 `origin/main`；FE-004 已作为提交 `c3dea20` 推送；FE-005 已作为提交 `f7029da` 推送；FE-006 已作为提交 `4a4ba4d` 推送；FE-007 已作为提交 `766e3c9` 推送；FE-008 / FE-009 / FE-010 已作为提交 `c1cc9ed` 推送；FE-011 已作为提交 `d88b974` 推送；FE-012 已作为提交 `163d018` 推送；FE-013 已作为提交 `45ec3f8` 推送；FE-020 已作为提交 `a6b52d4` 推送；FE-021 已作为提交 `30cc079` 推送；FE-050（校园动态浏览）已作为提交 `c564b6f` 推送。
 
 ---
 
@@ -107,7 +107,7 @@ Phase F3  Homepage（首页）
 Phase F4  Competition Experience（竞赛体验）
 Phase F5  Team Plaza（组队广场）
 Phase F6  Organizations & Recruitment（组织与招新）
-Phase F7  Activities（活动）
+Phase F7  Campus Dynamics（校园动态）
 Phase F8  Q&A / Guides（咨询与指南）
 Phase F9  Account Experience（账号体验）
 Phase F10 Organization Management（组织管理）
@@ -539,7 +539,7 @@ Bottom Navigation 固定五项：
 首页
 竞赛
 组队
-活动
+动态
 我的
 ```
 
@@ -549,7 +549,7 @@ Bottom Navigation 固定五项：
 /
 /competitions
 /teams
-/activities
+/activities（校园动态）
 /me
 ```
 
@@ -660,8 +660,20 @@ FE-004 后停止。
 
 # FE-004M：既有前端的 Mobile Web 适配任务
 
-> 如果 FE-004 已经在代码中完成但仍采用“Mobile Drawer + Desktop Layout Shrink”方案，则执行本任务。  
+> 如果 FE-004 已经在代码中完成但仍采用"Mobile Drawer + Desktop Layout Shrink"方案，则执行本任务。  
 > 如果 FE-004 尚未实现，则把本节验收要求直接合并进 FE-004，不重复实现两次。
+
+## 执行状态（2026-08-26）
+
+- 实现：`MobileDrawer + 桌面布局收缩` 已升级为最新版 Phone / Tablet / Desktop 导航模型。
+- 新增共享 shell 组件：`MobileBottomNav`（五项底部主导航）、`MobilePageHeader`（详情/表单返回头部）、`MobileActionBar`（粘性操作栏基础设施）、`TabletNavigationDrawer`（平板 Drawer）；删除旧的 `MobileNavigation.vue`。
+- 新增 `useBreakpoint` 特征检测 composable（基于 CSS media query，非 user-agent/机型指纹），驱动 `AppHeader` 在桌面 / 平板 / 手机根页 / 手机详情之间的自适应外壳。
+- `PublicLayout` 依据路由 `mobileShell` 元信息组合根级 Tab Shell（底部导航 + 内容底部安全区预留），详情 / 表单 / 管理 Shell 隐藏全局底部导航。
+- `index.html` 增加 `viewport-fit=cover`；底部与返回头部按 `env(safe-area-inset-bottom)` 预留安全区。
+- 路由补全目标 `mobileShell: 'tab' / 'detail'` 与 `mobileTab`；新增 `/me` 占位路由使底部五项导航可用。
+- 首页手机端：新增全宽搜索入口（§18.3），Phone H1 收窄至 24–28px（§18.2）；手机端信息顺序保持用户已确认偏差（截止区块在轮播之下）。
+- 跟进修复（2026-08-26）：消除首页横向溢出（Hero 媒体列与轮播加 `min-w-0`、`#app` 加 `overflow-x: clip`），避免手机端可左右滑动并防止 `fixed` 底部导航只露出部分项；手机端隐藏快捷入口卡片（找竞赛/找队友/找组织/找活动，`<768px` 不显示，用户判定与底部导航冗余）；轮播文案手机端内边距收窄。
+- 验收：`pnpm check` 全绿（lint / typecheck / test 91/91 / build）；响应式外壳由 shell 测试覆盖（手机根页底部五项导航、手机详情隐藏导航并展示返回头部、平板 Drawer、桌面顶部导航）。
 
 ## 目标
 
@@ -1340,6 +1352,8 @@ recruitment state
 organization card
 ```
 
+登录态且存在有效组织身份时，在 `/organizations` 的筛选区之前渲染“我的组织”：最多 4 项，超过后原位“查看全部 / 收起”；无身份时整个区块不渲染。MEMBER 只进入组织主页，LEADER 的“进入管理”携带具体 `organizationId` 进入 FE-080；不创建 `/me/organizations` 页面或 Header 全局组织管理入口。
+
 FE-040 后停止。
 
 ---
@@ -1379,17 +1393,17 @@ FE-042 后停止。
 
 ---
 
-# FE-050：活动列表
+# FE-050：校园动态浏览
 
-构建：
+在既有 `/activities` 路径实现展示名为“校园动态”的公开入口。路由 query 固定为 `tab=all|activities|announcements`：
 
 ```text
-activity list
-status
-date
-location
-registration state
+tab=all             近期活动 + 最新公告两个独立区块
+tab=activities      活动列表、状态 / 类型筛选、日期、地点、报名状态
+tab=announcements   公告列表、来源筛选、发布日期、关联对象、外链标识
 ```
+
+活动和公告使用不同的类型、fixture、列表行与详情目标；不创建“通用动态 JSON”替代 `Activity` 和 `Announcement`。筛选、搜索和分页由 URL 承载。Phone 使用紧凑列表行与“动态”底栏标签，tab 具备可见选中态和键盘可达性。
 
 FE-050 后停止。
 
@@ -1401,12 +1415,32 @@ FE-050 后停止。
 
 ```text
 activity detail
+related announcements
 registration modal / inline action
 capacity display（仅在存在真实数据时）
 cancel registration mock
 ```
 
+Phone 活动详情使用 Detail Shell；仅有可报名主操作时显示兼容 safe area 的 Sticky Mobile Action。
+
 FE-051 后停止。
+
+---
+
+# FE-052：公告详情 Mock
+
+构建 `/activities/announcements/:announcementId`：
+
+```text
+publisher scope（学院 / 学校 / 平台）
+title / date / Markdown body
+related activity / competition / organization / recruitment link（如有）
+external source link（如有）
+```
+
+公告详情是 Detail Shell，不使用 Phone Sticky Action；站外链接以明确“查看原文”操作打开，不嵌入外站页面。公开公告不写入 notification store。
+
+FE-052 后停止。
 
 ---
 
@@ -1439,9 +1473,10 @@ team posts
 applications
 activities
 questions
-organizations
 settings
 ```
+
+组织身份不再属于账号页；“我的组织”由 FE-040 在组织一级页呈现。
 
 使用占位 fixture 数据。
 
@@ -1473,6 +1508,8 @@ applications
 
 真实权限由后端在后续强制。
 
+入口只来自 `/organizations` 的 LEADER 组织项；组织工作台使用 `mobileShell: 'manage'`，Phone 不能显示全局 Bottom Navigation。
+
 FE-080 后停止。
 
 ---
@@ -1494,11 +1531,12 @@ compact navigation
 
 ```text
 competitions
-activities
+campus dynamics（activities + announcements tabs）
 questions
 guides
-announcements
 ```
+
+`/ops/activities` 展示名为“校园动态管理”。“发布动态”明确选择发布活动、发布公告或同步发布二者；活动与公告保留独立表、独立 API 和独立表单字段。Phone 使用摘要行进入详情/编辑任务页，不能展示横向巨型表格。
 
 不要构建视觉无关的管理主题。
 
@@ -1592,9 +1630,9 @@ FE-103 后停止。
 
 ---
 
-# FE-104：活动 API 集成
+# FE-104：校园动态 API 集成
 
-集成活动列表、详情与报名。
+集成活动列表、详情、报名、公告列表、公告详情与活动相关公告；`/activities` 的 tab、筛选和分页保持 URL 驱动。运营端还集成“活动并同步公告”的组合发布端点，失败时前端以一个可操作错误呈现，不以两次客户端写入模拟事务。
 
 FE-104 后停止。
 
