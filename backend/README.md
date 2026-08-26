@@ -113,6 +113,10 @@ python manage.py test -v 1
 
 完整功能套件及其精确计数以服务器最终输出为准；PostgreSQL `TransactionTestCase` 覆盖 partial unique、关键索引 introspection、活动容量、组队容量和同组织跨招新轮次 Membership 创建竞态。临时数据库、容器和网络在验证后清理；不会接触服务器已有服务。
 
+## GitHub Actions
+
+`.github/workflows/backend-postgresql.yml` 会在 `main` 的 push、Pull Request 和手动触发时启动 PostgreSQL 16.2 service，依次运行 `check`、全量 `migrate`、`makemigrations --check --dry-run` 与 Django 测试。该工作流只使用临时 CI 数据库和测试凭据，不含生产密钥或生产数据库地址。
+
 ## Gunicorn / Nginx 接口
 
 Linux 进程管理器应从 `backend/` 工作目录启动 Gunicorn，并仅监听回环地址：
