@@ -38,6 +38,7 @@ Internet -> Nginx :80/:443 -> Gunicorn 127.0.0.1:8000 -> PostgreSQL 内网或 lo
 - `systemd/campus-innovation-hub-dev.service` 与未来生产 unit 名称不同，只读取 `/etc/campus-innovation-hub/development.env`；
 - `scripts/provision-development.sh` 只接受 `/opt/campus-innovation-hub-dev/releases/<Git SHA>` 中的干净 Git checkout，创建独立 Docker volume、数据库、服务用户、媒体目录和应用密钥；不会触碰 `/opt/campus-innovation-hub-be*`、Judge0、Nginx、TLS 或防火墙；
 - 先在已授权服务器以 root 执行 `deploy/scripts/install-uv.sh`，再运行 provision 脚本。脚本固定 uv `0.11.24`，使用提交的 `uv.lock`；
+- 当服务器到 PyPI CDN 的链路较慢时，开发环境固定 `UV_HTTP_TIMEOUT=120`；仍只执行 `uv sync --frozen --group dev`，不改包源、依赖版本或 lockfile；
 - `scripts/start-development-tunnel.ps1` 在 Windows 前台建立 `127.0.0.1:18000 -> 服务器 127.0.0.1:8000`。Vite 使用 `DEV_API_PROXY_TARGET`，默认即为该本机地址；
 - development settings 只允许 `http://localhost:<port>` 与 `http://127.0.0.1:<port>` 作为 `DJANGO_CSRF_TRUSTED_ORIGINS`。浏览器仍始终访问 Vite 的同源 `/api`，不需要 CORS。
 

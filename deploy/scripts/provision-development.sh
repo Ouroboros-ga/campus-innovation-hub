@@ -96,6 +96,7 @@ if [[ ! -e "$DEVELOPMENT_ENV" && ! -e "$POSTGRES_ENV" ]]; then
     'MEDIA_URL=/media/' \
     "MEDIA_ROOT=$DATA_DIR/media" \
     "UV_CACHE_DIR=/var/lib/$APP_USER/uv-cache" \
+    'UV_HTTP_TIMEOUT=120' \
     'UV_LINK_MODE=copy' > "$DEVELOPMENT_ENV"
   chown root:"$APP_GROUP" "$DEVELOPMENT_ENV"
   chmod 0640 "$DEVELOPMENT_ENV"
