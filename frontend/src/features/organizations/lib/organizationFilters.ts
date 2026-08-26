@@ -14,6 +14,7 @@ import {
 import type { OrganizationType } from '@/shared/types/homepage'
 
 import type {
+  OrganizationRecruitment,
   OrganizationRecruitmentFilter,
   OrganizationSort,
   OrganizationSummary,
@@ -27,12 +28,11 @@ export interface SelectOption {
   value: string
 }
 
-/** 派生组织招新状态（§11.1 publication_state + 报名窗口）。 */
-export function deriveRecruitmentState(
-  org: OrganizationSummary,
+/** 从组织的当前招新对象派生招新状态（供组织详情逐条展示）。 */
+export function deriveRecruitmentStateFromRecruitment(
+  recruitment: OrganizationRecruitment | null,
   now: Date
 ): OrgRecruitmentState {
-  const recruitment = org.recruitment
   if (!recruitment) return 'NOT_RECRUITING'
 
   if (recruitment.publicationState === 'DRAFT') return 'NOT_RECRUITING'
@@ -51,6 +51,14 @@ export function deriveRecruitmentState(
   if (startMs != null && nowMs < startMs) return 'UPCOMING'
   if (endMs != null && nowMs > endMs) return 'NOT_RECRUITING'
   return 'RECRUITING'
+}
+
+/** 派生组织招新状态（§11.1 publication_state + 报名窗口）。 */
+export function deriveRecruitmentState(
+  org: OrganizationSummary,
+  now: Date
+): OrgRecruitmentState {
+  return deriveRecruitmentStateFromRecruitment(org.recruitment, now)
 }
 
 /** 组织类型筛选选项（全部由 placeholder 呈现）。 */

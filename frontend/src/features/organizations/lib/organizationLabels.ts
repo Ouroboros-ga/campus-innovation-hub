@@ -5,7 +5,11 @@
  * 这里只放组织招新状态的标签与语义色。
  */
 
-import type { OrgRecruitmentState } from '../types'
+import type {
+  OrgRecruitmentState,
+  RecruitmentApplicationState,
+  RecruitmentPhaseState
+} from '../types'
 
 /** 招新状态展示标签。 */
 export const orgRecruitmentStateLabel: Record<OrgRecruitmentState, string> = {
@@ -13,6 +17,28 @@ export const orgRecruitmentStateLabel: Record<OrgRecruitmentState, string> = {
   UPCOMING: '即将招新',
   PAUSED: '暂停招新',
   NOT_RECRUITING: '不招新'
+}
+
+/** 招新自身开放阶段展示标签（§11.1 派生 application_state）。 */
+export const recruitmentPhaseLabel: Record<RecruitmentPhaseState, string> = {
+  DRAFT: '草稿',
+  CANCELLED: '已取消',
+  ARCHIVED: '已归档',
+  COMPLETED: '已结束',
+  UPCOMING: '即将开始',
+  OPEN: '招新中',
+  CLOSED: '报名已结束'
+}
+
+/** 招新申请状态展示标签（§11.3 status）。 */
+export const recruitmentApplicationStateLabel: Record<
+  RecruitmentApplicationState,
+  string
+> = {
+  PENDING: '待审核',
+  ACCEPTED: '已通过',
+  REJECTED: '未通过',
+  WITHDRAWN: '已撤回'
 }
 
 /** 招新状态 → 文字语义色 class（§7.3，状态不只靠颜色表达时文字可读）。 */

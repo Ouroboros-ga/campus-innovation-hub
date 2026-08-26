@@ -69,3 +69,102 @@ export type OrganizationRecruitmentFilter = 'ALL' | OrgRecruitmentState
 
 /** 排序维度。 */
 export type OrganizationSort = 'DEFAULT' | 'NAME'
+
+// ---------------------------------------------------------------------------
+// 组织详情 / 招新详情 / 招新申请（FE-041 / FE-042）
+// ---------------------------------------------------------------------------
+
+/** 招新自身开放阶段（§11.1 派生 application_state）。 */
+export type RecruitmentPhaseState =
+  | 'DRAFT'
+  | 'CANCELLED'
+  | 'ARCHIVED'
+  | 'COMPLETED'
+  | 'UPCOMING'
+  | 'OPEN'
+  | 'CLOSED'
+
+/** 招新申请状态（§11.3 status）。 */
+export type RecruitmentApplicationState =
+  | 'PENDING'
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'WITHDRAWN'
+
+/** 组织近期活动预览（FE-041，指向真实活动详情）。 */
+export interface OrganizationActivityPreview {
+  id: string
+  title: string
+  startAt: string
+  detailPath: string
+}
+
+/** 招新岗位（§11.2 organizations_recruitment_position）。 */
+export interface OrganizationPosition {
+  id: string
+  name: string
+  /** 计划招募人数 > 0。 */
+  headcount: number
+  description: string | null
+  requirements: string | null
+}
+
+/** 组织详情页视图模型（FE-041，PageMap §组织主页）。 */
+export interface OrganizationDetail extends OrganizationSummary {
+  /** 完整介绍（Markdown 源，运行时降级为纯文本）。 */
+  descriptionMd: string
+  /** 主要方向。 */
+  direction: string
+  advisorName: string | null
+  leaderName: string
+  /** 负责人职位名，如「会长」。 */
+  leaderTitle: string
+  publicContact: string | null
+  recentActivities: OrganizationActivityPreview[]
+  currentRecruitments: OrganizationRecruitment[]
+}
+
+/** 招新详情页视图模型（FE-042，PageMap §招新详情）。 */
+export interface RecruitmentDetail {
+  id: string
+  organization: {
+    id: string
+    name: string
+    type: OrganizationType
+    detailPath: string
+    logo: HomepageImage
+  }
+  title: string
+  introMd: string
+  applyStartAt: string | null
+  applyEndAt: string | null
+  publicationState: RecruitmentPublicationState
+  completedAt: string | null
+  targetGradeMin: number | null
+  targetGradeMax: number | null
+  notesMd: string | null
+  positions: OrganizationPosition[]
+}
+
+/** 当前用户的招新申请（Mock store 记录，FE-042）。 */
+export interface MyRecruitmentApplication {
+  recruitmentId: string
+  positionId: string
+  positionName: string
+  selfIntro: string
+  skills: string | null
+  experience: string | null
+  motivation: string
+  status: RecruitmentApplicationState
+  submittedAt: string
+}
+
+/** 招新申请表单草案（提交输入）。 */
+export interface RecruitmentApplicationDraft {
+  recruitmentId: string
+  positionId: string
+  selfIntro: string
+  skills: string
+  experience: string
+  motivation: string
+}

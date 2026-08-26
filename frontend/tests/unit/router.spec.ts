@@ -15,6 +15,8 @@ describe('应用路由', () => {
       'competitions',
       'competition-detail',
       'organizations',
+      'recruitment-detail',
+      'organization-detail',
       'teams',
       'activities',
       'announcement-detail',

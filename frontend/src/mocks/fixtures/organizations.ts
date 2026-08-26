@@ -17,7 +17,9 @@
 
 import type {
   MyOrganization,
-  OrganizationSummary
+  OrganizationDetail,
+  OrganizationSummary,
+  RecruitmentDetail
 } from '@/features/organizations/types'
 
 const logo = (alt: string) => ({ alt, src: null })
@@ -158,5 +160,374 @@ export const myOrganizations: MyOrganization[] = [
     organization: organizations[1]!,
     membership: 'MEMBER',
     roleLabel: '成员'
+  }
+]
+
+// ---------------------------------------------------------------------------
+// 组织详情 / 招新详情（FE-041 / FE-042）
+// ---------------------------------------------------------------------------
+// 设计来源：PageMap §组织主页 / §招新详情 / §招新申请；database-design.md §10 / §11。
+// 近期活动链接到真实 `activities` fixture 的详情路径；招新详情复用列表中的 recruitment id。
+
+const aiUnionRecruitment = organizations[0]!.recruitment!
+
+export const organizationDetails: OrganizationDetail[] = [
+  {
+    ...organizations[0]!,
+    descriptionMd:
+      '人工智能协会是面向全校的人工智能技术社群。我们组织 AI 前沿讲座、动手工作坊与项目实战，帮助成员建立从理论到落地的完整认知。',
+    direction: '机器学习 / 计算机视觉 / 自然语言处理 / AI 产品与工程',
+    advisorName: '王丽华',
+    leaderName: '张同学',
+    leaderTitle: '会长',
+    publicContact: 'ai-union@example.edu.cn',
+    recentActivities: [
+      {
+        id: 'ai-sharing-4',
+        title: '大模型应用实战分享会',
+        startAt: '2026-08-24T19:00:00+08:00',
+        detailPath: '/activities/ai-sharing-4'
+      },
+      {
+        id: 'spring-innovation-salon',
+        title: 'AI 创新沙龙：从论文到原型',
+        startAt: '2026-09-12T14:00:00+08:00',
+        detailPath: '/activities/spring-innovation-salon'
+      }
+    ],
+    currentRecruitments: [aiUnionRecruitment]
+  },
+  {
+    ...organizations[1]!,
+    descriptionMd:
+      '数据科学社聚焦数据分析、统计建模与数据可视化，定期开展案例研读、工具工作坊与竞赛组队。',
+    direction: '数据分析 / 统计建模 / 机器学习 / 数据可视化',
+    advisorName: '李明',
+    leaderName: '赵同学',
+    leaderTitle: '社长',
+    publicContact: 'ds-club@example.edu.cn',
+    recentActivities: [
+      {
+        id: 'python-training',
+        title: 'Python 数据分析入门训练营',
+        startAt: '2026-08-30T15:00:00+08:00',
+        detailPath: '/activities/python-training'
+      }
+    ],
+    currentRecruitments: [organizations[1]!.recruitment!]
+  },
+  {
+    ...organizations[2]!,
+    descriptionMd:
+      '机器人创新实验室面向对机器人、嵌入式与智能硬件感兴趣的同学，提供开发板、机械结构与算法调优的实践环境。',
+    direction: 'ROS / 嵌入式开发 / 机械结构 / 传感器融合',
+    advisorName: '陈志强',
+    leaderName: '周同学',
+    leaderTitle: '实验室负责人',
+    publicContact: null,
+    recentActivities: [
+      {
+        id: 'research-training-camp',
+        title: '机器人基础研发训练营',
+        startAt: '2026-09-19T09:00:00+08:00',
+        detailPath: '/activities/research-training-camp'
+      }
+    ],
+    currentRecruitments: [organizations[2]!.recruitment!]
+  },
+  {
+    ...organizations[3]!,
+    descriptionMd:
+      '创新创业中心孵化校园创业项目，组织路演、商业计划辅导与资源对接，支持从 idea 到落地的全过程。',
+    direction: '创业孵化 / 商业计划 / 产品设计 / 项目路演',
+    advisorName: '刘敏',
+    leaderName: '王同学',
+    leaderTitle: '中心主任',
+    publicContact: 'innovation-center@example.edu.cn',
+    recentActivities: [
+      {
+        id: 'enterprise-visit-fall-2026',
+        title: '秋季企业参访：走进科技园区',
+        startAt: '2026-09-03T13:00:00+08:00',
+        detailPath: '/activities/enterprise-visit-fall-2026'
+      }
+    ],
+    currentRecruitments: [organizations[3]!.recruitment!]
+  },
+  {
+    ...organizations[4]!,
+    descriptionMd:
+      '科创与就业部服务全院同学的科创竞赛与就业发展，负责竞赛资讯、求职讲座与资源对接。',
+    direction: '竞赛服务 / 就业指导 / 校企对接 / 生涯规划',
+    advisorName: '孙老师',
+    leaderName: '李同学',
+    leaderTitle: '部长',
+    publicContact: 'sci-career@example.edu.cn',
+    recentActivities: [
+      {
+        id: 'mcm-briefing-2026',
+        title: '2026 数模竞赛宣讲会',
+        startAt: '2026-08-22T19:00:00+08:00',
+        detailPath: '/activities/mcm-briefing-2026'
+      }
+    ],
+    currentRecruitments: [organizations[4]!.recruitment!]
+  },
+  {
+    ...organizations[5]!,
+    descriptionMd:
+      '绿色公益社倡导绿色生活与公益实践，组织环保行动、志愿服务与公益传播，传递温暖共建美好校园。',
+    direction: '环保行动 / 志愿服务 / 公益传播',
+    advisorName: '何芳',
+    leaderName: '刘同学',
+    leaderTitle: '社长',
+    publicContact: 'green-public@example.edu.cn',
+    recentActivities: [
+      {
+        id: 'further-study-sharing',
+        title: '升学与职业规划分享会',
+        startAt: '2026-09-15T16:00:00+08:00',
+        detailPath: '/activities/further-study-sharing'
+      }
+    ],
+    currentRecruitments: [organizations[5]!.recruitment!]
+  },
+  {
+    ...organizations[6]!,
+    descriptionMd:
+      '光影工作室专注摄影与影像创作，提供设备共享、拍摄实践与后期工作坊，记录校园的美好瞬间。',
+    direction: '摄影 / 短片创作 / 后期剪辑',
+    advisorName: '吴晋',
+    leaderName: '郑同学',
+    leaderTitle: '工作室主理人',
+    publicContact: null,
+    recentActivities: [],
+    currentRecruitments: []
+  },
+  {
+    ...organizations[7]!,
+    descriptionMd:
+      '学术研讨会组织主题研讨与论文共读，帮助同学拓展学术视野、提升研究能力。',
+    direction: '论文共读 / 主题研讨 / 学术写作',
+    advisorName: null,
+    leaderName: '陈同学',
+    leaderTitle: '召集人',
+    publicContact: null,
+    recentActivities: [],
+    currentRecruitments: []
+  }
+]
+
+export const recruitmentDetails: RecruitmentDetail[] = [
+  {
+    id: 'ai-union-fall-2026',
+    organization: {
+      id: organizations[0]!.id,
+      name: organizations[0]!.name,
+      type: organizations[0]!.type,
+      detailPath: organizations[0]!.detailPath,
+      logo: organizations[0]!.logo
+    },
+    title: '人工智能协会 2026 秋季招新',
+    introMd:
+      '无论你是 AI 新手还是已有项目经验，只要对人工智能技术充满热情，都欢迎加入。我们看重好奇心与学习意愿。',
+    applyStartAt: '2026-08-20T00:00:00+08:00',
+    applyEndAt: '2026-09-05T23:59:59+08:00',
+    publicationState: 'PUBLISHED',
+    completedAt: null,
+    targetGradeMin: 1,
+    targetGradeMax: 4,
+    notesMd: '面试安排在 9 月上旬，具体时间将通过邮件通知。',
+    positions: [
+      {
+        id: 'ai-union-ml',
+        name: '机器学习方向',
+        headcount: 12,
+        description: '参与机器学习模型开发与论文复现。',
+        requirements: '熟悉 Python，了解一种深度学习框架。'
+      },
+      {
+        id: 'ai-union-cv',
+        name: '计算机视觉方向',
+        headcount: 8,
+        description: '围绕视觉检测与识别进行项目实践。',
+        requirements: '有图像处理基础，可参与数据集构建。'
+      },
+      {
+        id: 'ai-union-product',
+        name: 'AI 产品与运营',
+        headcount: 5,
+        description: '负责社群活动策划与 AI 产品体验设计。',
+        requirements: '沟通能力强，有活动组织经验者优先。'
+      }
+    ]
+  },
+  {
+    id: 'data-science-fall-2026',
+    organization: {
+      id: organizations[1]!.id,
+      name: organizations[1]!.name,
+      type: organizations[1]!.type,
+      detailPath: organizations[1]!.detailPath,
+      logo: organizations[1]!.logo
+    },
+    title: '数据科学社 2026 秋季招新',
+    introMd: '如果你对用数据讲故事感兴趣，欢迎加入数据科学社，一起做有趣的案例与竞赛。',
+    applyStartAt: '2026-08-20T00:00:00+08:00',
+    applyEndAt: '2026-09-06T23:59:59+08:00',
+    publicationState: 'PUBLISHED',
+    completedAt: null,
+    targetGradeMin: 1,
+    targetGradeMax: 4,
+    notesMd: null,
+    positions: [
+      {
+        id: 'ds-analysis',
+        name: '数据分析',
+        headcount: 10,
+        description: '负责数据采集、清洗与探索性分析。',
+        requirements: '会使用 Python 或 SQL。'
+      },
+      {
+        id: 'ds-viz',
+        name: '可视化',
+        headcount: 6,
+        description: '制作数据图表与可视化作品。',
+        requirements: '有审美好，熟悉至少一种可视化工具。'
+      }
+    ]
+  },
+  {
+    id: 'robot-lab-fall-2026',
+    organization: {
+      id: organizations[2]!.id,
+      name: organizations[2]!.name,
+      type: organizations[2]!.type,
+      detailPath: organizations[2]!.detailPath,
+      logo: organizations[2]!.logo
+    },
+    title: '机器人创新实验室 2026 招新',
+    introMd: '欢迎对机器人、嵌入式与智能硬件有热情的同学加入，一起动手做实物。',
+    applyStartAt: '2026-09-01T00:00:00+08:00',
+    applyEndAt: '2026-09-20T23:59:59+08:00',
+    publicationState: 'PUBLISHED',
+    completedAt: null,
+    targetGradeMin: 2,
+    targetGradeMax: 4,
+    notesMd: '实验室将提供开发板与机械结构材料。',
+    positions: [
+      {
+        id: 'robot-embedded',
+        name: '嵌入式开发',
+        headcount: 6,
+        description: '负责单片机与传感器控制开发。',
+        requirements: '了解 C 语言与基本电路。'
+      },
+      {
+        id: 'robot-mech',
+        name: '机械结构',
+        headcount: 4,
+        description: '设计并搭建机器人机械结构。',
+        requirements: '会使用三维建模软件。'
+      }
+    ]
+  },
+  {
+    id: 'innovation-center-fall-2026',
+    organization: {
+      id: organizations[3]!.id,
+      name: organizations[3]!.name,
+      type: organizations[3]!.type,
+      detailPath: organizations[3]!.detailPath,
+      logo: organizations[3]!.logo
+    },
+    title: '创新创业中心 2026 招新',
+    introMd: '无论你已有创业想法，还是想学习产品与商业知识，创新创业中心都欢迎你。',
+    applyStartAt: '2026-08-22T00:00:00+08:00',
+    applyEndAt: '2026-09-08T23:59:59+08:00',
+    publicationState: 'PUBLISHED',
+    completedAt: null,
+    targetGradeMin: 1,
+    targetGradeMax: 4,
+    notesMd: '鼓励携带想法或已有项目加入。',
+    positions: [
+      {
+        id: 'innovation-product',
+        name: '产品与运营',
+        headcount: 8,
+        description: '负责产品原型设计与项目运营。',
+        requirements: '逻辑清晰，乐于沟通。'
+      },
+      {
+        id: 'innovation-tech',
+        name: '技术研发',
+        headcount: 6,
+        description: '参与创业项目技术实现。',
+        requirements: '有一门擅长的编程语言。'
+      }
+    ]
+  },
+  {
+    id: 'sci-employment-fall-2026',
+    organization: {
+      id: organizations[4]!.id,
+      name: organizations[4]!.name,
+      type: organizations[4]!.type,
+      detailPath: organizations[4]!.detailPath,
+      logo: organizations[4]!.logo
+    },
+    title: '科创与就业部 2026 招新',
+    introMd: '加入科创与就业部，一起为同学们提供竞赛与就业服务。',
+    applyStartAt: '2026-08-22T00:00:00+08:00',
+    applyEndAt: '2026-09-06T23:59:59+08:00',
+    publicationState: 'PUBLISHED',
+    completedAt: null,
+    targetGradeMin: 1,
+    targetGradeMax: 4,
+    notesMd: null,
+    positions: [
+      {
+        id: 'sci-service',
+        name: '竞赛服务',
+        headcount: 6,
+        description: '负责竞赛信息整理与答疑。',
+        requirements: '细心耐心，熟悉校园竞赛者优先。'
+      },
+      {
+        id: 'sci-career',
+        name: '就业服务',
+        headcount: 6,
+        description: '组织求职讲座与企业对接。',
+        requirements: '具备一定沟通与组织能力。'
+      }
+    ]
+  },
+  {
+    id: 'green-public-fall-2026',
+    organization: {
+      id: organizations[5]!.id,
+      name: organizations[5]!.name,
+      type: organizations[5]!.type,
+      detailPath: organizations[5]!.detailPath,
+      logo: organizations[5]!.logo
+    },
+    title: '绿色公益社 2026 招新',
+    introMd: '期待热心公益、热爱生活的你，一起参与绿色行动与志愿服务。',
+    applyStartAt: '2026-09-02T00:00:00+08:00',
+    applyEndAt: '2026-09-18T23:59:59+08:00',
+    publicationState: 'PUBLISHED',
+    completedAt: null,
+    targetGradeMin: 1,
+    targetGradeMax: 4,
+    notesMd: '具体活动时间将在加入后通知。',
+    positions: [
+      {
+        id: 'green-action',
+        name: '公益活动策划',
+        headcount: 8,
+        description: '策划并组织环保与公益行动。',
+        requirements: '有责任心，乐于团队协作。'
+      }
+    ]
   }
 ]
