@@ -4,6 +4,9 @@
 
 html {
   font-family: var(--font-sans);
+  /* 为垂直滚动条预留稳定空间：内容高度变化导致滚动条出现/消失时，
+     视口宽度保持不变，避免居中容器重排引发的页面左右抖动（全系统通用）。 */
+  scrollbar-gutter: stable;
 }
 
 body {
