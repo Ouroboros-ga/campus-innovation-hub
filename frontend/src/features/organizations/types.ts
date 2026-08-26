@@ -113,12 +113,35 @@ export interface OrganizationPosition {
 export interface OrganizationDetail extends OrganizationSummary {
   /** 完整介绍（Markdown 源，运行时降级为纯文本）。 */
   descriptionMd: string
-  /** 主要方向。 */
+  /** 主要方向（以「/」分隔，展示为方向标签）。 */
   direction: string
+  /** 成立时间（ISO 8601，展示为「2018年9月」）。 */
+  foundedAt: string | null
+  /** 成员规模（人数）。 */
+  memberCount: number | null
+  /** 所属学院。 */
+  college: string | null
   advisorName: string | null
+  /** 指导老师职称，如「教授」。 */
+  advisorTitle: string | null
+  /** 指导老师所属单位。 */
+  advisorCollege: string | null
+  /** 指导老师研究方向。 */
+  advisorResearch: string | null
   leaderName: string
   /** 负责人职位名，如「会长」。 */
   leaderTitle: string
+  /** 负责人年级，如「2023级」。 */
+  leaderGrade: string | null
+  /** 公开邮箱。 */
+  contactEmail: string | null
+  /** 公开电话。 */
+  contactPhone: string | null
+  /** 公开地址。 */
+  contactAddress: string | null
+  /** 官方微信名称（官方微信二维码为装饰占位）。 */
+  wechatName: string | null
+  /** 单行公开联系方式（兼容字段，页面优先使用结构化联系方式）。 */
   publicContact: string | null
   recentActivities: OrganizationActivityPreview[]
   currentRecruitments: OrganizationRecruitment[]

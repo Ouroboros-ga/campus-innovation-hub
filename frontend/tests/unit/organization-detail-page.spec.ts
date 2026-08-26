@@ -42,19 +42,32 @@ afterEach(() => {
 })
 
 describe('FE-041 组织详情页', () => {
-  it('渲染身份信息与各内容区块', async () => {
+  it('渲染身份横幅、信息卡、近期活动与当前招新', async () => {
     const wrapper = await mountPage(OrganizationDetailPage, '/organizations/ai-union')
 
+    // 面包屑 + Identity 横幅
+    expect(wrapper.text()).toContain('首页')
+    expect(wrapper.text()).toContain('社团组织')
     expect(wrapper.text()).toContain('人工智能协会')
     expect(wrapper.text()).toContain('学生社团')
-    expect(wrapper.text()).toContain('组织简介')
+    expect(wrapper.text()).toContain('成立时间')
+    expect(wrapper.text()).toContain('成员规模')
+    expect(wrapper.text()).toContain('所属学院')
+    // 信息卡
     expect(wrapper.text()).toContain('主要方向')
-    expect(wrapper.text()).toContain('负责人信息')
-    expect(wrapper.text()).toContain('张同学（会长）')
+    expect(wrapper.text()).toContain('机器学习')
+    expect(wrapper.text()).toContain('指导老师')
+    expect(wrapper.text()).toContain('负责人')
+    expect(wrapper.text()).toContain('公开联系方式')
+    expect(wrapper.text()).toContain('张同学')
+    // 近期活动（关联真实活动，标题以 fixtures 为准）
     expect(wrapper.text()).toContain('近期活动')
-    expect(wrapper.text()).toContain('大模型应用实战分享会')
+    expect(wrapper.text()).toContain('AI 前沿技术分享会（第 4 期）')
+    // 当前招新（含岗位 + 申请加入）
     expect(wrapper.text()).toContain('当前招新')
     expect(wrapper.text()).toContain('人工智能协会 2026 秋季招新')
+    expect(wrapper.text()).toContain('机器学习方向')
+    expect(wrapper.text()).toContain('申请加入')
   })
 
   it('未知组织显示未找到', async () => {
