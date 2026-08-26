@@ -33,9 +33,12 @@ afterEach(() => {
 })
 
 describe('FE-052 公告详情页', () => {
-  it('展示来源、标题、正文与关联对象', async () => {
+  it('展示面包屑、来源、标题、正文与关联对象', async () => {
     const wrapper = await mountPage('announcement-mcm-2026')
 
+    // 桌面面包屑（回退到校园动态）
+    expect(wrapper.text()).toContain('校园动态')
+    expect(wrapper.text()).toContain('公告')
     expect(wrapper.text()).toContain('学院公告')
     expect(wrapper.text()).toContain('关于组织参加 2026 年全国大学生数学建模竞赛的通知')
     expect(wrapper.text()).toContain('公告内容')

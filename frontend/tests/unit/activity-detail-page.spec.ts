@@ -33,9 +33,12 @@ afterEach(() => {
 })
 
 describe('FE-051 活动详情页', () => {
-  it('展示类型、时间、地点、主办与报名主操作', async () => {
+  it('展示面包屑、类型、时间、地点、主办与报名主操作', async () => {
     const wrapper = await mountPage('ai-sharing-4')
 
+    // 桌面面包屑（回退到校园动态）
+    expect(wrapper.text()).toContain('校园动态')
+    expect(wrapper.text()).toContain('活动')
     expect(wrapper.text()).toContain('AI 前沿技术分享会（第 4 期）')
     expect(wrapper.text()).toContain('技术分享')
     expect(wrapper.text()).toContain('人工智能学院报告厅')

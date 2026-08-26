@@ -42,6 +42,27 @@ const body = computed(() => mdToPlainText(announcement.value?.bodyMd ?? null))
       </div>
 
       <template v-else>
+        <!-- 桌面/平板面包屑：手机端由居中返回头承担返回（§16.5） -->
+        <nav
+          class="mb-5 hidden items-center gap-1.5 text-sm text-muted md:flex"
+          aria-label="面包屑"
+        >
+          <RouterLink
+            to="/activities?tab=announcements"
+            class="transition-colors hover:text-primary-600"
+          >
+            校园动态
+          </RouterLink>
+          <UIcon
+            name="i-lucide-chevron-right"
+            class="size-3.5"
+            aria-hidden="true"
+          />
+          <span class="text-highlighted">
+            公告
+          </span>
+        </nav>
+
         <div class="flex flex-wrap items-center gap-2">
           <UBadge
             size="sm"
