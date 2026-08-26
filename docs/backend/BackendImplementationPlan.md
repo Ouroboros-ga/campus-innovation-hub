@@ -3,7 +3,7 @@
 > 产品：人工智能学院科创与就业服务平台
 > 仓库：campus-innovation-hub
 > 文档版本：0.1
-> 状态：BE-000 已冻结；BE-001 已完成（服务器 PostgreSQL 验证）
+> 状态：BE-000、BE-001、BE-002 已完成（服务器 PostgreSQL 验证）
 > 执行模型：一次只执行一个 BE 任务
 > Locale：简体中文（zh-CN）
 > 前置规范：BackendArchitecture.md、database-design.md、APIContract.md、PRD.md、PageMap.md
@@ -31,8 +31,8 @@
 | 任务 | 状态 | 事实 | 后续动作 |
 | --- | --- | --- | --- |
 | BE-000 Backend Spec Freeze | 已冻结 | 认证、UUID、对象存储、Markdown、首页聚合、组织申请与路由命名已写入事实来源 | 停止 |
-| BE-001 Django Foundation | 已完成 | Django 5.2.17、DRF 3.18、PostgreSQL-only 配置、`GET /api/health` 与统一 API 错误基础已在服务器 Python 3.12.14 / PostgreSQL 16.2 test database 验证 | 停止；等待明确启动 BE-002 |
-| BE-002 Accounts + Auth | 待执行 | Custom User 与 Session Auth 尚不存在 | 依赖 BE-001 |
+| BE-001 Django Foundation | 已完成 | Django 5.2.17、DRF 3.18、PostgreSQL-only 配置、`GET /api/health` 与统一 API 错误基础已在服务器 Python 3.12.14 / PostgreSQL 16.2 test database 验证 | 已完成 |
+| BE-002 Accounts + Auth | 已完成 | `accounts.User` / `UserProfile`、Session / CSRF、待审核注册、登录登出、`/api/auth/me` 与最小账户审核 Admin 已在服务器 Python 3.12.14 / PostgreSQL 16.2 验证；Media Avatar 与组织身份关联按依赖留给 BE-003 | 停止；等待明确启动 BE-003 |
 | BE-003 Domain Models | 待执行 | 25 张业务表只有设计文档 | 依赖 BE-002 |
 | BE-004 Django Admin | 待执行 | 待审核账号和系统数据尚无 Admin 配置 | 依赖 BE-003 |
 | BE-005 Domain Services | 待执行 | 关键跨表事务尚未实现 | 依赖 BE-003 |

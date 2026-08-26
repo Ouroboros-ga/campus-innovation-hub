@@ -2,7 +2,7 @@
 
 > 产品：人工智能学院科创与就业服务平台
 > 文档版本：1.0
-> 状态：V0.1 API 详细参考（仅基础设施端点已实现，业务端点待后端实现）
+> 状态：V0.1 API 详细参考（基础设施与 Auth 端点已实现，其他业务端点待后端实现）
 > 规范总览：[`APIContract.md`](APIContract.md)
 > 字段与持久化约束：[`../backend/database-design.md`](../backend/database-design.md)
 > 产品行为：[`../product/PRD.md`](../product/PRD.md) 与 [`../product/PageMap.md`](../product/PageMap.md)

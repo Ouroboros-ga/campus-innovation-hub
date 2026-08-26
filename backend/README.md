@@ -1,6 +1,6 @@
-# BE-001 Django Foundation
+# BE-001 / BE-002 Backend Foundation
 
-本目录只包含 BE-001 所需的 Django / Django REST Framework 基础设施：PostgreSQL 配置、健康检查、统一 API 错误结构与测试入口。不包含账户、业务 Model、Migration、认证端点或任何领域 API。
+本目录包含 BE-001 的 Django / Django REST Framework 基础设施，以及 BE-002 的账户与同源 Session 认证：PostgreSQL 配置、健康检查、统一 API 错误结构、Custom User、待审核注册、CSRF、Session 和最小账户审核 Admin。不包含 Media、Organization、Competition 或其他领域 Model / API。
 
 ## 运行环境
 
@@ -63,6 +63,24 @@ API 路由的非 2xx 响应使用冻结错误结构：
 ```
 
 字段校验时可额外返回 `fieldErrors`；部署层可额外提供 `requestId`。完整契约见 `../docs/api/APIContract.md` 与 `../docs/api/EndpointReference.md`。
+
+## Session 与 CSRF 认证
+
+认证固定为同源 Django Session，不返回 bearer token。先获取 CSRF cookie，再对所有认证写请求镜像到 `X-CSRFToken`：
+
+```text
+GET  /api/auth/csrf      204，确保浏览器获得可读取的 csrftoken
+POST /api/auth/register  {student_no, real_name, password}，201 pending_approval，不登录
+POST /api/auth/login     {username, password}，200 CurrentUser + HttpOnly Session cookie
+POST /api/auth/logout    登录 + CSRF，204，清理 Session
+GET  /api/auth/me        登录，200 CurrentUser
+```
+
+注册在同一事务创建 `accounts.User(is_active=false)` 和空 `UserProfile`；inactive 账号登录始终返回 `403 ACCOUNT_UNAVAILABLE`，不会建立 Session。Custom User 采用 UUID primary key、`student_no` PostgreSQL partial unique 与 `platform_role` / `is_active` 索引。
+
+`/api/auth/me` 只返回当前用户的 `student_no` 与 `real_name`，不返回 password、email、class_name、password hash、Session 或 CSRF 值。BE-002 尚未建立 Media 和 OrganizationMembership，因此 `profile.avatar` 为 `null`、`organization_memberships` 为空数组；BE-003 以真实关系补齐它们。
+
+`/admin/` 已提供受信任 SUPERADMIN 的最小账户审核入口，可启用待审核账号；全域 ModelAdmin、组织权限和审计记录仍属于后续 BE。
 
 ## Gunicorn / Nginx 接口
 
