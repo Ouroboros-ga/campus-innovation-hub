@@ -3,11 +3,13 @@
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.db.models import Q
 
 from apps.core.models import UUIDTimestampedModel
+from apps.core.validation import add_min_length_error
 
 
 class Activity(UUIDTimestampedModel):
@@ -76,6 +78,15 @@ class Activity(UUIDTimestampedModel):
             models.Index(fields=["registration_end_at"], name="activity_registration_end_idx"),
             models.Index(fields=["is_featured", "featured_order"], name="activity_featured_order_idx"),
         ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="title", value=self.title, minimum=2, label="活动标题")
+        add_min_length_error(errors, field="description_md", value=self.description_md, minimum=1, label="活动介绍")
+        add_min_length_error(errors, field="location", value=self.location, minimum=1, label="活动地点")
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self) -> str:
         return self.title

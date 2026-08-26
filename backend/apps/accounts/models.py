@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
+from apps.core.validation import add_min_length_error
+
 
 class User(AbstractUser):
     class PlatformRole(models.TextChoices):
@@ -80,6 +82,8 @@ class UserProfile(models.Model):
             errors["skills_json"] = "技能最多保留 20 项。"
         elif any(not isinstance(skill, str) or not skill.strip() for skill in skills):
             errors["skills_json"] = "技能项必须是非空字符串。"
+        elif any(len(skill.strip()) > 40 for skill in skills):
+            errors["skills_json"] = "每个技能项最多 40 个字符。"
         elif len({skill.strip() for skill in skills}) != len(skills):
             errors["skills_json"] = "技能项不能重复。"
 

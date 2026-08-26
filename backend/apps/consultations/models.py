@@ -1,10 +1,12 @@
 """咨询和正式回复模型。"""
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxLengthValidator
 from django.db import models
 
 from apps.core.models import UUIDTimestampedModel
+from apps.core.validation import add_min_length_error
 
 
 class Consultation(UUIDTimestampedModel):
@@ -43,8 +45,23 @@ class Consultation(UUIDTimestampedModel):
             models.Index(fields=["status", "visibility", "created_at"], name="consult_state_visibility_idx"),
         ]
 
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="title", value=self.title, minimum=4, label="咨询标题")
+        add_min_length_error(errors, field="body_md", value=self.body_md, minimum=10, label="咨询正文")
+        if errors:
+            raise ValidationError(errors)
+
 
 class Reply(UUIDTimestampedModel):
     consultation = models.ForeignKey(Consultation, on_delete=models.PROTECT, related_name="replies")
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="consultation_replies")
     body_md = models.TextField(validators=[MaxLengthValidator(10000)])
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="body_md", value=self.body_md, minimum=1, label="回复正文")
+        if errors:
+            raise ValidationError(errors)

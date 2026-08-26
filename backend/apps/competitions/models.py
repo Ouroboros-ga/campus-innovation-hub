@@ -1,11 +1,13 @@
 """竞赛、时间线和关注模型。"""
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.db.models import Q
 
 from apps.core.models import UUIDCreatedModel, UUIDTimestampedModel
+from apps.core.validation import add_min_length_error
 
 
 class Competition(UUIDTimestampedModel):
@@ -101,6 +103,15 @@ class Competition(UUIDTimestampedModel):
             models.Index(fields=["is_featured", "featured_order"], name="competition_featured_order_idx"),
             models.Index(fields=["event_start_at"], name="competition_event_start_idx"),
         ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="name", value=self.name, minimum=2, label="竞赛名称")
+        add_min_length_error(errors, field="edition", value=self.edition, minimum=1, label="届次")
+        add_min_length_error(errors, field="description_md", value=self.description_md, minimum=1, label="竞赛介绍")
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self) -> str:
         return f"{self.name} {self.edition}"

@@ -7,7 +7,8 @@ from django.test import TestCase
 from apps.accounts.models import User, UserProfile
 from apps.activities.models import Activity, Registration
 from apps.competitions.models import Competition, Follow
-from apps.content.models import Announcement
+from apps.consultations.models import Consultation
+from apps.content.models import Announcement, FaqItem, GuideArticle
 from apps.media.models import MediaAsset
 from apps.notifications.models import Notification
 from apps.organizations.models import Organization, OrganizationMembership, Recruitment, RecruitmentApplication, RecruitmentPosition
@@ -295,3 +296,104 @@ class DomainModelConstraintTests(TestCase):
         invalid_profile = UserProfile(user=applicant, skills_json=["Python", "Python"])
         with self.assertRaises(ValidationError):
             invalid_profile.full_clean()
+
+        too_long_skill_profile = UserProfile(user=applicant, skills_json=["x" * 41])
+        with self.assertRaises(ValidationError):
+            too_long_skill_profile.full_clean()
+
+    def test_model_clean_enforces_frozen_minimum_lengths(self) -> None:
+        actor = self.create_user("20240014")
+        competition = Competition.objects.create(
+            name="人工智能创新大赛",
+            edition="2026",
+            category=Competition.Category.AI,
+            level=Competition.Level.NATIONAL,
+            participation_mode=Competition.ParticipationMode.TEAM,
+            description_md="比赛介绍",
+            college_organized=False,
+            created_by=actor,
+            updated_by=actor,
+        )
+        competition.name = "赛"
+        with self.assertRaises(ValidationError):
+            competition.full_clean()
+
+        team_post = TeamPost.objects.create(
+            competition=competition,
+            author=actor,
+            post_type=TeamPost.PostType.TEAM_RECRUITING,
+            title="寻找算法队友",
+            direction="多模态算法",
+            base_member_count=1,
+            target_member_count=2,
+            contact_method=TeamPost.ContactMethod.EMAIL,
+            contact_value="team@example.edu",
+        )
+        team_post.title = "短"
+        with self.assertRaises(ValidationError):
+            team_post.full_clean()
+
+        organization = self.create_organization("长度校验协会")
+        recruitment = Recruitment.objects.create(
+            organization=organization,
+            title="秋季招新",
+            intro_md="欢迎加入。",
+            apply_end_at="2026-10-01T09:00:00+08:00",
+            created_by=actor,
+            updated_by=actor,
+        )
+        recruitment.title = "短"
+        with self.assertRaises(ValidationError):
+            recruitment.full_clean()
+
+        activity = Activity.objects.create(
+            title="技术分享会",
+            activity_type=Activity.ActivityType.TECH_SHARING,
+            description_md="技术分享内容。",
+            location="学院报告厅",
+            start_at="2026-10-01T09:00:00+08:00",
+            created_by=actor,
+            updated_by=actor,
+        )
+        activity.location = " "
+        with self.assertRaises(ValidationError):
+            activity.full_clean()
+
+        consultation = Consultation(
+            author=actor,
+            category=Consultation.Category.OTHER,
+            title="短",
+            body_md="内容过短",
+        )
+        with self.assertRaises(ValidationError):
+            consultation.full_clean()
+
+        guide = GuideArticle(
+            title="短",
+            category=GuideArticle.Category.OTHER,
+            body_md="正文",
+            created_by=actor,
+            updated_by=actor,
+        )
+        with self.assertRaises(ValidationError):
+            guide.full_clean()
+
+        faq = FaqItem(
+            category=FaqItem.Category.OTHER,
+            question="短",
+            answer_md="答案",
+            created_by=actor,
+            updated_by=actor,
+        )
+        with self.assertRaises(ValidationError):
+            faq.full_clean()
+
+        announcement = Announcement(
+            title="短",
+            body_md="正文",
+            publisher_scope=Announcement.PublisherScope.ACADEMY,
+            created_by=actor,
+            updated_by=actor,
+        )
+        with self.assertRaises(ValidationError):
+            announcement.full_clean()

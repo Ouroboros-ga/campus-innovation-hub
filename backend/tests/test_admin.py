@@ -59,12 +59,19 @@ class DjangoAdminTests(TestCase):
         registered_labels = {model._meta.label for model in admin.site._registry}
         self.assertTrue(expected_model_labels.issubset(registered_labels))
 
-        audit_admin = admin.site._registry[AuditLog]
         request = RequestFactory().get("/admin/")
+        request.user = self.create_user("20243000", superuser=True)
+        audit_admin = admin.site._registry[AuditLog]
         self.assertFalse(audit_admin.has_add_permission(request))
         self.assertFalse(audit_admin.has_change_permission(request))
         self.assertFalse(audit_admin.has_delete_permission(request))
-        self.assertTrue(all(not registered_admin.has_delete_permission(request) for registered_admin in admin.site._registry.values()))
+        business_admins = [
+            registered_admin
+            for model, registered_admin in admin.site._registry.items()
+            if model._meta.label in expected_model_labels
+        ]
+        self.assertEqual(len(business_admins), len(expected_model_labels))
+        self.assertTrue(all(not registered_admin.has_delete_permission(request) for registered_admin in business_admins))
 
     def test_only_active_staff_superadmin_can_enter_admin(self) -> None:
         operator = self.create_user("20243001", operator=True)

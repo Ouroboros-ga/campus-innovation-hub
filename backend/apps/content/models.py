@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import Q
 
 from apps.core.models import UUIDCreatedModel, UUIDTimestampedModel
+from apps.core.validation import add_min_length_error
 
 
 class PublicationState(models.TextChoices):
@@ -57,12 +58,16 @@ class HomepageBanner(UUIDTimestampedModel):
 
     def clean(self) -> None:
         super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="title", value=self.title, minimum=1, label="轮播标题")
         if self.link_type == self.LinkType.NONE and (self.internal_path or self.external_url):
-            raise ValidationError("无链接轮播不能设置链接地址。")
+            errors["link_type"] = "无链接轮播不能设置链接地址。"
         if self.link_type == self.LinkType.INTERNAL and (not self.internal_path or self.external_url):
-            raise ValidationError("站内轮播只能设置站内路径。")
+            errors["link_type"] = "站内轮播只能设置站内路径。"
         if self.link_type == self.LinkType.EXTERNAL and (not self.external_url or self.internal_path):
-            raise ValidationError("站外轮播只能设置站外链接。")
+            errors["link_type"] = "站外轮播只能设置站外链接。"
+        if errors:
+            raise ValidationError(errors)
 
 
 class Announcement(UUIDTimestampedModel):
@@ -105,11 +110,16 @@ class Announcement(UUIDTimestampedModel):
 
     def clean(self) -> None:
         super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="title", value=self.title, minimum=2, label="公告标题")
+        add_min_length_error(errors, field="body_md", value=self.body_md, minimum=1, label="公告正文")
         related_count = sum(
             item is not None for item in (self.competition_id, self.activity_id, self.organization_id, self.recruitment_id)
         )
         if related_count > 1:
-            raise ValidationError("公告最多只能关联一个核心业务对象。")
+            errors["__all__"] = "公告最多只能关联一个核心业务对象。"
+        if errors:
+            raise ValidationError(errors)
 
 
 class GuideArticle(UUIDTimestampedModel):
@@ -133,6 +143,14 @@ class GuideArticle(UUIDTimestampedModel):
             models.Index(fields=["category", "publication_state", "published_at"], name="guide_category_state_pub_idx"),
             models.Index(fields=["is_featured", "featured_order"], name="guide_featured_order_idx"),
         ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="title", value=self.title, minimum=2, label="指南标题")
+        add_min_length_error(errors, field="body_md", value=self.body_md, minimum=1, label="指南正文")
+        if errors:
+            raise ValidationError(errors)
 
 
 class GuideCompetition(UUIDCreatedModel):
@@ -163,3 +181,11 @@ class FaqItem(UUIDTimestampedModel):
     class Meta:
         constraints = [models.CheckConstraint(condition=Q(sort_order__gte=0), name="faq_sort_nonnegative")]
         indexes = [models.Index(fields=["publication_state", "sort_order"], name="faq_state_sort_idx")]
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="question", value=self.question, minimum=2, label="常见问题")
+        add_min_length_error(errors, field="answer_md", value=self.answer_md, minimum=1, label="常见问题答案")
+        if errors:
+            raise ValidationError(errors)

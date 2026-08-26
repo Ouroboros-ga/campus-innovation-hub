@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import Q
 
 from apps.core.models import UUIDTimestampedModel
+from apps.core.validation import add_min_length_error
 
 
 class Organization(UUIDTimestampedModel):
@@ -116,6 +117,14 @@ class Recruitment(UUIDTimestampedModel):
             models.Index(fields=["publication_state", "apply_end_at"], name="recruitment_state_end_idx"),
         ]
 
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="title", value=self.title, minimum=2, label="招新标题")
+        add_min_length_error(errors, field="intro_md", value=self.intro_md, minimum=1, label="招新简介")
+        if errors:
+            raise ValidationError(errors)
+
     def __str__(self) -> str:
         return self.title
 
@@ -134,6 +143,13 @@ class RecruitmentPosition(UUIDTimestampedModel):
             models.CheckConstraint(condition=Q(headcount__gt=0), name="recruitment_position_headcount_positive"),
             models.CheckConstraint(condition=Q(sort_order__gte=0), name="recruitment_position_sort_nonnegative"),
         ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="name", value=self.name, minimum=1, label="岗位名称")
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self) -> str:
         return self.name
@@ -176,10 +192,8 @@ class RecruitmentApplication(UUIDTimestampedModel):
     def clean(self) -> None:
         super().clean()
         errors: dict[str, str] = {}
-        if len(self.self_intro.strip()) < 5:
-            errors["self_intro"] = "自我介绍至少 5 个字符。"
-        if len(self.motivation.strip()) < 5:
-            errors["motivation"] = "申请动机至少 5 个字符。"
+        add_min_length_error(errors, field="self_intro", value=self.self_intro, minimum=5, label="自我介绍")
+        add_min_length_error(errors, field="motivation", value=self.motivation, minimum=5, label="申请动机")
         if self.position_id and self.recruitment_id and self.position.recruitment_id != self.recruitment_id:
             errors["position"] = "申请岗位不属于当前招新。"
         if errors:

@@ -8,6 +8,7 @@ from django.db.models import Q
 
 from apps.competitions.models import Competition
 from apps.core.models import UUIDTimestampedModel
+from apps.core.validation import add_min_length_error
 
 
 class TeamPost(UUIDTimestampedModel):
@@ -57,6 +58,15 @@ class TeamPost(UUIDTimestampedModel):
             models.Index(fields=["author", "created_at"], name="team_post_author_created_idx"),
             models.Index(fields=["post_type", "status", "created_at"], name="team_post_type_state_idx"),
         ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="title", value=self.title, minimum=4, label="组队标题")
+        add_min_length_error(errors, field="direction", value=self.direction, minimum=2, label="组队方向")
+        add_min_length_error(errors, field="contact_value", value=self.contact_value, minimum=1, label="联系方式")
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self) -> str:
         return self.title
@@ -117,10 +127,9 @@ class TeamApplication(UUIDTimestampedModel):
     def clean(self) -> None:
         super().clean()
         errors: dict[str, str] = {}
-        if len(self.self_intro.strip()) < 5:
-            errors["self_intro"] = "自我介绍至少 5 个字符。"
-        if len(self.motivation.strip()) < 5:
-            errors["motivation"] = "申请动机至少 5 个字符。"
+        add_min_length_error(errors, field="self_intro", value=self.self_intro, minimum=5, label="自我介绍")
+        add_min_length_error(errors, field="motivation", value=self.motivation, minimum=5, label="申请动机")
+        add_min_length_error(errors, field="contact_value", value=self.contact_value, minimum=1, label="联系方式")
         if self.team_post_id and self.applicant_id and self.team_post.author_id == self.applicant_id:
             errors["applicant"] = "不能申请自己的组队。"
         if self.desired_role_id and self.team_post_id and self.desired_role.team_post_id != self.team_post_id:
