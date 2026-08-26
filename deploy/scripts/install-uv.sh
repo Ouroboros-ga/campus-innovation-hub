@@ -24,7 +24,7 @@ installer_dir="$(mktemp -d)"
 trap 'rm -rf "$installer_dir"' EXIT
 
 curl --fail --location --proto '=https' --tlsv1.2 \
-  https://astral.sh/uv/install.sh \
+  "https://astral.sh/uv/$PINNED_UV_VERSION/install.sh" \
   --output "$installer_dir/install-uv.sh"
 
 UV_UNMANAGED_INSTALL="/usr/local/bin" UV_VERSION="$PINNED_UV_VERSION" sh "$installer_dir/install-uv.sh"
