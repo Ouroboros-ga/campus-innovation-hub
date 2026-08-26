@@ -146,9 +146,16 @@ if ! docker exec "$DATABASE_CONTAINER" psql --username "$BOOTSTRAP_DATABASE_USER
 fi
 
 chown -R "$APP_USER:$APP_GROUP" "$release_dir"
-runuser -u "$APP_USER" --preserve-environment -- "$UV_BIN" sync --frozen --group dev --directory "$release_dir/backend"
-runuser -u "$APP_USER" --preserve-environment -- "$UV_BIN" run --frozen --directory "$release_dir/backend" python manage.py check
-runuser -u "$APP_USER" --preserve-environment -- "$UV_BIN" run --frozen --directory "$release_dir/backend" python manage.py migrate --noinput
+run_as_app() {
+  runuser -u "$APP_USER" --preserve-environment -- env \
+    "HOME=/var/lib/$APP_USER" \
+    "XDG_CACHE_HOME=/var/lib/$APP_USER/.cache" \
+    "XDG_DATA_HOME=/var/lib/$APP_USER/.local/share" \
+    "$@"
+}
+run_as_app "$UV_BIN" sync --frozen --group dev --directory "$release_dir/backend"
+run_as_app "$UV_BIN" run --frozen --directory "$release_dir/backend" python manage.py check
+run_as_app "$UV_BIN" run --frozen --directory "$release_dir/backend" python manage.py migrate --noinput
 
 if [[ -e "$CURRENT_LINK" && ! -L "$CURRENT_LINK" ]]; then
   fail "$CURRENT_LINK 已存在但不是软链接。"
