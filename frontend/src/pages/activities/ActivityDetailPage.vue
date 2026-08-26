@@ -94,31 +94,48 @@ const relatedAnnouncements = computed(() =>
         <h1 class="mt-3 text-2xl font-semibold leading-snug text-highlighted">
           {{ activity.title }}
         </h1>
-        <p v-if="activity.summary" class="mt-2 text-sm text-muted">
+        <p
+          v-if="activity.summary"
+          class="mt-2 text-sm text-muted"
+        >
           {{ activity.summary }}
         </p>
 
         <div class="mt-6 grid gap-3 sm:grid-cols-2">
           <div class="rounded-surface border border-default p-3">
-            <p class="text-xs text-muted">时间</p>
+            <p class="text-xs text-muted">
+              时间
+            </p>
             <p class="mt-1 text-sm font-medium text-highlighted">
               {{ formatDateTimeCompact(activity.startAt) }}
             </p>
           </div>
           <div class="rounded-surface border border-default p-3">
-            <p class="text-xs text-muted">地点</p>
+            <p class="text-xs text-muted">
+              地点
+            </p>
             <p class="mt-1 text-sm font-medium text-highlighted">
               {{ activity.location }}
             </p>
           </div>
-          <div v-if="activity.organizerName" class="rounded-surface border border-default p-3">
-            <p class="text-xs text-muted">主办</p>
+          <div
+            v-if="activity.organizerName"
+            class="rounded-surface border border-default p-3"
+          >
+            <p class="text-xs text-muted">
+              主办
+            </p>
             <p class="mt-1 text-sm font-medium text-highlighted">
               {{ activity.organizerName }}
             </p>
           </div>
-          <div v-if="activity.speaker" class="rounded-surface border border-default p-3">
-            <p class="text-xs text-muted">主讲人 / 嘉宾</p>
+          <div
+            v-if="activity.speaker"
+            class="rounded-surface border border-default p-3"
+          >
+            <p class="text-xs text-muted">
+              主讲人 / 嘉宾
+            </p>
             <p class="mt-1 text-sm font-medium text-highlighted">
               {{ activity.speaker }}
             </p>
@@ -127,7 +144,9 @@ const relatedAnnouncements = computed(() =>
             v-if="activity.registrationStartAt"
             class="rounded-surface border border-default p-3"
           >
-            <p class="text-xs text-muted">报名开始</p>
+            <p class="text-xs text-muted">
+              报名开始
+            </p>
             <p class="mt-1 text-sm font-medium tabular-nums text-highlighted">
               {{ formatCompactDate(activity.registrationStartAt) }}
             </p>
@@ -136,7 +155,9 @@ const relatedAnnouncements = computed(() =>
             v-if="activity.registrationEndAt"
             class="rounded-surface border border-default p-3"
           >
-            <p class="text-xs text-muted">报名截止</p>
+            <p class="text-xs text-muted">
+              报名截止
+            </p>
             <p class="mt-1 text-sm font-medium tabular-nums text-highlighted">
               {{ formatCompactDate(activity.registrationEndAt) }}
             </p>
@@ -145,7 +166,9 @@ const relatedAnnouncements = computed(() =>
             v-if="activity.capacity != null"
             class="rounded-surface border border-default p-3"
           >
-            <p class="text-xs text-muted">名额</p>
+            <p class="text-xs text-muted">
+              名额
+            </p>
             <p class="mt-1 text-sm font-medium tabular-nums text-highlighted">
               {{ activity.capacity }} 人
             </p>

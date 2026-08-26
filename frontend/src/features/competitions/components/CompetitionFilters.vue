@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import {
-  computed,
-  onBeforeUnmount,
-  ref,
-  watch
-} from 'vue'
+import { ref } from 'vue'
 
 import {
   competitionCategoryOptions,
@@ -19,7 +14,8 @@ import {
  * 设计来源：
  * - FrontendDesign.md §34.5：桌面为搜索 + 下拉；手机为搜索 + 「筛选」按钮打开 UDrawer；
  *   筛选值始终 URL-backed，不建独立手机筛选状态；Drawer 含完整控件 + 重置 + 查看结果；
- * - §43 / §24：选项用语义状态与简短分类的简体中文。
+ * - §43 / §24：选项用语义状态与简短分类的简体中文；
+ * - §10：卡片无阴影、默认边框；筛选控件不用 pill 装饰。
  */
 const props = defineProps<{ query: CompetitionQuery }>()
 const emit = defineEmits<{
@@ -28,85 +24,76 @@ const emit = defineEmits<{
 }>()
 
 const drawerOpen = ref(false)
-const localQ = ref(props.query.q ?? '')
 
-watch(
-  () => props.query.q,
-  value => {
-    localQ.value = value ?? ''
-  }
-)
-
-let debounce: ReturnType<typeof globalThis.setTimeout> | null = null
 function onSearchInput(value: string) {
-  localQ.value = value
-  if (debounce) globalThis.clearTimeout(debounce)
-  debounce = globalThis.setTimeout(() => emit('change', { q: value }), 300)
+  emit('change', { q: value })
 }
-
-onBeforeUnmount(() => {
-  if (debounce) globalThis.clearTimeout(debounce)
-})
-
-const hasActiveFilters = computed(() =>
-  Boolean(
-    props.query.q ||
-      props.query.status ||
-      props.query.category ||
-      props.query.format
-  )
-)
 </script>
 
 <template>
   <div>
-    <!-- 桌面筛选栏 -->
-    <div class="hidden flex-wrap items-center gap-3 md:flex">
+    <!-- 桌面筛选栏：搜索 + 带标签下拉 + 重置 -->
+    <div class="hidden flex-wrap items-end gap-3 md:flex">
       <UInput
-        :model-value="localQ"
+        :model-value="props.query.q ?? ''"
         icon="i-lucide-search"
-        placeholder="搜索竞赛名称"
+        placeholder="搜索竞赛名称、关键词"
         class="w-64"
         @update:model-value="onSearchInput"
       />
-      <USelect
-        :model-value="query.status ?? undefined"
-        :items="competitionStatusOptions"
-        placeholder="全部状态"
-        class="w-40"
-        @update:model-value="v => emit('change', { status: v || undefined })"
-      />
-      <USelect
-        :model-value="query.category ?? undefined"
-        :items="competitionCategoryOptions"
-        placeholder="全部分类"
-        class="w-44"
-        @update:model-value="v => emit('change', { category: v || undefined })"
-      />
-      <USelect
-        :model-value="query.format ?? undefined"
-        :items="competitionFormatOptions"
-        placeholder="全部形式"
-        class="w-40"
-        @update:model-value="v => emit('change', { format: v || undefined })"
-      />
+      <div>
+        <p class="mb-1 text-xs text-muted">
+          状态
+        </p>
+        <USelect
+          :model-value="props.query.status ?? undefined"
+          :items="competitionStatusOptions"
+          placeholder="全部状态"
+          class="w-40"
+          @update:model-value="v => emit('change', { status: v || undefined })"
+        />
+      </div>
+      <div>
+        <p class="mb-1 text-xs text-muted">
+          分类
+        </p>
+        <USelect
+          :model-value="props.query.category ?? undefined"
+          :items="competitionCategoryOptions"
+          placeholder="全部分类"
+          class="w-44"
+          @update:model-value="v => emit('change', { category: v || undefined })"
+        />
+      </div>
+      <div>
+        <p class="mb-1 text-xs text-muted">
+          个人/团队
+        </p>
+        <USelect
+          :model-value="props.query.format ?? undefined"
+          :items="competitionFormatOptions"
+          placeholder="全部"
+          class="w-40"
+          @update:model-value="v => emit('change', { format: v || undefined })"
+        />
+      </div>
       <UButton
-        v-if="hasActiveFilters"
         variant="ghost"
         color="neutral"
         icon="i-lucide-rotate-ccw"
+        class="mb-0.5"
         @click="emit('reset')"
       >
-        清除筛选
+        重置
       </UButton>
     </div>
 
     <!-- 手机：搜索 + 筛选按钮 -->
     <div class="flex items-center gap-2 md:hidden">
       <UInput
-        :model-value="localQ"
+        :model-value="props.query.q ?? ''"
         icon="i-lucide-search"
-        placeholder="搜索竞赛"
+        placeholder="搜索竞赛名称、关键词"
         class="flex-1"
         @update:model-value="onSearchInput"
       />
@@ -142,7 +129,7 @@ const hasActiveFilters = computed(() =>
               状态
             </p>
             <USelect
-              :model-value="query.status ?? undefined"
+              :model-value="props.query.status ?? undefined"
               :items="competitionStatusOptions"
               placeholder="全部状态"
               class="w-full"
@@ -155,7 +142,7 @@ const hasActiveFilters = computed(() =>
               分类
             </p>
             <USelect
-              :model-value="query.category ?? undefined"
+              :model-value="props.query.category ?? undefined"
               :items="competitionCategoryOptions"
               placeholder="全部分类"
               class="w-full"
@@ -165,12 +152,12 @@ const hasActiveFilters = computed(() =>
 
           <div class="space-y-2">
             <p class="text-sm font-medium text-muted">
-              形式
+              个人/团队
             </p>
             <USelect
-              :model-value="query.format ?? undefined"
+              :model-value="props.query.format ?? undefined"
               :items="competitionFormatOptions"
-              placeholder="全部形式"
+              placeholder="全部"
               class="w-full"
               @update:model-value="v => emit('change', { format: v || undefined })"
             />

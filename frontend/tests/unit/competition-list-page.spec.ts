@@ -58,11 +58,21 @@ describe('FE-020 竞赛列表页', () => {
     expect(wrapper.text()).toContain('重新加载')
   })
 
-  it('筛选选项覆盖状态 / 分类 / 形式', async () => {
+  it('筛选选项覆盖状态 / 分类 / 个人团队', async () => {
     const wrapper = await mountPage()
 
     expect(wrapper.text()).toContain('全部状态')
     expect(wrapper.text()).toContain('全部分类')
-    expect(wrapper.text()).toContain('全部形式')
+    expect(wrapper.text()).toContain('个人/团队')
+    expect(wrapper.text()).toContain('全部')
+  })
+
+  it('有筛选时渲染「已选条件」chips 与清空全部', async () => {
+    const wrapper = await mountPage({ status: 'OPEN', category: 'AI' })
+
+    expect(wrapper.text()).toContain('已选条件：')
+    expect(wrapper.text()).toContain('报名中')
+    expect(wrapper.text()).toContain('人工智能')
+    expect(wrapper.text()).toContain('清空全部')
   })
 })

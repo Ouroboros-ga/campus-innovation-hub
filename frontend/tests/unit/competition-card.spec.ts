@@ -50,8 +50,11 @@ describe('FE-009 首页竞赛区块', () => {
       }
     })
 
-    // 级别 + 参赛形式 + 状态 = 3 个语义徽标（UBadge 渲染为 data-slot="base"）
-    const badges = wrapper.findAll('[data-slot="base"]')
+    // 级别 + 参赛形式 + 状态 = 3 个语义徽标（UBadge 渲染为 span[data-slot=base]），
+    // 排除主按钮（button/a[data-slot=base]）的干扰，符合 §21 的不超过 3 个上限
+    const badges = wrapper
+      .findAll('[data-slot="base"]')
+      .filter(el => el.element.tagName === 'SPAN')
     expect(badges.length).toBe(3)
     expect(wrapper.text()).toContain('报名中')
   })

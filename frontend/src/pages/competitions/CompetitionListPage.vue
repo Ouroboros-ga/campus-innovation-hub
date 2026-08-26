@@ -2,6 +2,7 @@
 import CompetitionCard from '@/features/homepage/components/CompetitionCard.vue'
 import CompetitionFilters from '@/features/competitions/components/CompetitionFilters.vue'
 import CompetitionListItem from '@/features/competitions/components/CompetitionListItem.vue'
+import SelectedCompetitionChips from '@/features/competitions/components/SelectedCompetitionChips.vue'
 import {
   COMPETITION_PAGE_SIZE,
   useCompetitionQuery
@@ -35,11 +36,18 @@ const {
         竞赛中心
       </h1>
       <p class="mt-2 max-w-xl text-base text-muted">
-        发现适合你的竞赛，把握报名与参赛机会。
+        汇聚校内外优质竞赛资源。发现机会，挑战自我，收获成长。
       </p>
 
       <CompetitionFilters
         class="mt-6"
+        :query="query"
+        @change="updateQuery"
+        @reset="reset"
+      />
+
+      <SelectedCompetitionChips
+        class="mt-3"
         :query="query"
         @change="updateQuery"
         @reset="reset"
@@ -111,7 +119,7 @@ const {
           </ul>
 
           <!-- 桌面 / 平板：卡片网格 -->
-          <ul class="mt-4 hidden grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 md:grid">
+          <ul class="mt-4 hidden grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:grid">
             <li
               v-for="item in paged.items"
               :key="item.id"

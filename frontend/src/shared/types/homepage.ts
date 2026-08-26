@@ -151,6 +151,8 @@ export interface CompetitionSummary {
   id: string
   name: string
   edition: string
+  /** 封面上的宣传语（可选，如「成就你的梦想」）。 */
+  slogan?: string | null
   category: CompetitionCategory
   level: CompetitionLevel
   participationMode: ParticipationMode
