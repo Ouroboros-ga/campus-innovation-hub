@@ -27,7 +27,7 @@ const body = computed(() => mdToPlainText(announcement.value?.bodyMd ?? null))
 </script>
 
 <template>
-  <section class="py-10 sm:py-14">
+  <section class="pt-4 pb-10 sm:pt-6 sm:pb-14">
     <PageContainer class="max-w-3xl">
       <div v-if="!announcement">
         <p class="text-base text-muted">

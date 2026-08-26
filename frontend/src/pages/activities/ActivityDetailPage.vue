@@ -56,7 +56,7 @@ const relatedAnnouncements = computed(() =>
 
 <template>
   <section
-    class="py-10 sm:py-14"
+    class="pt-4 pb-10 sm:pt-6 sm:pb-14"
     :class="{ 'pb-28 md:pb-14': registerable }"
   >
     <PageContainer class="max-w-3xl">
