@@ -11,13 +11,14 @@ Django REST Framework 3.18.0
 PostgreSQL 16 或兼容版本
 ```
 
-在 `backend/` 内创建并安装虚拟环境：
+在 `backend/` 内使用 `uv` 创建并安装虚拟环境：
 
 ```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -r requirements\development.txt
+uv venv .venv --python 3.12
+uv pip install --python .venv\Scripts\python.exe -r requirements\development.txt
 ```
+
+Linux / 服务器环境将 Python 路径替换为 `.venv/bin/python`。不直接使用 `pip install`；`requirements/*.txt` 仍是当前冻结的依赖声明。
 
 ## 环境变量
 
@@ -34,6 +35,12 @@ DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<database>
 ```
 
 `DATABASE_URL` 只接受 `postgres://` 或 `postgresql://`。SQLite URL 会在启动时被拒绝，防止 PostgreSQL 语义被本地替代掩盖。
+
+## 媒体存储
+
+当前服务器使用本地文件存储：`MEDIA_STORAGE_BACKEND=local`、`MEDIA_ROOT=<服务器媒体目录>`，由 Nginx 将同源 `MEDIA_URL=/media/` 映射为可公开读取的静态文件。公开 API 只返回 `{id, url}`，不会返回 `object_key`、哈希、上传者或媒体状态。
+
+已预留 OSS/S3-compatible 扩展：部署环境设置 `MEDIA_STORAGE_BACKEND=s3` 和 `MEDIA_PUBLIC_BASE_URL=https://<公开媒体域名>/<前缀>` 后，读取 API 无需改动。对象上传/删除端点将在 Media 写入阶段注入对应供应商的 S3 client；本阶段不引入 OSS SDK，也不在应用服务器部署 MinIO。
 
 ## 本地检查与测试
 
@@ -78,7 +85,7 @@ GET  /api/auth/me        登录，200 CurrentUser
 
 注册在同一事务创建 `accounts.User(is_active=false)` 和空 `UserProfile`；inactive 账号登录始终返回 `403 ACCOUNT_UNAVAILABLE`，不会建立 Session。Custom User 采用 UUID primary key、`student_no` PostgreSQL partial unique 与 `platform_role` / `is_active` 索引。
 
-`/api/auth/me` 只返回当前用户的 `student_no` 与 `real_name`，不返回 password、email、class_name、password hash、Session 或 CSRF 值。`organization_memberships` 现在只返回当前用户的 active Membership（`organization_id`、`MEMBER|LEADER`、展示 title）；`profile.avatar` 在对象存储和 MediaRef URL 实现前仍为 `null`。
+`/api/auth/me` 只返回当前用户的 `student_no` 与 `real_name`，不返回 password、email、class_name、password hash、Session 或 CSRF 值。`organization_memberships` 现在只返回当前用户的 active Membership（`organization_id`、`MEMBER|LEADER`、展示 title）；已配置且可用的 `profile.avatar` 将以 MediaRef 返回。
 
 ## 领域数据、Admin 与 Service 边界
 
@@ -113,7 +120,7 @@ python manage.py test -v 1
 
 完整功能套件及其精确计数以服务器最终输出为准。BE-006 的 PostgreSQL `TransactionTestCase` 已覆盖：已冻结 app 的 leaf Migration、partial unique 的 PostgreSQL predicate 与真实写入语义、高频索引 introspection、活动容量、组队容量、同岗位招新容量，以及同组织跨招新轮次 Membership 创建竞态。临时数据库、容器和网络在验证后清理；不会接触服务器已有服务。
 
-BE-006 不包含独立 seed、数据 Migration 或更广的数据库回归套件；这些内容必须在后续阶段单独立项和验收。
+BE-006 不包含独立 seed、数据 Migration 或更广的数据库回归套件；这些内容必须在后续阶段单独立项和验收。BE-010 的公开读取接口新增 `home`、竞赛、组织/招新、组队、活动、指南、FAQ、公告与搜索，不包含任何学生写入接口，也不切换前端 fixture。
 
 ## GitHub Actions
 

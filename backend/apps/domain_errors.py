@@ -28,6 +28,12 @@ class DuplicateApplication(DomainError):
     default_message = "已存在有效申请。"
 
 
+class AlreadyFollowed(DomainError):
+    code = "ALREADY_FOLLOWED"
+    status = 409
+    default_message = "你已关注该竞赛。"
+
+
 class CannotApplyOwn(DomainError):
     code = "CANNOT_APPLY_OWN"
     status = 422
@@ -44,6 +50,14 @@ class TimeWindowClosed(DomainError):
     code = "TIME_WINDOW_CLOSED"
     status = 422
     default_message = "不在可报名或申请的时间窗内。"
+
+
+class PublicationIncomplete(DomainError):
+    """资源可保存为草稿，但尚未满足公开发布的业务完整性。"""
+
+    code = "INVALID_STATE"
+    status = 422
+    default_message = "发布资料尚不完整。"
 
 
 class InvalidState(DomainError):

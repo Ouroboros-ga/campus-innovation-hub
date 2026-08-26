@@ -147,7 +147,7 @@ shadcn-vue（作为第二套组件系统）
 
 ---
 
-# 包管理器（Package Manager）
+# 前端包管理器（Frontend Package Manager）
 
 使用：
 
@@ -163,6 +163,28 @@ pnpm
 4. 不要生成 npm 或 yarn lockfile
 
 不要替换 `pnpm-lock.yaml`。
+
+---
+
+# 后端 Python 包管理器（Backend Python Package Manager）
+
+后端依赖与虚拟环境统一使用 `uv` 管理；现有 `requirements/*.txt` 仍是冻结的依赖声明，不因切换工具而无故改为 `pyproject.toml` 或新增 `uv.lock`。
+
+在 `backend/` 内执行：
+
+```powershell
+uv venv .venv --python 3.12
+uv pip install --python .venv\Scripts\python.exe -r requirements\development.txt
+```
+
+Linux / 服务器环境将 Python 路径替换为 `.venv/bin/python`。
+
+规则：
+
+- 不直接使用 `pip install`、`python -m pip install` 或手工改写 site-packages；
+- 新增、升级或移除后端依赖前，先检查现有 `requirements`，并将最小变更同步到对应 requirements 文件；
+- 不把临时验证容器、`uv` cache、`.venv` 或包源地址提交到仓库；
+- 生产运行时只使用已由 `uv` 创建并安装完成的虚拟环境，不在 Gunicorn 启动时安装依赖。
 
 ---
 
@@ -700,6 +722,16 @@ pnpm build
 ```
 
 当存在与被变更行为相关的测试时，运行测试。
+
+后端任务在 `backend/` 内使用由 `uv` 管理的 `.venv` 执行相关命令：
+
+```powershell
+.\.venv\Scripts\python.exe manage.py check
+.\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
+.\.venv\Scripts\python.exe manage.py test -v 2
+```
+
+服务器隔离验证应使用 `uv` 创建临时环境，使用 PostgreSQL 测试数据库；不要以 SQLite 替代 PostgreSQL 验证。
 
 ---
 
