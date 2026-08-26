@@ -16,7 +16,11 @@ export const routes: RouteRecordRaw[] = [
         name: 'competitions',
         component: () =>
           import('@/pages/competitions/CompetitionListPage.vue'),
-        meta: { mobileShell: 'tab', mobileTab: 'competitions' }
+        meta: {
+          mobileShell: 'tab',
+          mobileTab: 'competitions',
+          mobileHeaderTitle: '竞赛中心'
+        }
       },
       {
         path: 'competitions/:id',
@@ -29,9 +33,8 @@ export const routes: RouteRecordRaw[] = [
         path: 'organizations',
         name: 'organizations',
         component: () =>
-          import('@/pages/placeholder/PublicPlaceholderPage.vue'),
-        props: { title: '社团与组织' },
-        meta: { mobileShell: 'detail', title: '社团与组织' }
+          import('@/pages/organizations/OrganizationListPage.vue'),
+        meta: { mobileShell: 'tab', title: '社团与组织' }
       },
       {
         path: 'teams',
