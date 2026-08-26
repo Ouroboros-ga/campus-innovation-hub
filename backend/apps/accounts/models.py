@@ -6,8 +6,6 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
-from apps.core.validation import add_min_length_error
-
 
 class User(AbstractUser):
     class PlatformRole(models.TextChoices):
