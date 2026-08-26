@@ -49,6 +49,20 @@ export const routes: RouteRecordRaw[] = [
         meta: { mobileShell: 'tab', mobileTab: 'activities', title: '校园动态' }
       },
       {
+        path: 'activities/announcements/:announcementId',
+        name: 'announcement-detail',
+        component: () =>
+          import('@/pages/activities/AnnouncementDetailPage.vue'),
+        meta: { mobileShell: 'detail', title: '公告详情' }
+      },
+      {
+        path: 'activities/:activityId',
+        name: 'activity-detail',
+        component: () =>
+          import('@/pages/activities/ActivityDetailPage.vue'),
+        meta: { mobileShell: 'detail', title: '活动详情' }
+      },
+      {
         path: 'qa',
         name: 'qa',
         component: () =>

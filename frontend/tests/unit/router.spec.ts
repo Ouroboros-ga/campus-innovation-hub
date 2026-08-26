@@ -17,6 +17,8 @@ describe('应用路由', () => {
       'organizations',
       'teams',
       'activities',
+      'announcement-detail',
+      'activity-detail',
       'qa',
       'me'
     ])

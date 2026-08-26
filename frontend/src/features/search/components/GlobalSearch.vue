@@ -66,6 +66,7 @@ onBeforeUnmount(() => {
 
 <template>
   <UModal
+    v-if="store.open"
     v-model:open="store.open"
     :ui="{ content: 'max-w-xl' }"
   >
