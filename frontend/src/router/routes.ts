@@ -56,7 +56,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'organization-detail',
         component: () =>
           import('@/pages/organizations/OrganizationDetailPage.vue'),
-        meta: { mobileShell: 'detail', title: '组织主页' }
+        meta: { mobileShell: 'detail', title: '组织详情' }
       },
       {
         path: 'teams',

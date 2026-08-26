@@ -1237,13 +1237,25 @@ Phone root pages use a **compact centered title header**（推荐高度 52 到 5
 - 登录态下可再放通知与头像（保持 44px 触控目标）；
 - 不要在每个手机页都重复完整桌面品牌组合（logo + 名称 + 双行描述）。
 
-Phone detail / task pages use a **back header**：
+Phone detail / task pages use a **back header**（左返回 + **居中的短标题**）：
 
 ```text
-Back
-Short Page Title
-Context Action / More only when needed
+[ 返回 ]  [ 居中的短标题 ]  [ 上下文操作（仅需要时） ]
 ```
+
+标题必须是该页面的**短标题**，例如：
+
+```text
+竞赛详情 / 组织详情 / 活动详情 / 招新详情 / 公告详情
+```
+
+禁止事项：
+
+- 手机端详情页顶部**不要出现桌面式的完整状态栏 / 操作条**（logo + 同名大标题 + 多状态徽标 +
+  一排按钮），避免「电脑端状态条」观感；
+- 顶部返回与标题统一由这个居中返回头承载，**页面内容区不应再重复渲染**面包屑、返回链接、
+  同名大标题、状态徽标行与桌面式操作按钮（可在手机端 `hidden md:block` 或改用移动端结构）；
+- 详情页手机端隐藏全局底部主导航（§16.3 Detail Shell）。
 
 防止标题重复：若某个 root 页面在内容区还渲染了自己的大号 H1 / 标题，则该标题必须在
 手机端隐藏（`hidden md:block`），让标题只由居中头部承载；桌面 / 平板仍显示页面内标题。
