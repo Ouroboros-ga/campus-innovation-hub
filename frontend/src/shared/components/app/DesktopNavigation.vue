@@ -11,7 +11,7 @@ const route = useRoute()
 
 <template>
   <nav
-    class="hidden h-full items-stretch xl:flex"
+    class="hidden h-full items-stretch lg:flex"
     aria-label="主导航"
   >
     <RouterLink

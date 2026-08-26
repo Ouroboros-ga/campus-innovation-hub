@@ -9,6 +9,12 @@ import { routes } from '@/router/routes'
 
 const mountedWrappers: ReturnType<typeof mount>[] = []
 
+/** 设置视口宽度（px），用于驱动 `useBreakpoint` 响应式外壳的确定性测试。 */
+function setViewportWidth(width: number) {
+  ;(globalThis as unknown as { __viewportWidth: number }).__viewportWidth =
+    width
+}
+
 async function mountAt(path: string) {
   const router = createRouter({
     history: createMemoryHistory(),
@@ -30,6 +36,7 @@ async function mountAt(path: string) {
 }
 
 afterEach(() => {
+  setViewportWidth(1024)
   mountedWrappers.splice(0).forEach(wrapper => wrapper.unmount())
   document.body.innerHTML = ''
   vi.unstubAllGlobals()
@@ -41,7 +48,7 @@ describe('FE-004 公开应用外壳', () => {
     ['/competitions', '竞赛中心'],
     ['/organizations', '社团与组织'],
     ['/teams', '组队广场'],
-    ['/activities', '活动中心'],
+    ['/activities', '校园动态'],
     ['/qa', '咨询指南']
   ])('让 %s 共享完整外壳并显示正确页面标题', async (path, title) => {
     const { wrapper } = await mountAt(path)
@@ -59,14 +66,14 @@ describe('FE-004 公开应用外壳', () => {
     expect(desktopNavigation.text()).toContain('竞赛')
     expect(desktopNavigation.text()).toContain('社团组织')
     expect(desktopNavigation.text()).toContain('组队广场')
-    expect(desktopNavigation.text()).toContain('活动')
+    expect(desktopNavigation.text()).toContain('校园动态')
     expect(desktopNavigation.text()).toContain('咨询指南（Q&A）')
 
     await desktopNavigation.get('a[href="/activities"]').trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/activities')
-    expect(wrapper.get('main h1').text()).toBe('活动中心')
+    expect(wrapper.get('main h1').text()).toBe('校园动态')
     expect(
       desktopNavigation.get('a[href="/activities"]').attributes('aria-current')
     ).toBe('page')
@@ -76,7 +83,8 @@ describe('FE-004 公开应用外壳', () => {
     expect(wrapper.get('button[aria-label="打开用户菜单"]')).toBeTruthy()
   })
 
-  it('通过移动端 Drawer 导航并在选择后关闭', async () => {
+  it('Tablet 通过 Drawer 导航并在选择后关闭', async () => {
+    setViewportWidth(800)
     vi.stubGlobal('getComputedStyle', () => {
       const base: Record<string, string> = {
         animationName: 'none',
@@ -108,6 +116,27 @@ describe('FE-004 公开应用外壳', () => {
 
     expect(router.currentRoute.value.path).toBe('/organizations')
     expect(document.body.querySelector('[role="dialog"]')).toBeNull()
+  })
+
+  it('手机端根页展示五项底部主导航并标记活动项', async () => {
+    setViewportWidth(390)
+    const { wrapper } = await mountAt('/')
+
+    const bottomNav = wrapper.get('[aria-label="底部主导航"]')
+    expect(bottomNav.text()).toContain('首页')
+    expect(bottomNav.text()).toContain('竞赛')
+    expect(bottomNav.text()).toContain('组队')
+    expect(bottomNav.text()).toContain('动态')
+    expect(bottomNav.text()).toContain('我的')
+    expect(bottomNav.get('a[href="/"]').attributes('aria-current')).toBe('page')
+  })
+
+  it('手机端详情页隐藏底部导航并展示返回头部', async () => {
+    setViewportWidth(390)
+    const { wrapper } = await mountAt('/qa')
+
+    expect(wrapper.find('[aria-label="底部主导航"]').exists()).toBe(false)
+    expect(wrapper.get('button[aria-label="返回"]')).toBeTruthy()
   })
 
   it('在 Footer 中提供平台说明入口', async () => {

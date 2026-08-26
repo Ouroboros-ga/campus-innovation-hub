@@ -25,7 +25,9 @@ const detail = computed(() => findCompetitionDetail(id.value))
   <section class="py-10 sm:py-14">
     <PageContainer>
       <div v-if="!detail">
-        <p class="text-base text-muted">未找到该竞赛。</p>
+        <p class="text-base text-muted">
+          未找到该竞赛。
+        </p>
         <RouterLink
           to="/competitions"
           class="mt-4 inline-flex min-h-9 items-center text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"

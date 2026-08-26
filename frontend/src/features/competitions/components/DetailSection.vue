@@ -11,7 +11,9 @@ defineProps<{ title: string }>()
 <template>
   <section class="border-t border-default pt-6">
     <h2 class="text-lg font-semibold text-highlighted">
-      <slot name="title">{{ title }}</slot>
+      <slot name="title">
+        {{ title }}
+      </slot>
     </h2>
     <div class="mt-4">
       <slot />

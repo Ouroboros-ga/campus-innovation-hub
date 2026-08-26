@@ -16,6 +16,13 @@ body {
   line-height: 1.75;
 }
 
+/* 防止页面横向溢出导致可左右滑动，并避免 `fixed` 底部导航在部分移动浏览器
+   （含微信内置浏览器）被更宽的 layout viewport 撑开而只露出前几项。
+   使用 `clip`（而非 `hidden`）以免为 sticky Header / Back Header 创建滚动容器。 */
+#app {
+  overflow-x: clip;
+}
+
 *,
 *::before,
 *::after {

@@ -8,48 +8,61 @@ export const routes: RouteRecordRaw[] = [
       {
         path: '',
         name: 'home',
-        component: () => import('@/pages/home/HomePage.vue')
+        component: () => import('@/pages/home/HomePage.vue'),
+        meta: { mobileShell: 'tab', mobileTab: 'home' }
       },
       {
         path: 'competitions',
         name: 'competitions',
         component: () =>
-          import('@/pages/competitions/CompetitionListPage.vue')
+          import('@/pages/competitions/CompetitionListPage.vue'),
+        meta: { mobileShell: 'tab', mobileTab: 'competitions' }
       },
       {
         path: 'competitions/:id',
         name: 'competition-detail',
         component: () =>
           import('@/pages/competitions/CompetitionDetailPage.vue'),
-        meta: { mobileShell: 'detail' }
+        meta: { mobileShell: 'detail', title: '竞赛详情' }
       },
       {
         path: 'organizations',
         name: 'organizations',
         component: () =>
           import('@/pages/placeholder/PublicPlaceholderPage.vue'),
-        props: { title: '社团与组织' }
+        props: { title: '社团与组织' },
+        meta: { mobileShell: 'detail', title: '社团与组织' }
       },
       {
         path: 'teams',
         name: 'teams',
         component: () =>
           import('@/pages/placeholder/PublicPlaceholderPage.vue'),
-        props: { title: '组队广场' }
+        props: { title: '组队广场' },
+        meta: { mobileShell: 'tab', mobileTab: 'teams' }
       },
       {
         path: 'activities',
         name: 'activities',
         component: () =>
-          import('@/pages/placeholder/PublicPlaceholderPage.vue'),
-        props: { title: '活动中心' }
+          import('@/pages/activities/CampusDynamicsPage.vue'),
+        meta: { mobileShell: 'tab', mobileTab: 'activities', title: '校园动态' }
       },
       {
         path: 'qa',
         name: 'qa',
         component: () =>
           import('@/pages/placeholder/PublicPlaceholderPage.vue'),
-        props: { title: '咨询指南' }
+        props: { title: '咨询指南' },
+        meta: { mobileShell: 'detail', title: '咨询指南' }
+      },
+      {
+        path: 'me',
+        name: 'me',
+        component: () =>
+          import('@/pages/placeholder/PublicPlaceholderPage.vue'),
+        props: { title: '我的' },
+        meta: { mobileShell: 'tab', mobileTab: 'me' }
       }
     ]
   }

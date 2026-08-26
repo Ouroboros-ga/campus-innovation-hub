@@ -78,7 +78,7 @@ const autoplay = computed(() => {
       color: 'primary',
       class: 'bg-white/90 text-neutral-900 hover:bg-white shadow-md'
     }"
-    class="mb-7 rounded-surface border border-default bg-neutral-900 shadow-sm"
+    class="mb-7 w-full min-w-0 rounded-surface border border-default bg-neutral-900 shadow-sm"
     :ui="{
       viewport: 'overflow-hidden rounded-surface',
       prev: 'absolute left-3! top-1/2 z-10 -translate-y-1/2',
@@ -108,7 +108,7 @@ const autoplay = computed(() => {
         />
 
         <div
-          class="relative flex h-full flex-col justify-end px-14 py-5 sm:px-16 sm:py-6 md:py-8"
+          class="relative flex h-full flex-col justify-end px-8 py-5 sm:px-16 sm:py-6 md:py-8"
         >
           <span
             v-if="item.categoryLabel"

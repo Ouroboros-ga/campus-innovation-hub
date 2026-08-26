@@ -99,7 +99,9 @@ const primaryAction = computed(() => {
     <h1 class="mt-2 text-2xl font-bold leading-tight text-highlighted sm:text-3xl">
       {{ detail.name }}
     </h1>
-    <p class="mt-1 text-sm text-muted">{{ detail.edition }} 年度赛事</p>
+    <p class="mt-1 text-sm text-muted">
+      {{ detail.edition }} 年度赛事
+    </p>
 
     <div class="mt-4 grid gap-2 text-sm sm:grid-cols-2">
       <p class="text-muted">

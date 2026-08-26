@@ -35,17 +35,21 @@ const hasMedia = computed(() => Boolean(slots.media))
       >
         <div :class="hasMedia ? 'min-w-0' : 'max-w-3xl min-w-0'">
           <h1
-            class="text-[32px] font-bold leading-tight text-highlighted sm:text-[36px]"
+            class="text-[26px] font-bold leading-tight text-highlighted sm:text-[32px] lg:text-[36px]"
           >
             发现科创机会，成就无限可能
           </h1>
           <p class="mt-4 text-base text-muted">
             连接竞赛、伙伴、组织与活动，助力你的成长与探索
           </p>
-          <QuickEntry class="mt-8" />
+          <div class="mt-8 hidden md:block">
+            <QuickEntry />
+          </div>
           <HeroRecommendation class="mt-8 hidden md:block" />
         </div>
-        <slot name="media" />
+        <div class="min-w-0">
+          <slot name="media" />
+        </div>
       </div>
     </PageContainer>
   </section>

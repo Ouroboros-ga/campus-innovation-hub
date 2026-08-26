@@ -12,7 +12,7 @@ const isOpen = ref(false)
 </script>
 
 <template>
-  <div class="xl:hidden">
+  <div>
     <UButton
       aria-label="打开主菜单"
       icon="i-lucide-menu"
@@ -33,7 +33,7 @@ const isOpen = ref(false)
       <template #body>
         <nav
           class="space-y-1"
-          aria-label="移动端主导航"
+          aria-label="平板主导航"
         >
           <RouterLink
             v-for="item in publicNavigationItems"

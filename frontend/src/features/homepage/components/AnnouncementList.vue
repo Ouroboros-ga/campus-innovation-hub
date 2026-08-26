@@ -23,7 +23,7 @@ const props = withDefaults(
   <section>
     <SectionHeader
       title="通知公告"
-      to="/announcements"
+      to="/activities?tab=announcements"
     />
     <ul class="mt-2 divide-y divide-default">
       <li

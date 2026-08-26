@@ -322,19 +322,19 @@ export const announcementList: AnnouncementSummary[] = [
     id: 'announcement-mcm-2026',
     title: '关于组织参加 2026 年全国大学生数学建模竞赛的通知',
     publishedAt: '2026-08-18T09:00:00+08:00',
-    detailPath: '/announcements/mcm-2026'
+    detailPath: '/activities/announcements/announcement-mcm-2026'
   },
   {
     id: 'announcement-platform-launch',
     title: '人工智能学院科创与就业服务平台正式上线',
     publishedAt: '2026-08-20T10:00:00+08:00',
-    detailPath: '/announcements/platform-launch'
+    detailPath: '/activities/announcements/announcement-platform-launch'
   },
   {
     id: 'announcement-csdc-selection',
     title: '中国大学生计算机设计大赛校内选拔通知',
     publishedAt: '2026-08-16T14:30:00+08:00',
-    detailPath: '/announcements/csdc-selection'
+    detailPath: '/activities/announcements/announcement-csdc-selection'
   }
 ]
 

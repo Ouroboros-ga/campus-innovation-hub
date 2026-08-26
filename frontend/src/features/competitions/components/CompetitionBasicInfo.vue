@@ -66,7 +66,9 @@ const rows = computed<InfoRow[]>(() => {
       :key="row.label"
       class="grid grid-cols-[7rem_1fr] gap-3 py-3 sm:grid-cols-[8rem_1fr]"
     >
-      <dt class="text-sm text-muted">{{ row.label }}</dt>
+      <dt class="text-sm text-muted">
+        {{ row.label }}
+      </dt>
       <dd
         class="min-w-0 text-sm text-highlighted"
         :class="row.label === '官网' ? 'break-all text-primary-600 dark:text-primary-400' : ''"
@@ -85,7 +87,9 @@ const rows = computed<InfoRow[]>(() => {
             aria-hidden="true"
           />
         </a>
-        <template v-else>{{ row.value }}</template>
+        <template v-else>
+          {{ row.value }}
+        </template>
       </dd>
     </div>
   </dl>

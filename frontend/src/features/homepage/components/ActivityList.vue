@@ -53,7 +53,7 @@ function derivedState(item: ActivitySummary): RegistrationState {
   <section>
     <SectionHeader
       title="近期活动"
-      to="/activities"
+      to="/activities?tab=activities"
     />
     <ul class="mt-2 divide-y divide-default">
       <li

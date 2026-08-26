@@ -7,6 +7,7 @@ import GuideList from '@/features/homepage/components/GuideList.vue'
 import HomeCarousel from '@/features/homepage/components/HomeCarousel.vue'
 import HomeCompetitionSection from '@/features/homepage/components/HomeCompetitionSection.vue'
 import HomeHero from '@/features/homepage/components/HomeHero.vue'
+import HomePhoneSearch from '@/features/homepage/components/HomePhoneSearch.vue'
 import OrganizationRecruitmentList from '@/features/homepage/components/OrganizationRecruitmentList.vue'
 import TeamRecruitmentList from '@/features/homepage/components/TeamRecruitmentList.vue'
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
@@ -24,6 +25,8 @@ import PageContainer from '@/shared/components/layout/PageContainer.vue'
 </script>
 
 <template>
+  <HomePhoneSearch />
+
   <HomeHero>
     <template #media>
       <HomeCarousel />
