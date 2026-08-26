@@ -1,0 +1,28 @@
+[Unit]
+Description=Campus Innovation Hub Django API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=campus-hub
+Group=campus-hub
+WorkingDirectory=/opt/campus-innovation-hub/current/backend
+EnvironmentFile=/etc/campus-innovation-hub/production.env
+Environment=PYTHONUNBUFFERED=1
+RuntimeDirectory=campus-innovation-hub
+RuntimeDirectoryMode=0750
+ExecStart=/opt/campus-innovation-hub/current/backend/.venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2 --timeout 30 --graceful-timeout 30 --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile -
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=35s
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/campus-innovation-hub
+
+[Install]
+WantedBy=multi-user.target

@@ -39,6 +39,32 @@ class User(AbstractUser):
         ]
 
 
+class AuthThrottle(models.Model):
+    """短期认证节流状态；主体标识只以 HMAC 摘要形式保存。"""
+
+    class Scope(models.TextChoices):
+        LOGIN_IP = "LOGIN_IP", "登录来源 IP"
+        LOGIN_USERNAME = "LOGIN_USERNAME", "登录用户名"
+        REGISTER_IP = "REGISTER_IP", "注册来源 IP"
+
+    scope = models.CharField(max_length=32, choices=Scope.choices)
+    subject_digest = models.CharField(max_length=64)
+    failure_count = models.PositiveSmallIntegerField(default=0)
+    window_started_at = models.DateTimeField()
+    blocked_until = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["scope", "subject_digest"],
+                name="accounts_auth_throttle_scope_digest_unique",
+            ),
+        ]
+        indexes = [models.Index(fields=["blocked_until"], name="acct_throttle_blocked_idx")]
+
+
 class UserProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(

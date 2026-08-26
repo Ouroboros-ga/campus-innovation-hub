@@ -1,0 +1,29 @@
+[Unit]
+Description=Campus Innovation Hub development Django API (loopback only)
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=exec
+User=campus-hub
+Group=campus-hub
+WorkingDirectory=/opt/campus-innovation-hub-dev/current/backend
+EnvironmentFile=/etc/campus-innovation-hub/development.env
+Environment=PYTHONUNBUFFERED=1
+RuntimeDirectory=campus-innovation-hub-dev
+RuntimeDirectoryMode=0750
+ExecStart=/opt/campus-innovation-hub-dev/current/backend/.venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 2 --timeout 30 --graceful-timeout 30 --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile -
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=35s
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/campus-innovation-hub-dev
+
+[Install]
+WantedBy=multi-user.target

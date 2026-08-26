@@ -9,10 +9,11 @@ from rest_framework import serializers
 from rest_framework.request import Request
 
 from apps.activities.models import Registration
+from apps.accounts.models import User, UserProfile
 from apps.consultations.models import Consultation, Reply
 from apps.media.models import MediaAsset
 from apps.notifications.models import Notification
-from apps.public_api.serializers import actor_summary
+from apps.public_api.serializers import actor_summary, media_ref
 from apps.teams.models import TeamApplication, TeamPost
 
 
@@ -123,12 +124,184 @@ class MediaUploadSerializer(StrictSerializer):
     kind = serializers.ChoiceField(choices=MediaAsset.Kind.values)
 
 
+class ProfilePatchSerializer(StrictSerializer):
+    nickname = serializers.CharField(max_length=40, required=False, allow_null=True, allow_blank=False)
+    avatar_asset_id = serializers.UUIDField(required=False, allow_null=True)
+    major = serializers.CharField(max_length=80, required=False, allow_null=True, allow_blank=False)
+    grade = serializers.IntegerField(min_value=1, max_value=4, required=False, allow_null=True)
+    bio = serializers.CharField(max_length=500, required=False, allow_null=True, allow_blank=False)
+    skills = serializers.ListField(
+        child=serializers.CharField(max_length=40, allow_blank=False, trim_whitespace=True),
+        max_length=20,
+        required=False,
+    )
+
+    def validate_avatar_asset_id(self, asset_id: object) -> object:
+        if asset_id is None:
+            return asset_id
+        actor = self.context.get("user")
+        if not MediaAsset.objects.filter(
+            id=asset_id,
+            created_by=actor,
+            kind=MediaAsset.Kind.IMAGE,
+            status=MediaAsset.Status.ACTIVE,
+        ).exists():
+            raise serializers.ValidationError("头像必须引用可用的图片 MediaAsset。")
+        return asset_id
+
+    def validate_skills(self, skills: list[str]) -> list[str]:
+        normalised = [skill.strip() for skill in skills]
+        if len(set(normalised)) != len(normalised):
+            raise serializers.ValidationError("技能项不能重复。")
+        return normalised
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        if not attrs:
+            raise serializers.ValidationError({"non_field_errors": ["至少提供一个可编辑字段。"]})
+        return attrs
+
+
+def serialize_profile(user: User, profile: UserProfile, request: Request) -> dict[str, Any]:
+    return {
+        "real_name": user.real_name,
+        "student_no": user.student_no,
+        "class_name": profile.class_name,
+        "nickname": profile.nickname,
+        "avatar": media_ref(profile.avatar_asset, request) if profile.avatar_asset_id else None,
+        "major": profile.major,
+        "grade": profile.grade,
+        "bio": profile.bio,
+        "skills": profile.skills_json,
+    }
+
+
+def serialize_organization_membership(membership: Any) -> dict[str, Any]:
+    return {
+        "organization_id": str(membership.organization_id),
+        "organization_name": membership.organization.name,
+        "organization_type": membership.organization.organization_type,
+        "role": membership.role,
+        "title": membership.title,
+        "is_active": membership.is_active,
+    }
+
+
+def serialize_my_team(team: TeamPost, *, relationship: str) -> dict[str, Any]:
+    return {
+        "id": str(team.id),
+        "relationship": relationship,
+        "post_type": team.post_type,
+        "title": team.title,
+        "competition_id": str(team.competition_id),
+        "competition_name": team.competition.name,
+        "team_name": team.team_name,
+        "direction": team.direction,
+        "status": team.status,
+        "updated_at": team.updated_at,
+        "action_path": f"/teams/{team.id}",
+    }
+
+
+def serialize_my_team_application(application: TeamApplication) -> dict[str, Any]:
+    return {
+        "id": str(application.id),
+        "kind": "TEAM_APPLICATION",
+        "target_type": "TEAM_POST",
+        "target_id": str(application.team_post_id),
+        "target_title": application.team_post.title,
+        "target_organization_name": None,
+        "target_position_name": None,
+        "status": application.status,
+        "submitted_at": application.created_at,
+        "updated_at": application.updated_at,
+        "processed_at": application.processed_at,
+        "action_path": f"/teams/{application.team_post_id}",
+    }
+
+
+def serialize_my_recruitment_application(application: Any) -> dict[str, Any]:
+    return {
+        "id": str(application.id),
+        "kind": "RECRUITMENT_APPLICATION",
+        "target_type": "RECRUITMENT",
+        "target_id": str(application.recruitment_id),
+        "target_title": application.recruitment.title,
+        "target_organization_name": application.recruitment.organization.name,
+        "target_position_name": application.position.name,
+        "status": application.status,
+        "submitted_at": application.created_at,
+        "updated_at": application.updated_at,
+        "processed_at": application.processed_at,
+        "action_path": (
+            f"/organizations/{application.recruitment.organization_id}/recruitments/{application.recruitment_id}"
+        ),
+    }
+
+
+def serialize_my_activity_registration(registration: Registration) -> dict[str, Any]:
+    activity = registration.activity
+    return {
+        "id": str(registration.id),
+        "activity_id": str(activity.id),
+        "title": activity.title,
+        "activity_type": activity.activity_type,
+        "location": activity.location,
+        "start_at": activity.start_at,
+        "end_at": activity.end_at,
+        "registration_status": registration.status,
+        "registered_at": registration.registered_at,
+        "cancelled_at": registration.cancelled_at,
+        "action_path": f"/activities/{activity.id}",
+    }
+
+
+def serialize_my_consultation(consultation: Consultation) -> dict[str, Any]:
+    return {
+        "id": str(consultation.id),
+        "category": consultation.category,
+        "title": consultation.title,
+        "visibility": consultation.visibility,
+        "status": consultation.status,
+        "created_at": consultation.created_at,
+        "updated_at": consultation.updated_at,
+        "answered_at": consultation.answered_at,
+        "action_path": f"/qa/questions/{consultation.id}",
+    }
+
+
 def serialize_team_application_self(application: TeamApplication) -> dict[str, Any]:
     return {
         "id": str(application.id),
         "team_post_id": str(application.team_post_id),
         "desired_role_id": str(application.desired_role_id) if application.desired_role_id else None,
         "status": application.status,
+        "created_at": application.created_at,
+        "updated_at": application.updated_at,
+    }
+
+
+def serialize_team_application_owner(application: TeamApplication, request: Request) -> dict[str, Any]:
+    """作者申请列表的显式私有投影；不复用公开 TeamPost DTO。"""
+
+    desired_role = (
+        {"id": str(application.desired_role_id), "name": application.desired_role.name}
+        if application.desired_role_id
+        else None
+    )
+    return {
+        "id": str(application.id),
+        "team_post_id": str(application.team_post_id),
+        "desired_role": desired_role,
+        "applicant": actor_summary(application.applicant, request),
+        "self_intro": application.self_intro,
+        "skills": application.skills,
+        "experience": application.experience,
+        "motivation": application.motivation,
+        "weekly_commitment": application.weekly_commitment,
+        "contact_method": application.contact_method,
+        "contact_value": application.contact_value,
+        "status": application.status,
+        "processed_at": application.processed_at,
         "created_at": application.created_at,
         "updated_at": application.updated_at,
     }

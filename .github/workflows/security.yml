@@ -1,0 +1,81 @@
+name: 后端安全门禁
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  django-security:
+    name: Django production settings and security regressions
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.2-alpine
+        env:
+          POSTGRES_DB: campus_innovation_hub
+          POSTGRES_USER: campus
+          POSTGRES_PASSWORD: campus_ci_password
+        options: >-
+          --health-cmd "pg_isready -U campus -d campus_innovation_hub"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432/tcp
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DJANGO_SECRET_KEY: github-actions-test-secret-not-for-production
+      AUTH_THROTTLE_HMAC_KEY: github-actions-throttle-hmac-not-for-production
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: ci.example.invalid
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://ci.example.invalid
+      DJANGO_STATIC_ROOT: /tmp/campus-static
+      DJANGO_SECURE_HSTS_SECONDS: "300"
+      DATABASE_URL: postgresql://campus:campus_ci_password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/campus_innovation_hub
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装 uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      - name: 同步冻结依赖
+        run: uv sync --frozen --group dev
+
+      - name: Production deploy check
+        run: uv run --frozen python manage.py check --deploy --settings=config.settings.production
+
+      - name: Security regression suite
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.development
+        run: uv run --frozen python manage.py test -v 1
+
+      - name: Dependency audit
+        run: uv run --frozen pip-audit
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: detect --source . --redact --no-banner

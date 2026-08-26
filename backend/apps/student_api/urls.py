@@ -6,11 +6,21 @@ from apps.student_api import views
 
 
 urlpatterns = [
+    path("me", views.MeOverviewView.as_view(), name="me-overview"),
+    path("me/profile", views.MeProfileView.as_view(), name="me-profile"),
+    path("me/follows", views.MeFollowListView.as_view(), name="me-follows"),
+    path("me/teams", views.MeTeamListView.as_view(), name="me-teams"),
+    path("me/applications", views.MeApplicationListView.as_view(), name="me-applications"),
+    path("me/activities", views.MeActivityListView.as_view(), name="me-activities"),
+    path("me/questions", views.MeConsultationListView.as_view(), name="me-questions"),
+    path("me/organizations", views.MeOrganizationListView.as_view(), name="me-organizations"),
     path("competitions/<str:object_id>/follow", views.CompetitionFollowView.as_view(), name="competition-follow"),
     path("teams", views.TeamCollectionView.as_view(), name="team-collection"),
     path("teams/<str:object_id>", views.TeamDetailWriteView.as_view(), name="team-write-detail"),
     path("teams/<str:object_id>/close", views.TeamCloseView.as_view(), name="team-close"),
-    path("teams/<str:object_id>/applications", views.TeamApplicationCreateView.as_view(), name="team-application-create"),
+    path("teams/<str:object_id>/applications", views.TeamApplicationCollectionView.as_view(), name="team-application-collection"),
+    path("team-applications/<str:object_id>/accept", views.TeamApplicationAcceptView.as_view(), name="team-application-accept"),
+    path("team-applications/<str:object_id>/reject", views.TeamApplicationRejectView.as_view(), name="team-application-reject"),
     path("team-applications/<str:object_id>/withdraw", views.TeamApplicationWithdrawView.as_view(), name="team-application-withdraw"),
     path("recruitments/<str:object_id>/applications", views.RecruitmentApplicationCreateView.as_view(), name="recruitment-application-create"),
     path(

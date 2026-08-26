@@ -9,18 +9,20 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.models import UserProfile
+from apps.accounts.services import update_own_profile
 from apps.activities.models import Activity, Registration
 from apps.activities.services import cancel_activity_registration, register_activity
 from apps.competitions.models import Competition
 from apps.competitions.services import follow_competition, unfollow_competition
 from apps.consultations.models import Consultation
 from apps.consultations.services import create_consultation
-from apps.domain_errors import TimeWindowClosed
+from apps.domain_errors import PermissionDenied, TimeWindowClosed
 from apps.media.models import MediaAsset
 from apps.media.services import UnsupportedMedia, create_image_asset
 from apps.notifications.models import Notification
 from apps.notifications.services import mark_all_notifications_read, mark_notification_read
-from apps.organizations.models import Recruitment, RecruitmentApplication, RecruitmentPosition
+from apps.organizations.models import OrganizationMembership, Recruitment, RecruitmentApplication, RecruitmentPosition
 from apps.organizations.services import create_recruitment_application, withdraw_recruitment_application
 from apps.permissions import is_operator
 from apps.public_api.query import (
@@ -30,12 +32,13 @@ from apps.public_api.query import (
     parse_uuid,
     validate_query_keys,
 )
-from apps.public_api.serializers import serialize_team_detail
+from apps.public_api.serializers import serialize_competition, serialize_team_detail
 from apps.public_api.views import TeamDetailView as PublicTeamDetailView
 from apps.public_api.views import TeamListView as PublicTeamListView
 from apps.student_api.serializers import (
     ConsultationWriteSerializer,
     MediaUploadSerializer,
+    ProfilePatchSerializer,
     RecruitmentApplicationWriteSerializer,
     TeamApplicationWriteSerializer,
     TeamPostCreateSerializer,
@@ -43,9 +46,17 @@ from apps.student_api.serializers import (
     serialize_consultation_detail,
     serialize_consultation_self,
     serialize_media_upload,
+    serialize_my_activity_registration,
+    serialize_my_consultation,
+    serialize_my_recruitment_application,
+    serialize_my_team,
+    serialize_my_team_application,
     serialize_notification,
+    serialize_organization_membership,
+    serialize_profile,
     serialize_recruitment_application_self,
     serialize_registration_self,
+    serialize_team_application_owner,
     serialize_team_application_self,
 )
 from apps.teams.models import TeamApplication, TeamPost, TeamRole
@@ -53,7 +64,9 @@ from apps.teams.services import (
     close_team_post,
     create_team_application,
     create_team_post,
+    accept_team_application,
     update_team_post,
+    reject_team_application,
     withdraw_team_application,
 )
 
@@ -113,6 +126,18 @@ def get_activity_for_registration(object_id: str) -> Activity:
     return activity
 
 
+def get_current_profile(user: object) -> UserProfile:
+    return UserProfile.objects.select_related("avatar_asset").get(user=user)
+
+
+def active_organization_memberships(user: object):
+    return OrganizationMembership.objects.select_related("organization").filter(
+        user=user,
+        is_active=True,
+        organization__is_active=True,
+    ).order_by("organization__name", "id")
+
+
 class CompetitionFollowView(AuthenticatedStudentAPIView):
     def post(self, request: Request, object_id: str) -> Response:
         _empty_body(request)
@@ -123,6 +148,100 @@ class CompetitionFollowView(AuthenticatedStudentAPIView):
         _empty_body(request)
         unfollow_competition(actor=request.user, competition=get_published_competition(object_id))
         return Response(status=204)
+
+
+class MeOverviewView(AuthenticatedStudentAPIView):
+    def get(self, request: Request) -> Response:
+        profile = get_current_profile(request.user)
+        memberships = active_organization_memberships(request.user)
+        return Response(
+            {
+                "profile": serialize_profile(request.user, profile, request),
+                "organization_memberships": [serialize_organization_membership(item) for item in memberships],
+                "unread_notification_count": Notification.objects.filter(recipient=request.user, read_at__isnull=True).count(),
+            }
+        )
+
+
+class MeProfileView(AuthenticatedStudentAPIView):
+    def get(self, request: Request) -> Response:
+        return Response(serialize_profile(request.user, get_current_profile(request.user), request))
+
+    def patch(self, request: Request) -> Response:
+        serializer = ProfilePatchSerializer(data=request.data, context={"user": request.user})
+        serializer.is_valid(raise_exception=True)
+        profile = update_own_profile(actor=request.user, payload=serializer.validated_data)
+        return Response(serialize_profile(request.user, profile, request))
+
+
+class MeFollowListView(AuthenticatedStudentAPIView):
+    def get(self, request: Request) -> Response:
+        validate_query_keys(request, {"page", "page_size"})
+        competitions = Competition.objects.select_related("cover_asset").filter(
+            follows__user=request.user,
+            publication_state=Competition.PublicationState.PUBLISHED,
+        ).order_by("-follows__created_at", "-id")
+        return paginated_response(request, competitions, lambda competition: serialize_competition(competition, request))
+
+
+class MeTeamListView(AuthenticatedStudentAPIView):
+    def get(self, request: Request) -> Response:
+        validate_query_keys(request, {"scope", "page", "page_size"})
+        scope = parse_optional_enum(request, "scope", {"created", "joined"}) or "created"
+        teams = TeamPost.objects.select_related("competition")
+        relationship = "AUTHOR"
+        if scope == "created":
+            teams = teams.filter(author=request.user)
+        else:
+            teams = teams.filter(applications__applicant=request.user, applications__status=TeamApplication.Status.ACCEPTED).distinct()
+            relationship = "ACCEPTED_MEMBER"
+        return paginated_response(
+            request,
+            teams.order_by("-updated_at", "-id"),
+            lambda team: serialize_my_team(team, relationship=relationship),
+        )
+
+
+class MeApplicationListView(AuthenticatedStudentAPIView):
+    def get(self, request: Request) -> Response:
+        validate_query_keys(request, {"kind", "page", "page_size"})
+        kind = parse_optional_enum(request, "kind", {"team", "recruitment"})
+        applications: list[TeamApplication | RecruitmentApplication] = []
+        if kind in {None, "team"}:
+            applications.extend(
+                TeamApplication.objects.select_related("team_post").filter(applicant=request.user)
+            )
+        if kind in {None, "recruitment"}:
+            applications.extend(
+                RecruitmentApplication.objects.select_related("recruitment__organization", "position").filter(applicant=request.user)
+            )
+        applications.sort(key=lambda application: (application.created_at, str(application.id)), reverse=True)
+
+        def serialize(application: TeamApplication | RecruitmentApplication) -> dict[str, object]:
+            if isinstance(application, TeamApplication):
+                return serialize_my_team_application(application)
+            return serialize_my_recruitment_application(application)
+
+        return paginated_response(request, applications, serialize)
+
+
+class MeActivityListView(AuthenticatedStudentAPIView):
+    def get(self, request: Request) -> Response:
+        validate_query_keys(request, {"page", "page_size"})
+        registrations = Registration.objects.select_related("activity").filter(user=request.user).order_by("-registered_at", "-id")
+        return paginated_response(request, registrations, serialize_my_activity_registration)
+
+
+class MeConsultationListView(AuthenticatedStudentAPIView):
+    def get(self, request: Request) -> Response:
+        validate_query_keys(request, {"page", "page_size"})
+        consultations = Consultation.objects.filter(author=request.user).order_by("-updated_at", "-id")
+        return paginated_response(request, consultations, serialize_my_consultation)
+
+
+class MeOrganizationListView(AuthenticatedStudentAPIView):
+    def get(self, request: Request) -> Response:
+        return Response([serialize_organization_membership(item) for item in active_organization_memberships(request.user)])
 
 
 class TeamCollectionView(APIView):
@@ -165,7 +284,29 @@ class TeamCloseView(AuthenticatedStudentAPIView):
         return Response(status=204)
 
 
-class TeamApplicationCreateView(AuthenticatedStudentAPIView):
+class TeamApplicationCollectionView(AuthenticatedStudentAPIView):
+    """同一 collection 路径分别承载作者读取和学生提交申请。"""
+
+    def get(self, request: Request, object_id: str) -> Response:
+        validate_query_keys(request, {"status", "page", "page_size"})
+        team = get_team(object_id)
+        if team.author_id != request.user.id and not request.user.is_superuser:
+            raise PermissionDenied
+        status = parse_optional_enum(request, "status", TeamApplication.Status.values)
+        applications = TeamApplication.objects.select_related(
+            "desired_role",
+            "applicant",
+            "applicant__profile",
+            "applicant__profile__avatar_asset",
+        ).filter(team_post=team)
+        if status is not None:
+            applications = applications.filter(status=status)
+        return paginated_response(
+            request,
+            applications.order_by("-created_at", "-id"),
+            lambda application: serialize_team_application_owner(application, request),
+        )
+
     def post(self, request: Request, object_id: str) -> Response:
         team = get_team(object_id, public_only=True)
         serializer = TeamApplicationWriteSerializer(data=request.data)
@@ -185,13 +326,34 @@ class TeamApplicationCreateView(AuthenticatedStudentAPIView):
         return Response(serialize_team_application_self(application), status=201)
 
 
+def get_team_application(object_id: str) -> TeamApplication:
+    application = TeamApplication.objects.filter(id=parse_uuid(object_id)).first()
+    if application is None:
+        raise NotFound("组队申请不存在。")
+    return application
+
+
+class _TeamApplicationAuthorActionView(AuthenticatedStudentAPIView):
+    service = staticmethod(accept_team_application)
+
+    def post(self, request: Request, object_id: str) -> Response:
+        _empty_body(request)
+        self.service(actor=request.user, application=get_team_application(object_id))
+        return Response(status=204)
+
+
+class TeamApplicationAcceptView(_TeamApplicationAuthorActionView):
+    service = staticmethod(accept_team_application)
+
+
+class TeamApplicationRejectView(_TeamApplicationAuthorActionView):
+    service = staticmethod(reject_team_application)
+
+
 class TeamApplicationWithdrawView(AuthenticatedStudentAPIView):
     def post(self, request: Request, object_id: str) -> Response:
         _empty_body(request)
-        application = TeamApplication.objects.filter(id=parse_uuid(object_id)).first()
-        if application is None:
-            raise NotFound("组队申请不存在。")
-        withdraw_team_application(actor=request.user, application=application)
+        withdraw_team_application(actor=request.user, application=get_team_application(object_id))
         return Response(status=204)
 
 

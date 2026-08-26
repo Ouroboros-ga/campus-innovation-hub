@@ -70,3 +70,13 @@ class SensitiveAuditData(DomainError):
     code = "VALIDATION_ERROR"
     status = 400
     default_message = "审计记录不能包含敏感信息。"
+
+
+class RateLimitExceeded(DomainError):
+    code = "RATE_LIMITED"
+    status = 429
+    default_message = "请求过于频繁，请稍后重试。"
+
+    def __init__(self, *, retry_after_seconds: int) -> None:
+        self.retry_after_seconds = max(1, retry_after_seconds)
+        super().__init__()

@@ -164,27 +164,24 @@ pnpm
 
 不要替换 `pnpm-lock.yaml`。
 
----
+## 后端包管理（Backend Package Manager）
 
-# 后端 Python 包管理器（Backend Python Package Manager）
+`backend/` 使用：
 
-后端依赖与虚拟环境统一使用 `uv` 管理；现有 `requirements/*.txt` 仍是冻结的依赖声明，不因切换工具而无故改为 `pyproject.toml` 或新增 `uv.lock`。
-
-在 `backend/` 内执行：
-
-```powershell
-uv venv .venv --python 3.12
-uv pip install --python .venv\Scripts\python.exe -r requirements\development.txt
+```text
+uv
+pyproject.toml
+uv.lock
 ```
 
-Linux / 服务器环境将 Python 路径替换为 `.venv/bin/python`。
+执行 Python 依赖、管理命令或 CI 命令前，确认 `backend/pyproject.toml` 与 `backend/uv.lock` 一致，并优先使用：
 
-规则：
+```text
+uv sync --frozen --group dev
+uv run --frozen python manage.py <command>
+```
 
-- 不直接使用 `pip install`、`python -m pip install` 或手工改写 site-packages；
-- 新增、升级或移除后端依赖前，先检查现有 `requirements`，并将最小变更同步到对应 requirements 文件；
-- 不把临时验证容器、`uv` cache、`.venv` 或包源地址提交到仓库；
-- 生产运行时只使用已由 `uv` 创建并安装完成的虚拟环境，不在 Gunicorn 启动时安装依赖。
+不要直接使用 `pip install`，不要新建 requirements 的第二套可编辑依赖真源，也不要手改 `uv.lock`。新增依赖必须更新 `pyproject.toml` 后由 `uv lock` 生成锁文件。
 
 ---
 

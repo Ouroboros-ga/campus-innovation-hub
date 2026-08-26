@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
 from apps.accounts.models import User, UserProfile
-from apps.accounts.services import activate_pending_user, set_platform_role, set_user_active
+from apps.accounts.services import anonymize_deactivated_user, activate_pending_user, set_platform_role, set_user_active
 from apps.core.admin import AuditedAdminMixin
 
 
@@ -10,7 +10,13 @@ from apps.core.admin import AuditedAdminMixin
 class AccountsUserAdmin(AuditedAdminMixin, UserAdmin):
     list_display = ["username", "student_no", "real_name", "platform_role", "is_active", "is_staff"]
     list_filter = ["is_active", "platform_role", "is_staff", "is_superuser"]
-    actions = ["activate_pending_accounts", "deactivate_accounts", "grant_operator", "revoke_operator"]
+    actions = [
+        "activate_pending_accounts",
+        "deactivate_accounts",
+        "anonymize_deactivated_accounts",
+        "grant_operator",
+        "revoke_operator",
+    ]
     readonly_fields = ["is_active", "platform_role", "is_staff", "is_superuser"]
     fieldsets = UserAdmin.fieldsets + (
         ("平台信息", {"fields": ("student_no", "real_name", "platform_role")}),
@@ -32,6 +38,11 @@ class AccountsUserAdmin(AuditedAdminMixin, UserAdmin):
     def deactivate_accounts(self, request, queryset):
         for user in queryset.filter(is_active=True):
             set_user_active(actor=request.user, user=user, is_active=False)
+
+    @admin.action(description="匿名化已停用且已确认注销的账号")
+    def anonymize_deactivated_accounts(self, request, queryset):
+        for user in queryset.filter(is_active=False, is_superuser=False):
+            anonymize_deactivated_user(actor=request.user, user=user)
 
     @admin.action(description="授予平台运营角色")
     def grant_operator(self, request, queryset):

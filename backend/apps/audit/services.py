@@ -10,8 +10,17 @@ from apps.domain_errors import SensitiveAuditData
 
 _FORBIDDEN_CHANGE_KEYS = {
     "password",
+    "cookie",
+    "session",
+    "csrf",
+    "authorization",
+    "database_url",
+    "access_key",
+    "secret_access_key",
     "contact_value",
     "student_no",
+    "real_name",
+    "class_name",
     "student_no_snapshot",
     "self_intro",
     "motivation",

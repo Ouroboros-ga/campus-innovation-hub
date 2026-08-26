@@ -595,6 +595,37 @@ index(platform_role, is_active)
 - 系统维护账号可以 `student_no = null`；
 - OPERATOR 不自动拥有 Django Admin 权限；
 - 禁用账号不删除历史业务数据。
+- 账号注销采用“用户申请 → SUPERADMIN 确认 → `is_active=false` → 最小匿名化”流程，不做 `DELETE CASCADE`：保留 User UUID 与关联业务历史，移除学号、真实姓名、账号名、密码、邮箱及 Profile 的直接身份字段；超级管理员不适用该批量流程。
+
+---
+
+## 8.1.1 `accounts_auth_throttle`
+
+认证端点只保存短期、不可逆的节流状态；它不记录密码、明文 IP、学号、真实姓名、请求 body 或失败原因。
+
+| 字段 | 类型 | Null | 约束 / 说明 | 隐私 |
+|---|---|---:|---|---|
+| `id` | bigint | 否 | Django 自增 PK | INTERNAL |
+| `scope` | varchar(32) | 否 | `LOGIN_IP` / `LOGIN_USERNAME` / `REGISTER_IP` | INTERNAL |
+| `subject_digest` | char(64) | 否 | `HMAC-SHA256(AUTH_THROTTLE_HMAC_KEY, normalized_subject)` | SENSITIVE |
+| `failure_count` | smallint | 否 | 非负；仅用于短时退避 | INTERNAL |
+| `window_started_at` | timestamptz | 否 | 当前计数窗口开始时间 | INTERNAL |
+| `blocked_until` | timestamptz | 是 | 未阻断时为 null | INTERNAL |
+| `created_at` | timestamptz | 否 | | INTERNAL |
+| `updated_at` | timestamptz | 否 | | INTERNAL |
+
+### 约束、生命周期与使用边界
+
+```text
+unique(scope, subject_digest)
+index(blocked_until)
+```
+
+- `normalized_subject` 对用户名使用 `strip().casefold()`，对 IP 使用标准化地址文本；摘要 key 与 Django `SECRET_KEY` 在生产环境中独立配置；
+- 登录在 IP 与用户名两个 scope 上检查；注册只在 IP scope 上检查；不使用 Redis、Cookie 或前端计数作为授权依据；
+- 第五次连续凭据失败后，下一次登录在 30 秒内返回 `429 RATE_LIMITED`；之后的连续失败指数退避，上限 15 分钟；成功登录只清除该用户名维度，避免一个账号解锁整个 NAT；
+- 仅保留仍处于窗口或阻断期内的记录。`purge_auth_throttles` 管理命令清理超过 30 天的记录，运维按日运行；
+- 该表是安全运行数据，不加入公开 Serializer、AuditLog、搜索索引或备份以外的业务导出。
 
 ---
 
@@ -697,6 +728,8 @@ avif（浏览器 / 处理链支持时）
 ```text
 5 MB
 ```
+
+服务端还必须在完整解码前后同时限制：请求 JSON 不超过 1 MB、媒体上传请求不超过 6 MB、图片解码像素不超过 `16_777_216`。允许格式须由 Pillow 完整解码后重新编码为同一受信任格式；数据库的 `mime_type`、`size_bytes`、`sha256`、尺寸与 object key 均以重新编码结果为准。SVG、路径穿越、声明 MIME 与实际格式不一致、损坏数据、超尺寸或超像素图片一律拒绝。
 
 文档附件如果后续启用：
 
@@ -2949,14 +2982,14 @@ API Contract 可以隐藏数据库内部字段，但不得与数据库业务语�
 开始写 Django Models 前必须完成：
 
 - [x] `AUTH_USER_MODEL = accounts.User` 已冻结，且首条业务 Migration 必须使用 Custom User
-- [ ] PostgreSQL 开发环境可用
+- [x] PostgreSQL 开发 / 测试环境已验证
 - [x] 本文 25 张业务表无范围争议
-- [ ] 枚举值写入代码常量 / TextChoices
-- [ ] 所有 Unique / Check Constraint 命名
-- [ ] `on_delete` 明确
+- [x] 枚举值已写入代码常量 / TextChoices
+- [x] 所有 Unique / Check Constraint 已命名
+- [x] `on_delete` 已明确
 - [x] Markdown 内容渲染策略明确：Markdown canonical source、raw HTML 禁用、HTML render boundary sanitize
 - [x] Object Storage 接口明确：development 使用 LocalStorageBackend，production 使用 S3CompatibleStorageBackend
-- [ ] Migration 测试使用 PostgreSQL
+- [x] Migration 测试已使用 PostgreSQL
 - [x] 申请通过与活动报名事务方案已有测试计划（BackendImplementationPlan.md 的 BE-005 / BE-006）
 
 ---

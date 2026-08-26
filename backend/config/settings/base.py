@@ -55,6 +55,8 @@ def database_config_from_url(value: str) -> dict[str, Any]:
 SECRET_KEY = required_env("DJANGO_SECRET_KEY")
 DEBUG = env_bool("DJANGO_DEBUG")
 ALLOWED_HOSTS = [host.strip() for host in required_env("DJANGO_ALLOWED_HOSTS").split(",") if host.strip()]
+# development/CI 可复用 Django SECRET_KEY；production.py 强制要求独立 HMAC key。
+AUTH_THROTTLE_HMAC_KEY = os.environ.get("AUTH_THROTTLE_HMAC_KEY", SECRET_KEY)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -128,6 +130,15 @@ MEDIA_URL = os.environ.get("MEDIA_URL", "/media/")
 MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
 MEDIA_STORAGE_BACKEND = os.environ.get("MEDIA_STORAGE_BACKEND", "local").strip().lower()
 MEDIA_PUBLIC_BASE_URL = os.environ.get("MEDIA_PUBLIC_BASE_URL", "").strip()
+MEDIA_S3_ENDPOINT_URL = os.environ.get("MEDIA_S3_ENDPOINT_URL", "").strip()
+MEDIA_S3_REGION = os.environ.get("MEDIA_S3_REGION", "").strip()
+MEDIA_S3_BUCKET = os.environ.get("MEDIA_S3_BUCKET", "").strip()
+MEDIA_S3_ACCESS_KEY_ID = os.environ.get("MEDIA_S3_ACCESS_KEY_ID", "").strip()
+MEDIA_S3_SECRET_ACCESS_KEY = os.environ.get("MEDIA_S3_SECRET_ACCESS_KEY", "").strip()
+MEDIA_S3_OBJECT_PREFIX = os.environ.get("MEDIA_S3_OBJECT_PREFIX", "").strip()
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
@@ -140,7 +151,7 @@ CSRF_FAILURE_VIEW = "apps.core.errors.csrf_failure"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["apps.core.authentication.ApiSessionAuthentication"],
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "UNAUTHENTICATED_USER": None,
     "EXCEPTION_HANDLER": "apps.core.errors.api_exception_handler",
 }

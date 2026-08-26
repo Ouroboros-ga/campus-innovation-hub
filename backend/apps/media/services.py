@@ -6,6 +6,7 @@ import hashlib
 import uuid
 import warnings
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import PurePosixPath
 from typing import BinaryIO
 
@@ -27,6 +28,8 @@ class UnsupportedMedia(DomainError):
 
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_PIXELS = 16_777_216
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 _FORMAT_TO_MEDIA = {
     "JPEG": ("image/jpeg", "jpg"),
     "PNG": ("image/png", "png"),
@@ -37,6 +40,19 @@ _FORMAT_TO_MEDIA = {
 
 @dataclass(frozen=True)
 class ImageInspection:
+    mime_type: str
+    extension: str
+    size_bytes: int
+    sha256: str
+    width: int
+    height: int
+
+
+@dataclass(frozen=True)
+class NormalisedImage:
+    """已完全解码、去除元数据并重新编码的可信图片内容。"""
+
+    content: BytesIO
     mime_type: str
     extension: str
     size_bytes: int
@@ -78,9 +94,11 @@ def inspect_image(file: BinaryIO, declared_content_type: str | None) -> ImageIns
                 verified.verify()
         _reset(file)
         with Image.open(file) as decoded:
-            decoded.load()
             actual = decoded.format
             width, height = decoded.size
+            if width * height > MAX_IMAGE_PIXELS:
+                raise UnsupportedMedia("图片像素超过限制。")
+            decoded.load()
     except (Image.DecompressionBombError, Image.DecompressionBombWarning, OSError, SyntaxError, UnidentifiedImageError) as error:
         raise UnsupportedMedia("图片内容无法验证。") from error
     finally:
@@ -99,6 +117,52 @@ def inspect_image(file: BinaryIO, declared_content_type: str | None) -> ImageIns
     )
 
 
+def normalise_image_upload(file: BinaryIO, declared_content_type: str | None) -> NormalisedImage:
+    """仅存储服务器重新编码的像素数据，移除客户端附带的元数据与容器内容。"""
+
+    inspection = inspect_image(file, declared_content_type)
+    try:
+        _reset(file)
+        with Image.open(file) as decoded:
+            decoded.load()
+            image = decoded.copy()
+    except (OSError, SyntaxError, UnidentifiedImageError) as error:
+        raise UnsupportedMedia("图片内容无法重新编码。") from error
+    finally:
+        _reset(file)
+
+    output = BytesIO()
+    try:
+        if inspection.mime_type == "image/jpeg":
+            if image.mode not in {"RGB", "L"}:
+                image = image.convert("RGB")
+            image.save(output, format="JPEG", quality=90, optimize=True)
+        elif inspection.mime_type == "image/png":
+            image.save(output, format="PNG", optimize=True)
+        elif inspection.mime_type == "image/webp":
+            image.save(output, format="WEBP", quality=90, method=4)
+        elif inspection.mime_type == "image/avif":
+            image.save(output, format="AVIF", quality=60)
+        else:
+            raise UnsupportedMedia("图片格式不受支持。")
+    except (OSError, ValueError) as error:
+        raise UnsupportedMedia("图片内容无法重新编码。") from error
+
+    payload = output.getvalue()
+    if not payload or len(payload) > MAX_IMAGE_BYTES:
+        raise UnsupportedMedia("重新编码后的图片超过 5 MB 限制。")
+    output.seek(0)
+    return NormalisedImage(
+        content=output,
+        mime_type=inspection.mime_type,
+        extension=inspection.extension,
+        size_bytes=len(payload),
+        sha256=hashlib.sha256(payload).hexdigest(),
+        width=inspection.width,
+        height=inspection.height,
+    )
+
+
 def _safe_original_name(value: object, extension: str) -> str:
     name = str(value or "").replace("\\", "/").rsplit("/", 1)[-1].strip()
     return (name or f"image.{extension}")[:255]
@@ -107,23 +171,23 @@ def _safe_original_name(value: object, extension: str) -> str:
 def create_image_asset(*, actor: User, file: BinaryIO, original_name: object, content_type: str | None) -> tuple[MediaAsset, str]:
     """先保存对象；元数据事务失败时尽力删除对象，避免留下孤儿文件。"""
 
-    inspection = inspect_image(file, content_type)
+    normalized = normalise_image_upload(file, content_type)
     now = timezone.now()
-    object_key = str(PurePosixPath("uploads") / "images" / f"{now:%Y}" / f"{now:%m}" / f"{uuid.uuid4()}.{inspection.extension}")
+    object_key = str(PurePosixPath("uploads") / "images" / f"{now:%Y}" / f"{now:%m}" / f"{uuid.uuid4()}.{normalized.extension}")
     storage = get_object_storage()
-    stored = storage.save(file, object_key, inspection.mime_type)
+    stored = storage.save(normalized.content, object_key, normalized.mime_type)
     try:
         with transaction.atomic():
             asset = MediaAsset.objects.create(
                 created_by=actor,
                 kind=MediaAsset.Kind.IMAGE,
                 object_key=stored.object_key,
-                original_name=_safe_original_name(original_name, inspection.extension),
-                mime_type=inspection.mime_type,
-                size_bytes=inspection.size_bytes,
-                sha256=inspection.sha256,
-                width=inspection.width,
-                height=inspection.height,
+                original_name=_safe_original_name(original_name, normalized.extension),
+                mime_type=normalized.mime_type,
+                size_bytes=normalized.size_bytes,
+                sha256=normalized.sha256,
+                width=normalized.width,
+                height=normalized.height,
             )
     except Exception:
         try:

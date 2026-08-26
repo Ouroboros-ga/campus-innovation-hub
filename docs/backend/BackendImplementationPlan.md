@@ -2,8 +2,9 @@
 
 > 产品：人工智能学院科创与就业服务平台
 > 仓库：campus-innovation-hub
-> 文档版本：0.1
-> 状态：BE-000 至 BE-005 已完成（服务器 PostgreSQL 验证）
+> 文档版本：0.2
+> 状态：BE-000 至 BE-050A 产品缺口收口已实现；BE-060 至 BE-068 的代码、配置与文档资产已实现，运行证据仍未取得
+> 实现基线：`main@5fd5ed3bc284276057cf3442ec203412839237dc`；本状态不等同于生产环境已发布
 > 执行模型：一次只执行一个 BE 任务
 > Locale：简体中文（zh-CN）
 > 前置规范：BackendArchitecture.md、database-design.md、APIContract.md、PRD.md、PageMap.md
@@ -36,11 +37,21 @@
 | BE-003 Domain Models | 已完成 | 25 张 V0.1 业务表、TextChoices、命名约束、索引、冻结的外键删除行为和全部 Migration 已在服务器 Python 3.12.14 / PostgreSQL 16.2 全新数据库迁移验证 | 停止；不创建业务 ViewSet |
 | BE-004 Django Admin | 已完成 | `/admin/` 已注册全域 ModelAdmin，且只允许 active staff SUPERADMIN；账号审核、组织启停、平台运营角色、组织 LEADER 和成员关系操作均经受审计 Service；全部 ModelAdmin 禁止物理删除，AuditLog 只读 | 停止；不创建独立超级管理员前端 |
 | BE-005 Domain Services | 已完成 | 平台角色、`orgId` 作用域、私有咨询过滤、审计、组队/招新接受和活动报名事务已实现；服务器 PostgreSQL 全套测试及活动/组队容量、跨 Recruitment Membership 双连接竞态测试通过 | 停止；不创建任何业务 API |
-| BE-006 Database Verification | 待执行 | BE-003～005 的 Migration、partial unique、索引 introspection 与活动、组队、招新并发锁已作为本阶段验收；独立 seed、数据 Migration 和更广的数据库回归套件仍未开始 | 依赖 BE-003、BE-005，须另行明确启动 |
-| BE-010 Public Read APIs | 待执行 | 首页及公开浏览 API 尚未实现 | 依赖 BE-004、BE-006 |
-| BE-020 Student Write APIs | 待执行 | 学生写操作尚未实现 | 依赖 BE-002、BE-005、BE-006 |
-| BE-030 Organization Leader APIs | 待执行 | 组织负责人管理 API 尚未实现 | 依赖 BE-020 |
-| BE-040 Operator APIs | 待执行 | 运营 API 尚未实现 | 依赖 BE-010、BE-020 |
+| BE-006 Database Verification | 已完成 | Migration、partial unique、索引 introspection，以及活动、组队、招新并发事务均已由 PostgreSQL 测试覆盖；独立 seed、数据 Migration 和扩展数据库回归不在本阶段范围 | 不因已完成而自动开始业务 API |
+| BE-010 Public Read APIs | 已完成 | `home`、公开竞赛/组织/招新/组队/活动/内容/搜索路由及合同测试已实现 | 公开读取仅暴露可见的已发布数据 |
+| BE-020 Student Write APIs | 已完成（原范围） | 关注、组队帖创建/编辑/关闭、提交与撤回申请、活动报名、咨询、通知、媒体上传等学生端入口已实现 | 组队作者处理申请与个人中心聚合不属于当时已交付的 HTTP 入口，转入 BE-050 |
+| BE-030 Organization Leader APIs | 已完成 | 严格 `organization_id` 作用域的组织资料、招新和招新申请管理接口及合同测试已实现 | 不创建独立超级管理员前端 |
+| BE-040 Operator APIs | 已完成 | 竞赛、活动、咨询、内容、公告、Banner 运营接口、CSV、组合发布与审计已实现 | 前端集成和生产发布另行验收 |
+| BE-050A Product Closure | 已完成 | 组队作者申请列表/接受/拒绝、个人中心 API、Profile allowlist 与合同测试已实现；前端仍使用 fixture | 已在隔离 PostgreSQL 跑过 90 项完整 Django suite；停止，等待 FE-100+ 接入评审 |
+| BE-060 Authentication Hardening | 实现已落地，未运行验收（P0） | Session 生命周期、账号禁用边界、登录/注册双维节流与 429 契约 | 依赖 BE-002；完成前不得公开认证端点 |
+| BE-061 Authorization & IDOR Hardening | 实现已落地，未运行验收（P0） | DRF Default Deny、公开端点显式 AllowAny、集中权限/敏感 Serializer 回归 | 依赖 BE-010、BE-020、BE-030、BE-040 |
+| BE-062 Web Security | 实现已落地，未运行验收（P0） | production settings、TLS/CSRF、安全 header、CSP Report-Only、Markdown/XSS 与 redirect 边界 | 依赖 BE-060、BE-061 和最终前端构建 |
+| BE-063 Upload & Object Storage Security | 实现已落地，未运行验收（P0） | 上传重编码、像素/请求限制、S3 client、最小 IAM 与预发布 bucket 验证 | 依赖 BE-020、BE-062 |
+| BE-064 Production Infrastructure Security | 实现已落地，未运行验收（P0） | Nginx/Gunicorn/PostgreSQL/网络与 readiness 的版本化部署基线 | 依赖 BE-062、BE-063 |
+| BE-065 Logging / Audit / Backup / Monitoring | 实现已落地，未运行验收（P1） | 脱敏日志、审计覆盖、备份恢复、对象生命周期和告警 | 依赖 BE-064 |
+| BE-066 Security CI & Automated Tests | 实现已落地，未运行验收（P1） | `check --deploy`、依赖/secret 扫描与安全回归套件 | 依赖 BE-060 至 BE-065 |
+| BE-067 Privacy / Data Protection / Release Compliance | 实现已落地，未运行验收（P1） | 数据清单、保留与注销流程、发布合规证据 | 依赖 BE-061、BE-065 |
+| BE-068 Final Security Penetration Checklist | 实现已落地，未运行验收（P1） | 预发布攻击场景与 go/no-go 记录 | 依赖 BE-060 至 BE-067 |
 
 ---
 
@@ -68,9 +79,40 @@ BE-020  Student Write APIs
 BE-030  Organization Leader APIs
    |
 BE-040  Operator APIs
+   |
+BE-050  Product Closure + Release Readiness
+   |
+BE-060~064  P0 Security Baseline
+   |
+BE-065~068  P1 Security / Release Evidence
 ~~~
 
 前端轨道独立执行 FE-008 至 FE-090，继续使用 fixture。只有 APIContract 稳定且用户明确进入 FE-100+ 后，前端才逐域替换 fixture。
+
+---
+
+## 2.1 BE-050 的事实边界与进入条件
+
+BE-050 不是“把现有开发服务器直接上线”。它分为产品缺口收口和发布就绪两条线，二者都通过才可形成 Production Candidate。
+
+| 类别 | 已有事实 | 未闭环项 | BE-050 处理原则 |
+|---|---|---|---|
+| 组队 | `accept_team_application(...)` 事务 Service 已存在，学生可提交和撤回申请 | 作者申请列表、接受/拒绝 URL 与拒绝 Service 已由 BE-050A 收口 | 复用 post→application 行锁、定向 Notification、AuditLog 和合同测试 |
+| 个人中心 | `/api/auth/me`、通知、关注、报名、咨询和组织关系等底层数据已存在 | `/api/me`、Profile、关注、组队、混合申请、活动、咨询和组织身份已由 BE-050A 注册 | 保留既有命名；QuerySet 仅按当前用户/active membership 作用域读取 |
+| 对象存储 | `local` 上传、元数据事务、公开 `MediaRef` 与 S3-compatible client 已可用 | 未配置真实 provider，也没有 bucket smoke evidence | 生产接通一个经预发布验证的 S3-compatible client；不在应用服务器部署 MinIO |
+| 生产安全与部署 | 同源 Session/CSRF、Default Deny、production settings、Nginx/systemd、uv CI、日志和备份模板已存在 | 没有恢复演练、已确认 CI/预发布运行证据 | 反向代理/TLS/安全 header、限流、日志、静态与媒体发布、备份恢复都须经可复现验证 |
+
+`APIContract.md` 与 `EndpointReference.md` 仍是接口唯一契约；其中已有路径不因 BE-050 而改名。若个人中心的 DTO 细节不足以直接写 Serializer，先更新两份契约并评审，禁止由实现自行猜测字段。
+
+BE-050A 的产品收口已停止；其验证证据、后续生产门槛和非目标见 [`ProductionReadinessPlan.md`](ProductionReadinessPlan.md)。BE-060+ 已创建安全整改和部署模板，但不创建生产资源，也不把模板当作部署完成。
+
+---
+
+## 2.2 安全上线门槛（BE-060 至 BE-068）
+
+BE-050 的“发布就绪”部分由 [`SecurityBaseline.md`](SecurityBaseline.md) 细化并取代任何零散的安全配置建议。BE-060 至 BE-064 是 P0：任何一项缺失时，只允许继续本地/隔离开发，不形成 Production Candidate。BE-065 至 BE-068 的日志、备份恢复、CI、隐私与人工演练是最终发布审批的证据门槛。
+
+安全任务必须保留既定 Session + CSRF、同源部署、UUID 与 PostgreSQL 架构；禁止以改 JWT、放宽 CORS、用 UUID 替代授权、向应用服务器部署 MinIO 或增加不必要的 Redis 作为“快捷修复”。
 
 ---
 

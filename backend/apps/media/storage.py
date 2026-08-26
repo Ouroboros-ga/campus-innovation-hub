@@ -43,6 +43,29 @@ class S3Client(Protocol):
     def delete_object(self, object_key: str) -> None: ...
 
 
+class Boto3S3Client:
+    """将 boto3 限制在一个部署配置的 bucket/prefix 内。"""
+
+    def __init__(self, *, client: object, bucket: str, object_prefix: str) -> None:
+        self.client = client
+        self.bucket = bucket
+        self.object_prefix = _normalise_object_key(object_prefix).rstrip("/")
+
+    def _key(self, object_key: str) -> str:
+        return f"{self.object_prefix}/{_normalise_object_key(object_key)}"
+
+    def upload_fileobj(self, file: BinaryIO, object_key: str, content_type: str) -> None:
+        self.client.upload_fileobj(
+            file,
+            self.bucket,
+            self._key(object_key),
+            ExtraArgs={"ContentType": content_type},
+        )
+
+    def delete_object(self, object_key: str) -> None:
+        self.client.delete_object(Bucket=self.bucket, Key=self._key(object_key))
+
+
 def _normalise_object_key(object_key: str) -> str:
     path = PurePosixPath(object_key)
     if not object_key or path.is_absolute() or ".." in path.parts or str(path) in {"", "."}:
@@ -115,6 +138,37 @@ class S3CompatibleStorageBackend:
         self.client.delete_object(_normalise_object_key(object_key))
 
 
+def _required_s3_setting(name: str) -> str:
+    value = str(getattr(settings, name, "")).strip()
+    if not value:
+        raise ImproperlyConfigured(f"{name} 是 s3 存储的必填配置")
+    return value
+
+
+def build_s3_client_from_settings() -> S3Client:
+    """按 S3-compatible 标准建立 client；凭据不进入 Model、Serializer 或 URL。"""
+
+    try:
+        import boto3
+    except ImportError as error:
+        raise ImproperlyConfigured("s3 存储需要安装 boto3") from error
+
+    endpoint_url = _required_s3_setting("MEDIA_S3_ENDPOINT_URL")
+    region_name = _required_s3_setting("MEDIA_S3_REGION")
+    bucket = _required_s3_setting("MEDIA_S3_BUCKET")
+    access_key_id = _required_s3_setting("MEDIA_S3_ACCESS_KEY_ID")
+    secret_access_key = _required_s3_setting("MEDIA_S3_SECRET_ACCESS_KEY")
+    object_prefix = _required_s3_setting("MEDIA_S3_OBJECT_PREFIX")
+    client = boto3.client(
+        "s3",
+        endpoint_url=endpoint_url,
+        region_name=region_name,
+        aws_access_key_id=access_key_id,
+        aws_secret_access_key=secret_access_key,
+    )
+    return Boto3S3Client(client=client, bucket=bucket, object_prefix=object_prefix)
+
+
 @lru_cache(maxsize=1)
 def get_object_storage() -> ObjectStorage:
     """按环境选择存储实现；调用方不感知本地或 OSS。"""
@@ -123,5 +177,5 @@ def get_object_storage() -> ObjectStorage:
     if backend == "local":
         return LocalStorageBackend(settings.MEDIA_ROOT, settings.MEDIA_PUBLIC_BASE_URL or settings.MEDIA_URL)
     if backend == "s3":
-        return S3CompatibleStorageBackend(settings.MEDIA_PUBLIC_BASE_URL)
+        return S3CompatibleStorageBackend(settings.MEDIA_PUBLIC_BASE_URL, client=build_s3_client_from_settings())
     raise ImproperlyConfigured("MEDIA_STORAGE_BACKEND 仅支持 local 或 s3")

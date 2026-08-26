@@ -268,3 +268,35 @@ def accept_team_application(*, actor: User, application: TeamApplication) -> Tea
         changes={"status": {"from": TeamApplication.Status.PENDING, "to": TeamApplication.Status.ACCEPTED}},
     )
     return locked_application
+
+
+@transaction.atomic
+def reject_team_application(*, actor: User, application: TeamApplication) -> TeamApplication:
+    """拒绝申请沿用与接受相同的锁顺序，并保留通知和审计副作用。"""
+
+    basis = TeamApplication.objects.only("id", "team_post_id").get(pk=application.pk)
+    post = TeamPost.objects.select_for_update().get(pk=basis.team_post_id)
+    locked_application = TeamApplication.objects.select_for_update().get(pk=basis.pk)
+    if actor.id != post.author_id and not actor.is_superuser:
+        raise PermissionDenied
+    if locked_application.status != TeamApplication.Status.PENDING:
+        raise InvalidState
+
+    locked_application.status = TeamApplication.Status.REJECTED
+    locked_application.processed_at = timezone.now()
+    locked_application.save(update_fields=["status", "processed_at", "updated_at"])
+    create_notification(
+        recipient=locked_application.applicant,
+        notification_type=Notification.NotificationType.TEAM,
+        title="组队申请未通过",
+        body=f"你的组队申请“{post.title}”未通过。",
+        action_path=f"/teams/{post.id}",
+        dedupe_key=f"team-application:{locked_application.id}:rejected",
+    )
+    record_audit(
+        actor=actor,
+        action="TEAM_APPLICATION_REJECTED",
+        target=locked_application,
+        changes={"status": {"from": TeamApplication.Status.PENDING, "to": TeamApplication.Status.REJECTED}},
+    )
+    return locked_application

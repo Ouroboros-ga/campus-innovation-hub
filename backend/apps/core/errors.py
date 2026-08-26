@@ -76,9 +76,13 @@ def _field_errors(data: Any) -> Mapping[str, list[str]] | None:
 
 def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response | None:
     if isinstance(exc, DomainError):
+        headers = None
+        if exc.code == "RATE_LIMITED":
+            headers = {"Retry-After": str(getattr(exc, "retry_after_seconds", 1))}
         return Response(
             {"code": exc.code, "message": str(exc)},
             status=exc.status,
+            headers=headers,
         )
 
     response = exception_handler(exc, context)

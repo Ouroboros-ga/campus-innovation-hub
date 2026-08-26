@@ -1,5 +1,6 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.conf import settings
+from django.db.migrations.loader import MigrationLoader
 from django.test import SimpleTestCase
 
 
@@ -33,3 +34,25 @@ class SecuritySettingsTests(SimpleTestCase):
         self.assertTrue(settings.CSRF_COOKIE_SECURE)
         self.assertEqual(settings.SESSION_COOKIE_SAMESITE, "Lax")
         self.assertEqual(settings.CSRF_COOKIE_SAMESITE, "Lax")
+
+
+class DevelopmentSettingsTests(SimpleTestCase):
+    def test_local_csrf_origins_are_parsed_and_non_local_origins_are_rejected(self) -> None:
+        from config.settings.development import parse_development_csrf_origins
+
+        self.assertEqual(
+            parse_development_csrf_origins("http://localhost:5173,http://127.0.0.1:4173"),
+            ["http://localhost:5173", "http://127.0.0.1:4173"],
+        )
+        with self.assertRaises(ImproperlyConfigured):
+            parse_development_csrf_origins("https://example.edu")
+
+    def test_accounts_migrations_have_one_linear_leaf(self) -> None:
+        loader = MigrationLoader(None, ignore_no_migrations=True)
+
+        self.assertEqual(loader.graph.leaf_nodes("accounts"), [("accounts", "0003_auth_throttle")])
+
+    def test_auth_throttle_index_name_is_portable(self) -> None:
+        from apps.accounts.models import AuthThrottle
+
+        self.assertLessEqual(len(AuthThrottle._meta.indexes[0].name), 30)

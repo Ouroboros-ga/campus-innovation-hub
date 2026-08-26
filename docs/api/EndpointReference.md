@@ -1,8 +1,9 @@
 # EndpointReference.md
 
 > 产品：人工智能学院科创与就业服务平台
-> 文档版本：1.0
-> 状态：V0.1 API 详细参考（基础设施与 Auth 端点已实现，其他业务端点待后端实现）
+> 文档版本：1.1
+> 状态：V0.1 API 详细参考（BE-000 至 BE-050A 已实现；BE-060 至 BE-068 的实现资产已加入，生产安全与发布运行证据仍待取得）
+> 实现基线：`main@5fd5ed3bc284276057cf3442ec203412839237dc`；本文是契约而非实时发布状态
 > 规范总览：[`APIContract.md`](APIContract.md)
 > 字段与持久化约束：[`../backend/database-design.md`](../backend/database-design.md)
 > 产品行为：[`../product/PRD.md`](../product/PRD.md) 与 [`../product/PageMap.md`](../product/PageMap.md)
@@ -23,6 +24,17 @@ Query 或 request body
 ```
 
 本文件不定义新的数据库字段、页面路由、权限角色或基础设施。若其与数据库设计冲突，必须先修订数据库设计和本文件，再实现 Serializer、View 或前端 API 模块。
+
+## 0.0 实现状态与联调边界
+
+Auth、公开浏览、既定学生写操作、组织负责人、运营 API，以及 BE-050A 的下列路径均已有 DRF Serializer、View/URL 与合同测试；前端仍须等待 FE-100+ 的明确接入评审，不能仅因后端路径已注册而切换 fixture：
+
+| 契约域 | 已实现路径 | 收口阶段 |
+|---|---|---|
+| 组队作者申请处理 | `GET /api/teams/{id}/applications`、`POST /api/team-applications/{id}/accept`、`POST /api/team-applications/{id}/reject` | BE-050 |
+| 个人中心 | `/api/me`、`/api/me/profile`、`/api/me/follows`、`/api/me/teams`、`/api/me/applications`、`/api/me/activities`、`/api/me/questions`、`/api/me/organizations` | BE-050 |
+
+其中 `TeamApplicationOwnerItem`、`MyApplicationItem`、`MyActivityItem`、`MyConsultationItem` 与 `MyTeamItem` 的字段边界已冻结在 §1.5 和 §3.1。`PageMap.md` 的“我的组队”使用既有路径 `/api/me/teams` 的 `scope=created|joined` 表达；资料页的只读真实姓名、学号和班级已纳入 `Profile` response。生产配置、S3 写入和部署验证见 `../backend/ProductionReadinessPlan.md`，不由本 API 文档宣称完成。
 
 ## 0.1 通用传输规则
 
@@ -313,6 +325,16 @@ Content-Disposition: attachment; filename="activity-<id>-registrations.csv"
 | Error | `405 METHOD_NOT_ALLOWED`；未预期异常为 `500 INTERNAL_ERROR` |
 | 副作用 | 无；该端点用于部署探活，不读取或写入业务数据 |
 
+## 0.8 `GET /api/ready`
+
+| 项 | 契约 |
+|---|---|
+| 权限 | Django 端显式 `AllowAny`；生产 Nginx 只允许 loopback 探针访问 |
+| Request | 无 body |
+| Success | `200 {"status":"ready"}` |
+| Error | 数据库不可连接时 `503 {"status":"unavailable"}`；不返回数据库 URL、主机、版本或异常文本 |
+| 副作用 | 仅确认 Django 可建立数据库连接；不读取业务数据 |
+
 ---
 
 # 1. Auth 与个人中心
@@ -334,14 +356,14 @@ Content-Disposition: attachment; filename="activity-<id>-registrations.csv"
 | 权限 | PUBLIC + CSRF |
 | Body | `{student_no, real_name, password}`；长度分别 2–32、1–80、使用 Django password validator |
 | Success | `201 {"status":"pending_approval","message":"注册已提交，请等待管理员审核。"}` |
-| Error | `400 VALIDATION_ERROR`、`409 ACCOUNT_EXISTS` |
+| Error | `400 VALIDATION_ERROR`、`409 ACCOUNT_EXISTS`、`429 RATE_LIMITED` + `Retry-After` |
 | 副作用 | 单一事务创建 `User(username=student_no, platform_role=STUDENT, is_active=false)` 与空 `UserProfile`；不登录，不发送审核原因或已有账号资料 |
 
 ## 1.3 `POST /api/auth/login` 与 `POST /api/auth/logout`
 
 | 端点 | 权限 | Body | Success | Error / 规则 |
 |---|---|---|---|---|
-| `POST /api/auth/login` | PUBLIC + CSRF | `{username, password}` | `200`，Set-Cookie Session，body 为 `CurrentUser` | 凭据错误 `401 AUTH_REQUIRED`；inactive 统一 `403 ACCOUNT_UNAVAILABLE` |
+| `POST /api/auth/login` | PUBLIC + CSRF | `{username, password}` | `200`，Set-Cookie Session，body 为 `CurrentUser` | 凭据错误 `401 AUTH_REQUIRED`；inactive 统一 `403 ACCOUNT_UNAVAILABLE`；短时节流为 `429 RATE_LIMITED` + `Retry-After` |
 | `POST /api/auth/logout` | LOGIN + CSRF | 无 | `204`，清理当前 Session | `401 AUTH_REQUIRED` |
 
 登录不返回 bearer token、密码哈希或 CSRF token。忘记密码不提供 API，产品只显示“请联系管理员”。
@@ -359,20 +381,23 @@ Content-Disposition: attachment; filename="activity-<id>-registrations.csv"
 
 | 端点 | 权限 | Query / Body | 成功 response | 规则与错误 |
 |---|---|---|---|---|
-| `GET /api/me` | LOGIN | 无 | `200 {profile, organization_memberships, unread_notification_count}` | 聚合当前用户信息；不取代 `/api/auth/me` 的权限上下文 |
+| `GET /api/me` | LOGIN | 无 | `200 {profile, organization_memberships, unread_notification_count}` | 聚合当前用户信息；不返回平台权限上下文，不取代 `/api/auth/me` |
 | `GET /api/me/profile` | LOGIN | 无 | `200 Profile` | 只返回本人允许读取的资料 |
-| `PATCH /api/me/profile` | LOGIN + CSRF | `{nickname?, avatar_asset_id?, major?, grade?, bio?, skills?}` | `200 Profile` | `skills` 是去重字符串数组，最多 20 项；不可改真实姓名、学号、班级；字段非法 `400` |
+| `PATCH /api/me/profile` | LOGIN + CSRF | `{nickname?, avatar_asset_id?, major?, grade?, bio?, skills?}` | `200 Profile` | `skills` 是去重字符串数组，最多 20 项；`avatar_asset_id` 必须是调用者上传的 ACTIVE IMAGE；不可改真实姓名、学号、班级；字段非法 `400` |
 | `GET /api/me/follows` | LOGIN | page/page_size | `200 Page<CompetitionListItem>` | 仅当前用户关注记录 |
-| `GET /api/me/teams` | LOGIN | page/page_size | `200 Page<TeamPostOwnerItem>` | 返回本人所有状态的 TeamPost |
+| `GET /api/me/teams` | LOGIN | `scope=created|joined`（默认 `created`）、page/page_size | `200 Page<MyTeamItem>` | `created` 为作者帖子，`joined` 为已接受组队申请所关联帖子；不返回联系方式 |
 | `GET /api/me/applications` | LOGIN | `kind=team|recruitment` 可选，page/page_size | `200 Page<MyApplicationItem>` | kind 非法 `400`；每项带 `action_path` |
 | `GET /api/me/activities` | LOGIN | page/page_size | `200 Page<MyActivityItem>` | 带本人 `registration_status`，不返回其他人的报名快照 |
 | `GET /api/me/questions` | LOGIN | page/page_size | `200 Page<MyConsultationItem>` | 包含公开与私密的本人咨询 |
 | `GET /api/me/organizations` | LOGIN | 无 | `200 OrganizationMembershipItem[]` | 无身份返回 `[]`；为 `/organizations` “我的组织”区块供数，不对应独立学生路由 |
 
-`Profile` 的写入字段与 `accounts_user_profile` 一致：
+`Profile` response 只对本人返回下列字段；其中 `real_name`、`student_no`、`class_name` 只读且不得出现在 PATCH body：
 
 ```json
 {
+  "real_name": "张三",
+  "student_no": "20260001",
+  "class_name": "人工智能 2301",
   "nickname": "阿三",
   "avatar": { "id": "uuid", "url": "https://media.example.edu/avatar.webp" },
   "major": "人工智能",
@@ -381,6 +406,45 @@ Content-Disposition: attachment; filename="activity-<id>-registrations.csv"
   "skills": ["Python", "Vue"]
 }
 ```
+
+`MyTeamItem`：
+
+```json
+{
+  "id": "team-post uuid",
+  "relationship": "AUTHOR | ACCEPTED_MEMBER",
+  "post_type": "TEAM_RECRUITING | PERSON_LOOKING",
+  "title": "寻找两名算法队友",
+  "competition_id": "uuid",
+  "competition_name": "全国大学生数学建模竞赛",
+  "team_name": "数模小分队",
+  "direction": "数学建模方向",
+  "status": "RECRUITING | FULL | CLOSED",
+  "updated_at": "2026-09-01T10:00:00+08:00",
+  "action_path": "/teams/{id}"
+}
+```
+
+`MyApplicationItem`：
+
+```json
+{
+  "id": "uuid",
+  "kind": "TEAM_APPLICATION | RECRUITMENT_APPLICATION",
+  "target_type": "TEAM_POST | RECRUITMENT",
+  "target_id": "uuid",
+  "target_title": "队伍标题 / 招新标题",
+  "target_organization_name": "招新所属组织或 null",
+  "target_position_name": "招新申请岗位或 null",
+  "status": "PENDING | ACCEPTED | REJECTED | WITHDRAWN",
+  "submitted_at": "2026-09-01T10:00:00+08:00",
+  "updated_at": "2026-09-01T10:00:00+08:00",
+  "processed_at": null,
+  "action_path": "/teams/{target_id} 或 /organizations/{organization_id}/recruitments/{target_id}"
+}
+```
+
+当未传 `kind` 时，两种申请合并并按 `submitted_at` 倒序、`id` 倒序后分页；传入 `kind=team|recruitment` 时只返回对应种类。`MyActivityItem` 为 `{id, activity_id, title, activity_type, location, start_at, end_at, registration_status, registered_at, cancelled_at, action_path}`；`MyConsultationItem` 为 `{id, category, title, visibility, status, created_at, updated_at, answered_at, action_path}`，其 `action_path` 固定为 `/qa/questions/{id}`。二者分别按 `registered_at`、`updated_at` 倒序，再按 `id` 倒序。
 
 `OrganizationMembershipItem`：
 
@@ -515,7 +579,7 @@ Content-Disposition: attachment; filename="activity-<id>-registrations.csv"
 }
 ```
 
-`TeamPostDetail` 在此基础上增加 `notes_md`、`updated_at`、`my_application_status`；`contact_method/contact_value` 仅作者或已接受申请的双方可见。`TeamApplicationOwnerItem` 使用申请写入字段加 `id`、申请人 `ActorSummary`、`status`、`processed_at`、`created_at`；作者可见申请人提交的联系方式，公开端点绝不返回。
+`TeamPostDetail` 在此基础上增加 `notes_md`、`updated_at`、`my_application_status`；`contact_method/contact_value` 仅作者或已接受申请的双方可见。`TeamApplicationOwnerItem` 仅可由对应 `TeamPost.author`（或 SUPERADMIN）读取，固定使用申请写入字段加 `id`、`team_post_id`、`desired_role`（`{id,name}` 或 null）、申请人 `ActorSummary`、`status`、`processed_at`、`created_at`、`updated_at`；作者可见申请人提交的联系方式，公开端点绝不返回。列表默认按 `created_at` 倒序、再按 `id` 倒序；`status=PENDING|ACCEPTED|REJECTED|WITHDRAWN` 之外的筛选返回 `400 VALIDATION_ERROR`。
 
 ## 3.2 创建、编辑与关闭 TeamPost
 

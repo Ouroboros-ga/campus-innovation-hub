@@ -4,11 +4,12 @@ from django.contrib import admin
 from django.urls import include, path
 
 from apps.accounts import views as account_views
-from apps.core.views import HealthCheckView
+from apps.core.views import HealthCheckView, ReadinessCheckView
 
 
 urlpatterns = [
     path("api/health", HealthCheckView.as_view(), name="api-health"),
+    path("api/ready", ReadinessCheckView.as_view(), name="api-ready"),
     path("api/", include("apps.organization_api.urls")),
     path("api/", include("apps.student_api.urls")),
     path("api/", include("apps.ops_api.urls")),

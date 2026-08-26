@@ -2,8 +2,8 @@
 
 > 产品：人工智能学院科创与就业服务平台
 > 仓库：campus-innovation-hub
-> 文档版本：0.1
-> 状态：BE-000 Spec Frozen
+> 文档版本：0.2
+> 状态：BE-000 Spec Frozen；BE-000 至 BE-050A 已实现；BE-060 至 BE-068 已形成实现资产，尚未完成预发布运行证据
 > 产品里程碑：V0.1
 > 职责：定义 Django 后端的运行时边界、认证与权限、媒体、内容安全、服务边界、测试与部署约束
 > 上游事实来源：docs/product/PRD.md、docs/product/PageMap.md、docs/backend/database-design.md、docs/api/APIContract.md
@@ -76,7 +76,7 @@ PostgreSQL
 Gunicorn（生产 WSGI）
 ~~~
 
-依赖由 backend/requirements/ 中的受版本控制文件声明；生产与开发依赖分开，真实密钥不进入仓库。Windows 开发使用 backend/.venv/Scripts/python.exe，不依赖系统 Python 的 Store stub。
+依赖由 `backend/pyproject.toml` 声明、`backend/uv.lock` 锁定；开发组依赖使用 uv `dev` group，真实密钥不进入仓库。Windows 开发通过 `uv run --frozen` 使用项目 `.venv`，不依赖系统 Python 的 Store stub。
 
 目标目录：
 
@@ -95,7 +95,8 @@ backend/
 │  ├─ notifications/
 │  └─ audit/
 ├─ tests/                  # 跨 app、HTTP 与事务测试
-├─ requirements/
+├─ pyproject.toml
+├─ uv.lock
 └─ manage.py
 ~~~
 
@@ -112,19 +113,28 @@ BE-001 至少定义：
 ~~~text
 DJANGO_SETTINGS_MODULE
 DJANGO_SECRET_KEY
+AUTH_THROTTLE_HMAC_KEY
 DJANGO_DEBUG
 DJANGO_ALLOWED_HOSTS
+DJANGO_CSRF_TRUSTED_ORIGINS
+DJANGO_STATIC_ROOT
+DJANGO_SECURE_HSTS_SECONDS
 DATABASE_URL
 MEDIA_STORAGE_BACKEND=local|s3
 MEDIA_URL
-S3_ENDPOINT_URL
-S3_BUCKET
-S3_ACCESS_KEY
-S3_SECRET_KEY
-S3_REGION
+MEDIA_S3_ENDPOINT_URL
+MEDIA_S3_BUCKET
+MEDIA_S3_ACCESS_KEY_ID
+MEDIA_S3_SECRET_ACCESS_KEY
+MEDIA_S3_REGION
+MEDIA_S3_OBJECT_PREFIX
 ~~~
 
-只有 MEDIA_STORAGE_BACKEND=s3 时才要求 S3_* 变量。生产必须使用 HTTPS，并将 Session cookie 设置为 Secure、HttpOnly、SameSite=Lax。开发可关闭 Secure 以支持 localhost，但不得改变 Session 与 CSRF 的认证模型。
+只有 `MEDIA_STORAGE_BACKEND=s3` 时才要求 `MEDIA_S3_*` 变量。production settings 强制 HTTPS、精确 Host/CSRF origin、Secure/HttpOnly/SameSite=Lax cookie 与 12 小时滑动 idle Session；开发可关闭 Secure 以支持 localhost，但不得改变 Session 与 CSRF 的认证模型。
+
+当前仓库已有 `config.settings.production`、延迟加载的 S3-compatible client 和受版本控制的反向代理模板。它们必须由授权部署环境提供准确变量、TLS、bucket 权限和公开媒体基地址；在预发布真实上传/删除与网络验证完成前，不得仅通过设定 `MEDIA_STORAGE_BACKEND=s3` 宣称可用。
+
+上线前安全任务、P0/P1 分类和验收由 [`SecurityBaseline.md`](SecurityBaseline.md) 约束。特别是 DRF Default Deny、生产 TLS/CSRF 配置、上传重编码/对象存储、部署网络边界与预发布证据均不可由这份架构目标文字替代。
 
 ---
 
@@ -374,7 +384,9 @@ BE-001 建立健康检查和测试基础设施；BE-003 与 BE-006 必须覆盖�
 
 # 11. 前后端并行边界
 
-Frontend 继续执行 FE-008 至 FE-090，持续使用类型化 fixture。后端按 BackendImplementationPlan.md 执行，直到 Public Read API 与 Authenticated API 已稳定。
+Frontend 继续执行 FE-008 至 FE-090，持续使用类型化 fixture。BE-010 至 BE-040 的公开读取、既定学生写入、组织负责人和运营 API 已有实现；但 API 稳定只适用于已交付的领域，不能泛化为“全部契约端点已可联调”。
+
+BE-050A 已注册组队作者申请处理和 `/api/me/*` 个人中心路径，但前端仍须在 FE-100+ 的明确评审后按域切换真实 API。前端也不得根据开发环境的本地媒体目录假定生产对象存储可写。
 
 前端只在 FE-100+ 且 APIContract 已评审后，按领域逐步接入共享 HTTP client、Feature API module 与 composable。后端不得提前修改前端页面、fixture 或 Pinia 来模拟联调。
 

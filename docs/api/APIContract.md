@@ -2,8 +2,9 @@
 
 > 产品：人工智能学院科创与就业服务平台  
 > 仓库：`campus-innovation-hub`  
-> 文档版本：1.0
-> 状态：Canonical Contract（BE-000 已冻结，待后端实现）
+> 文档版本：1.1
+> 状态：Canonical Contract（BE-000 至 BE-050A 已实现；BE-060 至 BE-068 的实现资产已加入，生产安全与发布运行证据仍待取得）
+> 实现基线：`main@5fd5ed3bc284276057cf3442ec203412839237dc`；契约存在不表示每一路径均已注册
 > 产品里程碑：V0.1  
 > 传输协议：REST / JSON over HTTPS  
 > 上游事实来源：`docs/backend/database-design.md`（字段与约束）、`docs/product/PageMap.md`（页面与操作）、`docs/product/PRD.md`（业务规则）  
@@ -42,6 +43,28 @@
 3. 页面操作归属以 `PageMap.md` 为准；本文件只是它的传输表达；
 4. 本文件与 `EndpointReference.md` 共同变更并先评审，再同步修改前端 API 模块与后端 Serializer，禁止单侧静默修改；
 5. 两份 API 文档内部冲突时，以更具体的 `EndpointReference.md` 为准，但两者都不得违背 `database-design.md`。
+
+## 0.0 当前实现边界
+
+本文件是契约，不以“文档中出现”代替运行时证据。`main@5fd5ed3` 是 BE-050A 前的已提交基线；BE-050A 已为下列冻结路径注册 Serializer、View/URL 与 PostgreSQL 合同测试：
+
+```text
+GET  /api/teams/{id}/applications
+POST /api/team-applications/{id}/accept
+POST /api/team-applications/{id}/reject
+
+GET   /api/me
+GET   /api/me/profile
+PATCH /api/me/profile
+GET   /api/me/follows
+GET   /api/me/teams
+GET   /api/me/applications
+GET   /api/me/activities
+GET   /api/me/questions
+GET   /api/me/organizations
+```
+
+这些路径保留现有 method、path 与权限命名，不能为方便实现而改名。BE-050A 已冻结并实现个人中心的逐项 DTO：`/api/me/teams` 以 `scope=created|joined` 表达“我发布的 / 我加入的”（默认 `created`）；`Profile` 对本人显式返回只读真实姓名、学号和班级。前端 fixture 不因本实现自动切换；生产设置、S3 写入链路、部署及运行验证亦不因现有 API 实现而视为完成。
 
 ---
 
@@ -229,11 +252,22 @@ ordering         显式排序（可选）
 405 Method Not Allowed 请求方法不被端点支持
 409 Conflict     唯一约束 / 状态冲突（重复关注、重复报名、状态不允许）
 422 Unprocessable Entity 业务规则拒绝（容量已满、截止已过）
-429 Too Many Requests    限流（如启用）
+429 Too Many Requests    认证或注册限流
 500 Internal Server Error
 ```
 
 写接口状态冲突优先 `409`；业务规则（时间窗口、容量、状态机非法转移）优先 `422`。
+
+`429` 固定返回：
+
+```json
+{
+  "code": "RATE_LIMITED",
+  "message": "请求过于频繁，请稍后重试。"
+}
+```
+
+并带正整数 `Retry-After` header。响应不得暴露用户名、IP、失败次数、剩余封锁次数或账户是否存在。
 
 ## 1.10 隐私字段过滤规则
 
@@ -275,6 +309,7 @@ SENSITIVE   仅本人或必要运营人员
 
 ```text
 GET  /api/health                                    服务健康检查（PUBLIC）
+GET  /api/ready                                     仅反向代理本机健康探针使用
 ```
 
 ## 2.1 公开浏览域（PUBLIC）
@@ -312,7 +347,7 @@ GET  /api/me                                        个人中心概览
 GET  /api/me/profile                                我的资料（读取）
 PATCH /api/me/profile                               我的资料（修改）
 GET  /api/me/follows                                我的关注
-GET  /api/me/teams                                 我发布的组队
+GET  /api/me/teams                                 我的组队（我发布的 / 我加入的）
 GET  /api/me/applications                           我的申请（组队 + 组织）
 GET  /api/me/activities                             我的活动
 GET  /api/me/questions                              我的咨询
@@ -507,6 +542,8 @@ Response `201`：
 
 错误：`400`（字段校验）、`409 ACCOUNT_EXISTS`（学号或用户名已存在）。响应不得泄露已有账号的审核状态、真实姓名或其他资料。SUPERADMIN 仅通过 Django Admin 启用账号；V0.1 不提供邮件、短信、验证码、学生名单校验或自助密码重置 API。
 
+注册端点按来源 IP 执行短时节流；被节流时返回 `429 RATE_LIMITED` 与 `Retry-After`。该行为不改变 `409 ACCOUNT_EXISTS` 的既有语义。
+
 ### 登录
 
 ```text
@@ -526,6 +563,8 @@ Request body：
 Response `200`：登录成功，Set-Cookie session。Body 返回 `GET /api/auth/me` 结构。
 
 错误：`401`（凭据错误）；所有 inactive 账号统一返回 `403`、code `ACCOUNT_UNAVAILABLE`、message `账号尚未启用，请联系管理员。`，不区分待审核和停用。
+
+登录在来源 IP 与用户名两个维度执行短时节流。命中时返回 `429 RATE_LIMITED` 与 `Retry-After`，不返回计数、锁定原因或账户信息。成功 `login()` 轮换 Session key；`logout()` 清理 Session；账号被停用后，既有 Session 也不得继续访问 LOGIN API。
 
 ### 登出
 
@@ -589,6 +628,8 @@ GET /api/me
 
 Response：profile 摘要 + 组织身份 + 未读通知数。字段来自 `/api/auth/me`、`/api/me/organizations`、`/api/notifications/unread-count` 的合并（后端可聚合返回，避免前端多次请求）。
 
+`profile` 与下文 `Profile` 相同；`organization_memberships` 与“我的组织”项相同；`unread_notification_count` 为当前用户未读 `Notification` 数量。该端点不返回 `platform_role`、`is_superuser` 或其他权限上下文，权限上下文仍以 `/api/auth/me` 为准。
+
 ### 我的资料
 
 ```text
@@ -617,9 +658,28 @@ nickname <= 40
 bio <= 500
 skills 数组，每项 <= 40 字符，最多 20 项，去重
 grade 1–4 或 null
+avatar_asset_id 必须是当前用户上传、仍为 ACTIVE 的 IMAGE MediaAsset，或 null（清除头像）
 ```
 
 不可通过本端点修改：真实姓名、学号、班级（SENSITIVE，由管理员 / 后续流程处理，V0.1 只读）。
+
+GET 与 PATCH 的 `Profile` response 固定为：
+
+```json
+{
+  "real_name": "张三",
+  "student_no": "20260001",
+  "class_name": "人工智能 2301",
+  "nickname": "阿三",
+  "avatar": {"id": "uuid", "url": "https://media.example.edu/avatar.webp"},
+  "major": "人工智能",
+  "grade": 2,
+  "bio": "一句话简介",
+  "skills": ["Python", "Vue"]
+}
+```
+
+`real_name`、`student_no` 和 `class_name` 仅本人可读；`avatar` 为 `MediaRef | null`。PATCH 后返回更新后的完整 `Profile`，但不接受上述三项只读字段。
 
 ### 我的关注
 
@@ -630,14 +690,37 @@ GET /api/me/follows?page=&page_size=
 
 results 为竞赛摘要列表（同 §3.3 列表项结构）。
 
-### 我发布的组队
+### 我的组队
 
 ```text
-GET /api/me/teams?page=&page_size=
+GET /api/me/teams?page=&page_size=&scope=created|joined
 权限：LOGIN
 ```
 
-results 为本人 `teams_team_post`（含 status）。
+`scope` 默认 `created`，保持既有“我发布的组队”默认语义：
+
+```text
+created  当前用户是 TeamPost.author 的全部帖子
+joined   当前用户具有 ACCEPTED TeamApplication 的 TeamPost
+```
+
+两个 scope 都按 `TeamPost.updated_at` 倒序、再按 `id` 倒序；不返回联系方式。每项为：
+
+```json
+{
+  "id": "team-post uuid",
+  "relationship": "AUTHOR | ACCEPTED_MEMBER",
+  "post_type": "TEAM_RECRUITING | PERSON_LOOKING",
+  "title": "寻找两名算法队友",
+  "competition_id": "uuid",
+  "competition_name": "全国大学生数学建模竞赛",
+  "team_name": "数模小分队",
+  "direction": "数学建模方向",
+  "status": "RECRUITING | FULL | CLOSED",
+  "updated_at": "2026-09-01T10:00:00+08:00",
+  "action_path": "/teams/{id}"
+}
+```
 
 ### 我的申请
 
@@ -653,14 +736,19 @@ GET /api/me/applications?page=&page_size=&kind=team|recruitment
   "id": "uuid",
   "kind": "TEAM_APPLICATION | RECRUITMENT_APPLICATION",
   "target_type": "TEAM_POST | RECRUITMENT",
+  "target_id": "uuid",
   "target_title": "队伍标题 / 招新标题",
   "target_organization_name": "（招新时）",
+  "target_position_name": "（招新时）",
   "status": "PENDING | ACCEPTED | REJECTED | WITHDRAWN",
   "submitted_at": "2026-09-01T10:00:00+08:00",
+  "updated_at": "2026-09-01T10:00:00+08:00",
   "processed_at": null,
   "action_path": "/teams/{id}"
 }
 ```
+
+`kind` 查询参数只接受小写 `team` 或 `recruitment`；response 中 `kind` 仍使用 `TEAM_APPLICATION` 或 `RECRUITMENT_APPLICATION`。全部列表在合并两种申请后按 `submitted_at` 倒序、再按 `id` 倒序，分页在合并排序后执行。TEAM 项 `target_organization_name` 与 `target_position_name` 为 `null`；RECRUITMENT 项 `target_position_name` 为申请岗位名。
 
 ### 我的活动
 
@@ -669,7 +757,23 @@ GET /api/me/activities?page=&page_size=
 权限：LOGIN
 ```
 
-results：活动摘要 + 我的报名状态（`REGISTERED` / `CANCELLED`）。
+按 `Registration.registered_at` 倒序、再按 `id` 倒序。每项固定为：
+
+```json
+{
+  "id": "registration uuid",
+  "activity_id": "uuid",
+  "title": "学生 API 活动",
+  "activity_type": "TECH_SHARING",
+  "location": "学院报告厅",
+  "start_at": "2026-09-03T10:00:00+08:00",
+  "end_at": null,
+  "registration_status": "REGISTERED | CANCELLED",
+  "registered_at": "2026-09-01T10:00:00+08:00",
+  "cancelled_at": null,
+  "action_path": "/activities/{activity_id}"
+}
+```
 
 ### 我的咨询
 
@@ -678,7 +782,21 @@ GET /api/me/questions?page=&page_size=
 权限：LOGIN
 ```
 
-results：`title`、`visibility`、`status`、`updated_at`、`answered_at`。
+按 `Consultation.updated_at` 倒序、再按 `id` 倒序。每项固定为：
+
+```json
+{
+  "id": "uuid",
+  "category": "COMPETITION",
+  "title": "如何准备人工智能竞赛？",
+  "visibility": "PUBLIC | PRIVATE",
+  "status": "OPEN | ANSWERED | CLOSED",
+  "created_at": "2026-09-01T10:00:00+08:00",
+  "updated_at": "2026-09-01T10:00:00+08:00",
+  "answered_at": null,
+  "action_path": "/qa/questions/{id}"
+}
+```
 
 ### 我的组织
 
