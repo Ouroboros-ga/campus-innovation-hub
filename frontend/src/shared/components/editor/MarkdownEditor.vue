@@ -3,6 +3,8 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Vditor from 'vditor'
 import 'vditor/dist/index.css'
 
+import { uploadImage } from '@/shared/http/media'
+
 /**
  * 共享 Markdown 文本编辑器（Vditor 封装）。
  *
@@ -97,19 +99,32 @@ function onInsertImageClick(): void {
   imageFile.value?.click()
 }
 
-function onInsertImageChange(event: Event): void {
+function insertMarkdownImage(url: string): void {
+  if (!editor) return
+  editor.insertValue(`![](${url})`)
+  emit('update:modelValue', editor.getValue() ?? '')
+}
+
+function insertImageAsBase64(file: File): void {
+  const reader = new FileReader()
+  reader.onload = () => {
+    const dataUrl = typeof reader.result === 'string' ? reader.result : ''
+    if (dataUrl) insertMarkdownImage(dataUrl)
+  }
+  reader.readAsDataURL(file)
+}
+
+async function onInsertImageChange(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (file && editor) {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = typeof reader.result === 'string' ? reader.result : ''
-      if (dataUrl) {
-        editor?.insertValue(`![](${dataUrl})`)
-        emit('update:modelValue', editor?.getValue() ?? '')
-      }
+    try {
+      const result = await uploadImage(file, 'IMAGE')
+      insertMarkdownImage(result.url)
+    } catch {
+      // 上传失败（无后端 / 未登录 / 超限）回退为 base64 插入，保证图片可插入。
+      insertImageAsBase64(file)
     }
-    reader.readAsDataURL(file)
   }
   input.value = ''
 }

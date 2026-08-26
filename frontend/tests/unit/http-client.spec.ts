@@ -126,4 +126,21 @@ describe('FE-100 共享 HTTP 客户端', () => {
     expect(result).toBeUndefined()
     expect(mock.mock.calls[0]![1]?.method).toBe('DELETE')
   })
+
+  it('FormData 以 multipart 提交且不设置 JSON Content-Type', async () => {
+    const mock = mockFetch(async (_input: RequestInfo | URL, init: RequestInit = {}) => {
+      void _input
+      void init
+      return jsonResponse({ id: 'u1', url: 'https://cdn/x.jpg' })
+    })
+    const form = new FormData()
+    form.append('file', new Blob(['x']), 'a.jpg')
+    form.append('kind', 'IMAGE')
+
+    await http.post<{ id: string; url: string }>('/media/upload', form)
+
+    const [, init] = mock.mock.calls[0]!
+    expect(init?.body).toBe(form)
+    expect((init?.headers as Headers | undefined)?.get('Content-Type')).not.toBe('application/json')
+  })
 })

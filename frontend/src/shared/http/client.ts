@@ -138,7 +138,9 @@ async function request<T>(
   headers.set('Accept', 'application/json')
 
   const isMutation = method !== 'GET'
-  if (isMutation && options.body !== undefined) {
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData
+  if (isMutation && options.body !== undefined && !isFormData) {
     headers.set('Content-Type', 'application/json')
   }
   if (isMutation && csrfToken && !headers.has('X-CSRFToken')) {
@@ -151,7 +153,12 @@ async function request<T>(
       method,
       headers,
       signal: options.signal,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body)
+      body:
+        options.body === undefined
+          ? undefined
+          : isFormData
+            ? (options.body as BodyInit)
+            : JSON.stringify(options.body)
     })
   } catch (error) {
     throw networkError(error)
