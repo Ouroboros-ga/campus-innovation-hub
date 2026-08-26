@@ -57,108 +57,131 @@ const autoplay = computed(() => {
   if (prefersReducedMotion.value) return false
   return { delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true }
 })
+
+const carouselRef = ref()
+
+function scrollPrev() {
+  carouselRef.value?.emblaApi?.scrollPrev()
+}
+function scrollNext() {
+  carouselRef.value?.emblaApi?.scrollNext()
+}
 </script>
 
 <template>
-  <UCarousel
-    :items="props.slides"
-    :autoplay="autoplay"
-    loop
-    arrows
-    dots
-    :prev="{
-      size: 'md',
-      variant: 'solid',
-      color: 'primary',
-      square: true,
-      class: 'opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 bg-white/85 text-neutral-900 shadow-md hover:bg-white'
-    }"
-    :next="{
-      size: 'md',
-      variant: 'solid',
-      color: 'primary',
-      square: true,
-      class: 'opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 bg-white/85 text-neutral-900 shadow-md hover:bg-white'
-    }"
-    class="group mb-7 w-full min-w-0 rounded-surface border border-default bg-neutral-900 shadow-sm"
-    :ui="{
-      viewport: 'overflow-hidden rounded-surface',
-      prev: 'absolute left-3! top-1/2 z-10 -translate-y-1/2',
-      next: 'absolute right-3! top-1/2 z-10 -translate-y-1/2'
-    }"
-  >
-    <template #default="{ item }">
-      <article class="relative aspect-video overflow-hidden">
-        <div
-          v-if="item.image.src"
-          class="absolute inset-0"
-        >
-          <img
-            :src="item.image.src"
-            :alt="item.image.alt"
-            class="size-full object-cover"
-            :style="{
-              objectPosition: item.image.position ?? 'center'
-            }"
-            loading="lazy"
+  <div class="group relative">
+    <UCarousel
+      ref="carouselRef"
+      :items="props.slides"
+      :autoplay="autoplay"
+      loop
+      dots
+      class="mb-7 w-full min-w-0 rounded-surface border border-default bg-neutral-900 shadow-sm"
+      :ui="{
+        viewport: 'overflow-hidden rounded-surface'
+      }"
+    >
+      <template #default="{ item }">
+        <article class="relative aspect-video overflow-hidden">
+          <div
+            v-if="item.image.src"
+            class="absolute inset-0"
           >
-        </div>
-        <div
-          v-else
-          class="absolute inset-0 bg-neutral-900"
-          aria-hidden="true"
-        />
-
-        <div
-          class="relative flex h-full flex-col justify-end px-8 py-5 sm:px-16 sm:py-6 md:py-8"
-        >
-          <span
-            v-if="item.categoryLabel"
-            class="w-fit rounded-md bg-white/90 px-2 py-1 text-xs font-semibold text-neutral-900"
-          >
-            {{ item.categoryLabel }}
-          </span>
-          <h2
-            class="mt-3 max-w-md text-xl font-bold leading-snug text-white sm:text-2xl md:text-3xl"
-          >
-            {{ item.title }}
-          </h2>
-          <p
-            v-if="item.subtitle"
-            class="mt-2 max-w-lg text-sm text-white/85 sm:text-base"
-          >
-            {{ item.subtitle }}
-          </p>
+            <img
+              :src="item.image.src"
+              :alt="item.image.alt"
+              class="size-full object-cover"
+              :style="{
+                objectPosition: item.image.position ?? 'center'
+              }"
+              loading="lazy"
+            >
+          </div>
+          <div
+            v-else
+            class="absolute inset-0 bg-neutral-900"
+            aria-hidden="true"
+          />
 
           <div
-            v-if="item.link.type !== 'NONE'"
-            class="mt-4"
+            class="relative flex h-full flex-col justify-end px-8 py-5 sm:px-16 sm:py-6 md:py-8"
           >
-            <UButton
-              :to="
-                item.link.type === 'EXTERNAL'
-                  ? (item.link.externalUrl ?? undefined)
-                  : (item.link.internalPath ?? undefined)
-              "
-              :target="item.link.type === 'EXTERNAL' ? '_blank' : undefined"
-              :rel="
-                item.link.type === 'EXTERNAL' ? 'noopener noreferrer' : undefined
-              "
-              size="sm"
-              variant="soft"
-              color="primary"
-              :label="
-                item.link.type === 'EXTERNAL' ? '访问官网' : '查看详情'
-              "
-              :trailing-icon="
-                item.link.type === 'EXTERNAL'
-                  ? 'i-lucide-external-link'
-                  : 'i-lucide-arrow-right'
-              "
-            />
+            <span
+              v-if="item.categoryLabel"
+              class="w-fit rounded-md bg-white/90 px-2 py-1 text-xs font-semibold text-neutral-900"
+            >
+              {{ item.categoryLabel }}
+            </span>
+            <h2
+              class="mt-3 max-w-md text-xl font-bold leading-snug text-white sm:text-2xl md:text-3xl"
+            >
+              {{ item.title }}
+            </h2>
+            <p
+              v-if="item.subtitle"
+              class="mt-2 max-w-lg text-sm text-white/85 sm:text-base"
+            >
+              {{ item.subtitle }}
+            </p>
+
+            <div
+              v-if="item.link.type !== 'NONE'"
+              class="mt-4"
+            >
+              <UButton
+                :to="
+                  item.link.type === 'EXTERNAL'
+                    ? (item.link.externalUrl ?? undefined)
+                    : (item.link.internalPath ?? undefined)
+                "
+                :target="item.link.type === 'EXTERNAL' ? '_blank' : undefined"
+                :rel="
+                  item.link.type === 'EXTERNAL' ? 'noopener noreferrer' : undefined
+                "
+                size="sm"
+                variant="soft"
+                color="primary"
+                :label="
+                  item.link.type === 'EXTERNAL' ? '访问官网' : '查看详情'
+                "
+                :trailing-icon="
+                  item.link.type === 'EXTERNAL'
+                    ? 'i-lucide-external-link'
+                    : 'i-lucide-arrow-right'
+                "
+              />
+            </div>
           </div>
-        </div>
-      </article>
-    </template>
-  </UCarousel>
+        </article>
+      </template>
+    </UCarousel>
+
+    <!-- 自定义前后箭头：默认透明，鼠标靠近/聚焦显示，图标在圆形内居中 -->
+    <button
+      type="button"
+      data-slot="prev"
+      aria-label="上一张"
+      class="absolute start-3 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-neutral-900 shadow-md opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-white"
+      @click="scrollPrev"
+    >
+      <UIcon
+        name="i-lucide-chevron-left"
+        class="size-5"
+        aria-hidden="true"
+      />
+    </button>
+    <button
+      type="button"
+      data-slot="next"
+      aria-label="下一张"
+      class="absolute end-3 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-white/85 text-neutral-900 shadow-md opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-white"
+      @click="scrollNext"
+    >
+      <UIcon
+        name="i-lucide-chevron-right"
+        class="size-5"
+        aria-hidden="true"
+      />
+    </button>
+  </div>
 </template>
