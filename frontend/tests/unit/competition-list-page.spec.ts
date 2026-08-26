@@ -40,7 +40,7 @@ describe('FE-020 竞赛列表页', () => {
     const wrapper = await mountPage()
 
     expect(wrapper.text()).toContain('竞赛中心')
-    expect(wrapper.text()).toContain('共 12 项竞赛')
+    expect(wrapper.find('input[placeholder="搜索竞赛名称、关键词"]').exists()).toBe(true)
 
     // 桌面网格卡片
     const cards = wrapper.findAllComponents({ name: 'CompetitionCard' })

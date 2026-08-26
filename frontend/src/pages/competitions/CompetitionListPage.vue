@@ -104,10 +104,6 @@ const {
         </template>
 
         <template v-else>
-          <p class="text-sm text-muted">
-            共 {{ filtered.length }} 项竞赛
-          </p>
-
           <!-- 手机：紧凑列表行（§34.4） -->
           <ul class="mt-2 divide-y divide-default md:hidden">
             <li

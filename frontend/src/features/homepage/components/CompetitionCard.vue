@@ -47,19 +47,13 @@ const deadlineText = computed(() =>
 /** 关注（mock：无后端，仅本地切换，不展示虚假计数 §28）。 */
 const followed = ref(false)
 
-/** 报名状态 → 语义色（仅用于状态徽标，符合 §7.3 / §24）。 */
-function stateColor(state: RegistrationState): 'success' | 'warning' | 'neutral' | 'error' {
-  switch (state) {
-    case 'OPEN':
-      return 'success'
-    case 'FULL':
-    case 'UPCOMING':
-      return 'warning'
-    case 'CLOSED':
-      return 'neutral'
-    default:
-      return 'neutral'
+/** 报名状态 → 文字语义色（§7.3，状态文字不只靠颜色表达时仍可读）。 */
+function stateTextClass(state: RegistrationState): string {
+  if (state === 'OPEN') return 'text-success-600 dark:text-success-400'
+  if (state === 'UPCOMING' || state === 'FULL') {
+    return 'text-warning-600 dark:text-warning-400'
   }
+  return 'text-muted'
 }
 </script>
 
@@ -124,30 +118,39 @@ function stateColor(state: RegistrationState): 'success' | 'warning' | 'neutral'
       <div class="flex flex-wrap gap-1.5">
         <UBadge
           size="sm"
-          variant="soft"
+          variant="outline"
           color="neutral"
         >
           {{ competitionLevelLabel[item.level] }}
         </UBadge>
         <UBadge
           size="sm"
-          variant="soft"
+          variant="outline"
           color="neutral"
         >
           {{ participationModeLabel[item.participationMode] }}
         </UBadge>
         <UBadge
+          v-if="item.crossSchool"
           size="sm"
-          variant="soft"
-          :color="stateColor(registrationState)"
+          variant="outline"
+          color="neutral"
         >
-          {{ registrationStateLabel[registrationState] }}
+          支持跨校组队
         </UBadge>
       </div>
 
-      <p class="mt-3 text-xs text-muted">
-        报名截止
-        <span class="font-medium text-muted">{{ deadlineText }}</span>
+      <p class="mt-3 text-xs">
+        <span
+          class="font-medium"
+          :class="stateTextClass(registrationState)"
+        >
+          {{ registrationStateLabel[registrationState] }}
+        </span>
+        <span class="text-muted"> · 截止：</span>
+        <span class="font-medium text-muted">
+          {{ deadlineText }}
+        </span>
       </p>
 
       <div class="mt-auto flex items-center gap-2 pt-3">

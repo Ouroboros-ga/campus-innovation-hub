@@ -38,7 +38,7 @@ describe('FE-009 首页竞赛区块', () => {
     expect(wrapper.text()).toContain('国家级')
     expect(wrapper.text()).toContain('团队赛')
     expect(wrapper.text()).toContain('报名中')
-    expect(wrapper.text()).toContain('报名截止')
+    expect(wrapper.text()).toContain('截止：')
     expect(wrapper.text()).toContain('查看详情')
   })
 
@@ -50,12 +50,12 @@ describe('FE-009 首页竞赛区块', () => {
       }
     })
 
-    // 级别 + 参赛形式 + 状态 = 3 个语义徽标（UBadge 渲染为 span[data-slot=base]），
-    // 排除主按钮（button/a[data-slot=base]）的干扰，符合 §21 的不超过 3 个上限
+    // 级别 + 参赛形式 = 2 个语义徽标（无 crossSchool）；状态此时作为文字置入截止行，
+    // 不占用徽标位；符合 §21 的不超过 3 个上限。
     const badges = wrapper
       .findAll('[data-slot="base"]')
-      .filter(el => el.element.tagName === 'SPAN')
-    expect(badges.length).toBe(3)
+      .filter(node => node.element.parentElement?.classList.contains('flex-wrap'))
+    expect(badges.length).toBe(2)
     expect(wrapper.text()).toContain('报名中')
   })
 

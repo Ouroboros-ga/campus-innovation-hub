@@ -153,6 +153,8 @@ export interface CompetitionSummary {
   edition: string
   /** 封面上的宣传语（可选，如「成就你的梦想」）。 */
   slogan?: string | null
+  /** 是否支持跨校组队（可选）。 */
+  crossSchool?: boolean
   category: CompetitionCategory
   level: CompetitionLevel
   participationMode: ParticipationMode
