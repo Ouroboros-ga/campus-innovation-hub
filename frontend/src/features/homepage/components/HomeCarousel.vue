@@ -70,12 +70,14 @@ const autoplay = computed(() => {
       size: 'md',
       variant: 'solid',
       color: 'primary',
+      square: true,
       class: 'opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 bg-white/85 text-neutral-900 shadow-md hover:bg-white'
     }"
     :next="{
       size: 'md',
       variant: 'solid',
       color: 'primary',
+      square: true,
       class: 'opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 bg-white/85 text-neutral-900 shadow-md hover:bg-white'
     }"
     class="group mb-7 w-full min-w-0 rounded-surface border border-default bg-neutral-900 shadow-sm"
