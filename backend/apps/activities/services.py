@@ -11,9 +11,9 @@ from apps.domain_errors import CapacityFull, InvalidState, PermissionDenied, Tim
 
 def _assert_registration_window(activity: Activity, now: object) -> None:
     if activity.publication_state != Activity.PublicationState.PUBLISHED:
-        raise InvalidState("未发布或已取消的活动不能报名。")
+        raise TimeWindowClosed("活动当前不能报名。")
     if not activity.registration_required:
-        raise InvalidState("该活动不需要报名。")
+        raise TimeWindowClosed("该活动不需要报名。")
     if activity.registration_start_at and now < activity.registration_start_at:
         raise TimeWindowClosed
     if activity.registration_end_at and now > activity.registration_end_at:

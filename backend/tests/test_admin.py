@@ -9,14 +9,21 @@ from apps.organizations.models import Organization, OrganizationMembership
 
 
 class DjangoAdminTests(TestCase):
-    def create_user(self, student_no: str, *, superuser: bool = False, operator: bool = False) -> User:
+    def create_user(
+        self,
+        student_no: str,
+        *,
+        superuser: bool = False,
+        operator: bool = False,
+        staff: bool = False,
+    ) -> User:
         return User.objects.create_user(
             username=student_no,
             student_no=student_no,
             real_name="测试用户",
             password="SafePassword123!",
             is_active=True,
-            is_staff=superuser,
+            is_staff=superuser or staff,
             is_superuser=superuser,
             platform_role=User.PlatformRole.OPERATOR if operator else User.PlatformRole.STUDENT,
         )
@@ -57,16 +64,23 @@ class DjangoAdminTests(TestCase):
         self.assertFalse(audit_admin.has_add_permission(request))
         self.assertFalse(audit_admin.has_change_permission(request))
         self.assertFalse(audit_admin.has_delete_permission(request))
+        self.assertTrue(all(not registered_admin.has_delete_permission(request) for registered_admin in admin.site._registry.values()))
 
-    def test_operator_cannot_enter_admin_but_active_staff_superadmin_can(self) -> None:
+    def test_only_active_staff_superadmin_can_enter_admin(self) -> None:
         operator = self.create_user("20243001", operator=True)
         superadmin = self.create_user("20243002", superuser=True)
+        staff_non_superuser = self.create_user("20243005", staff=True)
         client = Client()
 
         client.force_login(operator)
         operator_response = client.get("/admin/", follow=False)
         self.assertEqual(operator_response.status_code, 302)
         self.assertIn("/admin/login/", operator_response["Location"])
+
+        client.force_login(staff_non_superuser)
+        staff_response = client.get("/admin/", follow=False)
+        self.assertEqual(staff_response.status_code, 302)
+        self.assertIn("/admin/login/", staff_response["Location"])
 
         client.force_login(superadmin)
         self.assertEqual(client.get("/admin/").status_code, 200)

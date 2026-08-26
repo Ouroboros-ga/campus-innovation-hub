@@ -3,20 +3,25 @@ from django.contrib.auth.admin import UserAdmin
 
 from apps.accounts.models import User, UserProfile
 from apps.accounts.services import activate_pending_user, set_platform_role, set_user_active
+from apps.core.admin import AuditedAdminMixin
 
 
 @admin.register(User)
-class AccountsUserAdmin(UserAdmin):
+class AccountsUserAdmin(AuditedAdminMixin, UserAdmin):
     list_display = ["username", "student_no", "real_name", "platform_role", "is_active", "is_staff"]
     list_filter = ["is_active", "platform_role", "is_staff", "is_superuser"]
     actions = ["activate_pending_accounts", "deactivate_accounts", "grant_operator", "revoke_operator"]
-    readonly_fields = ["is_active", "platform_role"]
+    readonly_fields = ["is_active", "platform_role", "is_staff", "is_superuser"]
     fieldsets = UserAdmin.fieldsets + (
         ("平台信息", {"fields": ("student_no", "real_name", "platform_role")}),
     )
     add_fieldsets = UserAdmin.add_fieldsets + (
         ("平台信息", {"fields": ("student_no", "real_name", "platform_role")}),
     )
+
+    def has_add_permission(self, request):
+        # 正式账号只经待审核注册创建；初始超级管理员使用 createsuperuser。
+        return False
 
     @admin.action(description="启用待审核账号")
     def activate_pending_accounts(self, request, queryset):
@@ -40,7 +45,11 @@ class AccountsUserAdmin(UserAdmin):
 
 
 @admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
+class UserProfileAdmin(AuditedAdminMixin, admin.ModelAdmin):
     list_display = ["user", "nickname", "major", "grade", "updated_at"]
     search_fields = ["user__username", "nickname", "major"]
-    raw_id_fields = ["user", "avatar_asset"]
+    raw_id_fields = ["user"]
+    readonly_fields = ["avatar_asset"]
+
+    def has_add_permission(self, request):
+        return False

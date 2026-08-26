@@ -1,6 +1,7 @@
 """组队帖子、岗位与申请模型。"""
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.db.models import Q
@@ -112,6 +113,20 @@ class TeamApplication(UUIDTimestampedModel):
             models.Index(fields=["team_post", "status", "created_at"], name="team_app_post_state_idx"),
             models.Index(fields=["applicant", "created_at"], name="team_app_applicant_created_idx"),
         ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        if len(self.self_intro.strip()) < 5:
+            errors["self_intro"] = "自我介绍至少 5 个字符。"
+        if len(self.motivation.strip()) < 5:
+            errors["motivation"] = "申请动机至少 5 个字符。"
+        if self.team_post_id and self.applicant_id and self.team_post.author_id == self.applicant_id:
+            errors["applicant"] = "不能申请自己的组队。"
+        if self.desired_role_id and self.team_post_id and self.desired_role.team_post_id != self.team_post_id:
+            errors["desired_role"] = "申请岗位不属于当前组队帖子。"
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self) -> str:
         return f"{self.team_post} / {self.applicant}"

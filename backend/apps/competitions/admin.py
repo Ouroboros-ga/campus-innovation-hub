@@ -1,10 +1,11 @@
 from django.contrib import admin
 
 from apps.competitions.models import Competition, Follow, TimelineEvent
+from apps.core.admin import AuditedAdminMixin
 
 
 @admin.register(Competition)
-class CompetitionAdmin(admin.ModelAdmin):
+class CompetitionAdmin(AuditedAdminMixin, admin.ModelAdmin):
     list_display = ["name", "edition", "category", "level", "publication_state", "is_featured"]
     list_filter = ["publication_state", "category", "level", "participation_mode"]
     search_fields = ["name", "edition", "direction"]
@@ -13,13 +14,16 @@ class CompetitionAdmin(admin.ModelAdmin):
 
 
 @admin.register(TimelineEvent)
-class TimelineEventAdmin(admin.ModelAdmin):
+class TimelineEventAdmin(AuditedAdminMixin, admin.ModelAdmin):
     list_display = ["title", "competition", "event_at", "sort_order"]
     raw_id_fields = ["competition"]
 
 
 @admin.register(Follow)
-class FollowAdmin(admin.ModelAdmin):
+class FollowAdmin(AuditedAdminMixin, admin.ModelAdmin):
     list_display = ["competition", "user", "created_at"]
     raw_id_fields = ["competition", "user"]
     readonly_fields = ["created_at"]
+
+    def has_add_permission(self, request):
+        return False

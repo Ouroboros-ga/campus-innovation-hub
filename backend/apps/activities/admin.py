@@ -1,10 +1,11 @@
 from django.contrib import admin
 
 from apps.activities.models import Activity, Registration
+from apps.core.admin import AuditedAdminMixin
 
 
 @admin.register(Activity)
-class ActivityAdmin(admin.ModelAdmin):
+class ActivityAdmin(AuditedAdminMixin, admin.ModelAdmin):
     list_display = ["title", "activity_type", "publication_state", "start_at", "registration_required"]
     list_filter = ["publication_state", "activity_type", "registration_required"]
     search_fields = ["title", "summary", "location"]
@@ -13,7 +14,7 @@ class ActivityAdmin(admin.ModelAdmin):
 
 
 @admin.register(Registration)
-class RegistrationAdmin(admin.ModelAdmin):
+class RegistrationAdmin(AuditedAdminMixin, admin.ModelAdmin):
     list_display = ["activity", "user", "status", "registered_at", "cancelled_at"]
     list_filter = ["status"]
     raw_id_fields = ["activity", "user"]
@@ -27,3 +28,6 @@ class RegistrationAdmin(admin.ModelAdmin):
         "registered_at",
         "cancelled_at",
     ]
+
+    def has_add_permission(self, request):
+        return False

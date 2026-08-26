@@ -9,6 +9,8 @@ from rest_framework import exceptions
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
+from apps.domain_errors import DomainError
+
 
 def _is_api_request(request: HttpRequest) -> bool:
     return request.path.startswith("/api/")
@@ -73,6 +75,12 @@ def _field_errors(data: Any) -> Mapping[str, list[str]] | None:
 
 
 def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response | None:
+    if isinstance(exc, DomainError):
+        return Response(
+            {"code": exc.code, "message": str(exc)},
+            status=exc.status,
+        )
+
     response = exception_handler(exc, context)
     if response is None:
         return None

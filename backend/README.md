@@ -1,6 +1,6 @@
-# BE-001 / BE-002 Backend Foundation
+# BE-001 至 BE-005 Backend Foundation
 
-本目录包含 BE-001 的 Django / Django REST Framework 基础设施，以及 BE-002 的账户与同源 Session 认证：PostgreSQL 配置、健康检查、统一 API 错误结构、Custom User、待审核注册、CSRF、Session 和最小账户审核 Admin。不包含 Media、Organization、Competition 或其他领域 Model / API。
+本目录包含 Django / Django REST Framework 基础设施、账户与同源 Session 认证、V0.1 全部领域 Model、Django Admin，以及权限和事务 Service。当前仍不包含业务 DRF Serializer / ViewSet / URL，也不切换前端 fixture；业务纵切片必须在用户明确启动后按“竞赛 → 组队 → 组织招新 → 校园动态 → 内容/咨询/消息 → 运营与组织工作台”执行。
 
 ## 运行环境
 
@@ -78,9 +78,40 @@ GET  /api/auth/me        登录，200 CurrentUser
 
 注册在同一事务创建 `accounts.User(is_active=false)` 和空 `UserProfile`；inactive 账号登录始终返回 `403 ACCOUNT_UNAVAILABLE`，不会建立 Session。Custom User 采用 UUID primary key、`student_no` PostgreSQL partial unique 与 `platform_role` / `is_active` 索引。
 
-`/api/auth/me` 只返回当前用户的 `student_no` 与 `real_name`，不返回 password、email、class_name、password hash、Session 或 CSRF 值。BE-002 尚未建立 Media 和 OrganizationMembership，因此 `profile.avatar` 为 `null`、`organization_memberships` 为空数组；BE-003 以真实关系补齐它们。
+`/api/auth/me` 只返回当前用户的 `student_no` 与 `real_name`，不返回 password、email、class_name、password hash、Session 或 CSRF 值。`organization_memberships` 现在只返回当前用户的 active Membership（`organization_id`、`MEMBER|LEADER`、展示 title）；`profile.avatar` 在对象存储和 MediaRef URL 实现前仍为 `null`。
 
-`/admin/` 已提供受信任 SUPERADMIN 的最小账户审核入口，可启用待审核账号；全域 ModelAdmin、组织权限和审计记录仍属于后续 BE。
+## 领域数据、Admin 与 Service 边界
+
+BE-003 建立 `media`、`organizations`（含招新）、`competitions`、`teams`、`activities`、`content`、`consultations`、`notifications` 与 `audit`。二进制文件不进入 PostgreSQL；状态展示值不重复持久化；稳定唯一性、部分唯一性、CheckConstraint、索引和 `on_delete` 以 `docs/backend/database-design.md` 为准。
+
+`/admin/` 仅允许 `is_active=true && is_staff=true && is_superuser=true` 的可信账户登录。`platform_role=OPERATOR` 和普通 `is_staff` 账户都不会获得 Admin 访问。账号启停、OPERATOR、组织 LEADER、成员关系与组织启停均通过 Service 写入 `AuditLog`；生命周期字段在 Admin 只读，所有 ModelAdmin 禁止物理删除，AuditLog 本身不允许新建、编辑或删除。
+
+所有跨表业务规则不依赖未来的 DRF View：
+
+```text
+can_manage_organization(user, organization_id)
+visible_consultations_for(user)
+accept_team_application(...)
+accept_recruitment_application(...)
+register_activity(...) / cancel_activity_registration(...)
+publish_competition(...)
+grant_organization_leader(...)
+```
+
+`LEADER` 严格受 `organization_id` 和 active Membership 限制，展示 `title` 不授予权限；OPERATOR 不自动获得组织负责人权限；SUPERADMIN 只从 Django `is_superuser` 推导。Service 使用 `transaction.atomic()` 和 `select_for_update()` 锁定活动、组队/招新申请及名额关联记录，并在同一事务内写入定向 Notification 和无敏感字段的 AuditLog。
+
+## PostgreSQL 验证
+
+本阶段在服务器的隔离 Python 3.12.14 / PostgreSQL 16.2 容器中验证：
+
+```text
+python manage.py check
+python manage.py migrate --noinput
+python manage.py makemigrations --check --dry-run
+python manage.py test -v 1
+```
+
+完整功能套件及其精确计数以服务器最终输出为准；PostgreSQL `TransactionTestCase` 覆盖 partial unique、关键索引 introspection、活动容量、组队容量和同组织跨招新轮次 Membership 创建竞态。临时数据库、容器和网络在验证后清理；不会接触服务器已有服务。
 
 ## Gunicorn / Nginx 接口
 

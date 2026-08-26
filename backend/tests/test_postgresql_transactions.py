@@ -10,11 +10,13 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.activities.models import Activity, Registration
 from apps.activities.services import register_activity
-from apps.competitions.models import Follow
+from apps.competitions.models import Competition, Follow
 from apps.domain_errors import CapacityFull
 from apps.notifications.models import Notification
-from apps.organizations.models import RecruitmentApplication
-from apps.teams.models import TeamApplication
+from apps.organizations.models import Organization, OrganizationMembership, Recruitment, RecruitmentApplication, RecruitmentPosition
+from apps.organizations.services import accept_recruitment_application
+from apps.teams.models import TeamApplication, TeamPost
+from apps.teams.services import accept_team_application
 
 
 class PostgreSQLSchemaTests(TransactionTestCase):
@@ -110,4 +112,181 @@ class ActivityRegistrationConcurrencyTests(TransactionTestCase):
         self.assertEqual(
             Registration.objects.filter(activity=activity, status=Registration.Status.REGISTERED).count(),
             1,
+        )
+
+
+class TeamApplicationConcurrencyTests(TransactionTestCase):
+    """同一 TeamPost 的接受操作必须由帖子行锁串行化。"""
+
+    reset_sequences = True
+
+    def create_user(self, student_no: str) -> User:
+        return User.objects.create_user(
+            username=student_no,
+            student_no=student_no,
+            real_name="并发测试用户",
+            password="SafePassword123!",
+        )
+
+    def test_concurrent_accept_cannot_overfill_team(self) -> None:
+        author = self.create_user("20244101")
+        first_student = self.create_user("20244102")
+        second_student = self.create_user("20244103")
+        competition = Competition.objects.create(
+            name="并发组队竞赛",
+            edition="2026",
+            category=Competition.Category.AI,
+            level=Competition.Level.SCHOOL,
+            participation_mode=Competition.ParticipationMode.TEAM,
+            description_md="用于 PostgreSQL 行锁测试。",
+            created_by=author,
+            updated_by=author,
+        )
+        post = TeamPost.objects.create(
+            competition=competition,
+            author=author,
+            post_type=TeamPost.PostType.TEAM_RECRUITING,
+            title="并发招募算法队友",
+            direction="多模态算法",
+            base_member_count=1,
+            target_member_count=2,
+            contact_method=TeamPost.ContactMethod.EMAIL,
+            contact_value="team@example.edu",
+        )
+        first_application = TeamApplication.objects.create(
+            team_post=post,
+            applicant=first_student,
+            self_intro="我有足够的竞赛经验。",
+            motivation="希望共同完成高质量项目。",
+            contact_method=TeamPost.ContactMethod.EMAIL,
+            contact_value="first@example.edu",
+        )
+        second_application = TeamApplication.objects.create(
+            team_post=post,
+            applicant=second_student,
+            self_intro="我有足够的竞赛经验。",
+            motivation="希望共同完成高质量项目。",
+            contact_method=TeamPost.ContactMethod.EMAIL,
+            contact_value="second@example.edu",
+        )
+        barrier = Barrier(2)
+        result_lock = Lock()
+        outcomes: list[str] = []
+
+        def attempt_accept(application_id: object) -> None:
+            close_old_connections()
+            try:
+                barrier.wait(timeout=10)
+                accept_team_application(
+                    actor=User.objects.get(pk=author.id),
+                    application=TeamApplication.objects.get(pk=application_id),
+                )
+                outcome = "ACCEPTED"
+            except CapacityFull:
+                outcome = "CAPACITY_FULL"
+            finally:
+                close_old_connections()
+            with result_lock:
+                outcomes.append(outcome)
+
+        threads = [
+            Thread(target=attempt_accept, args=(first_application.id,)),
+            Thread(target=attempt_accept, args=(second_application.id,)),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=15)
+
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        self.assertCountEqual(outcomes, ["ACCEPTED", "CAPACITY_FULL"])
+        self.assertEqual(
+            TeamApplication.objects.filter(team_post=post, status=TeamApplication.Status.ACCEPTED).count(),
+            1,
+        )
+
+
+class RecruitmentMembershipConcurrencyTests(TransactionTestCase):
+    """不同招新轮次接受同一人时，Organization 锁保护 Membership 唯一键。"""
+
+    reset_sequences = True
+
+    def create_user(self, student_no: str) -> User:
+        return User.objects.create_user(
+            username=student_no,
+            student_no=student_no,
+            real_name="并发测试用户",
+            password="SafePassword123!",
+        )
+
+    def test_concurrent_accept_in_same_organization_creates_one_membership(self) -> None:
+        leader = self.create_user("20244201")
+        applicant = self.create_user("20244202")
+        organization = Organization.objects.create(
+            name="并发招新协会",
+            organization_type=Organization.OrganizationType.STUDENT_CLUB,
+        )
+        OrganizationMembership.objects.create(
+            organization=organization,
+            user=leader,
+            role=OrganizationMembership.Role.LEADER,
+        )
+        recruitments = [
+            Recruitment.objects.create(
+                organization=organization,
+                title=title,
+                intro_md="用于 PostgreSQL Membership 并发测试。",
+                apply_end_at=timezone.now() + timedelta(days=7),
+                publication_state=Recruitment.PublicationState.PUBLISHED,
+                created_by=leader,
+                updated_by=leader,
+            )
+            for title in ("技术部招新", "运营部招新")
+        ]
+        applications = []
+        for recruitment, position_name in zip(recruitments, ("技术干事", "运营干事"), strict=True):
+            position = RecruitmentPosition.objects.create(recruitment=recruitment, name=position_name, headcount=1)
+            applications.append(
+                RecruitmentApplication.objects.create(
+                    recruitment=recruitment,
+                    position=position,
+                    applicant=applicant,
+                    self_intro="我有足够的组织服务经验。",
+                    motivation="希望服务学院同学。",
+                )
+            )
+
+        barrier = Barrier(2)
+        result_lock = Lock()
+        outcomes: list[str] = []
+
+        def attempt_accept(application_id: object) -> None:
+            close_old_connections()
+            try:
+                barrier.wait(timeout=10)
+                accept_recruitment_application(
+                    actor=User.objects.get(pk=leader.id),
+                    application=RecruitmentApplication.objects.get(pk=application_id),
+                )
+                outcome = "ACCEPTED"
+            finally:
+                close_old_connections()
+            with result_lock:
+                outcomes.append(outcome)
+
+        threads = [Thread(target=attempt_accept, args=(application.id,)) for application in applications]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=15)
+
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        self.assertEqual(outcomes, ["ACCEPTED", "ACCEPTED"])
+        self.assertEqual(
+            OrganizationMembership.objects.filter(organization=organization, user=applicant, is_active=True).count(),
+            1,
+        )
+        self.assertEqual(
+            RecruitmentApplication.objects.filter(status=RecruitmentApplication.Status.ACCEPTED).count(),
+            2,
         )

@@ -1,6 +1,7 @@
 """组织、成员关系和招新模型。"""
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.db.models import Q
@@ -171,6 +172,18 @@ class RecruitmentApplication(UUIDTimestampedModel):
             models.Index(fields=["position", "status"], name="recruit_app_position_state_idx"),
             models.Index(fields=["applicant", "created_at"], name="recruit_applicant_created_idx"),
         ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        if len(self.self_intro.strip()) < 5:
+            errors["self_intro"] = "自我介绍至少 5 个字符。"
+        if len(self.motivation.strip()) < 5:
+            errors["motivation"] = "申请动机至少 5 个字符。"
+        if self.position_id and self.recruitment_id and self.position.recruitment_id != self.recruitment_id:
+            errors["position"] = "申请岗位不属于当前招新。"
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self) -> str:
         return f"{self.recruitment} / {self.applicant}"

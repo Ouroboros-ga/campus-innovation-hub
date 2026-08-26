@@ -3,7 +3,7 @@
 > 产品：人工智能学院科创与就业服务平台
 > 仓库：campus-innovation-hub
 > 文档版本：0.1
-> 状态：BE-000、BE-001、BE-002 已完成（服务器 PostgreSQL 验证）
+> 状态：BE-000 至 BE-005 已完成（服务器 PostgreSQL 验证）
 > 执行模型：一次只执行一个 BE 任务
 > Locale：简体中文（zh-CN）
 > 前置规范：BackendArchitecture.md、database-design.md、APIContract.md、PRD.md、PageMap.md
@@ -33,10 +33,10 @@
 | BE-000 Backend Spec Freeze | 已冻结 | 认证、UUID、对象存储、Markdown、首页聚合、组织申请与路由命名已写入事实来源 | 停止 |
 | BE-001 Django Foundation | 已完成 | Django 5.2.17、DRF 3.18、PostgreSQL-only 配置、`GET /api/health` 与统一 API 错误基础已在服务器 Python 3.12.14 / PostgreSQL 16.2 test database 验证 | 已完成 |
 | BE-002 Accounts + Auth | 已完成 | `accounts.User` / `UserProfile`、Session / CSRF、待审核注册、登录登出、`/api/auth/me` 与最小账户审核 Admin 已在服务器 Python 3.12.14 / PostgreSQL 16.2 验证；Media Avatar 与组织身份关联按依赖留给 BE-003 | 停止；等待明确启动 BE-003 |
-| BE-003 Domain Models | 待执行 | 25 张业务表只有设计文档 | 依赖 BE-002 |
-| BE-004 Django Admin | 待执行 | 待审核账号和系统数据尚无 Admin 配置 | 依赖 BE-003 |
-| BE-005 Domain Services | 待执行 | 关键跨表事务尚未实现 | 依赖 BE-003 |
-| BE-006 Database Verification | 待执行 | PostgreSQL Migration 与并发测试尚未建立 | 依赖 BE-003、BE-005 |
+| BE-003 Domain Models | 已完成 | 25 张 V0.1 业务表、TextChoices、命名约束、索引、冻结的外键删除行为和全部 Migration 已在服务器 Python 3.12.14 / PostgreSQL 16.2 全新数据库迁移验证 | 停止；不创建业务 ViewSet |
+| BE-004 Django Admin | 已完成 | `/admin/` 已注册全域 ModelAdmin，且只允许 active staff SUPERADMIN；账号审核、组织启停、平台运营角色、组织 LEADER 和成员关系操作均经受审计 Service；全部 ModelAdmin 禁止物理删除，AuditLog 只读 | 停止；不创建独立超级管理员前端 |
+| BE-005 Domain Services | 已完成 | 平台角色、`orgId` 作用域、私有咨询过滤、审计、组队/招新接受和活动报名事务已实现；服务器 PostgreSQL 全套测试及活动/组队容量、跨 Recruitment Membership 双连接竞态测试通过 | 停止；不创建任何业务 API |
+| BE-006 Database Verification | 待执行 | BE-003～005 的 Migration、partial unique、索引 introspection 与活动、组队、招新并发锁已作为本阶段验收；独立 seed、数据 Migration 和更广的数据库回归套件仍未开始 | 依赖 BE-003、BE-005，须另行明确启动 |
 | BE-010 Public Read APIs | 待执行 | 首页及公开浏览 API 尚未实现 | 依赖 BE-004、BE-006 |
 | BE-020 Student Write APIs | 待执行 | 学生写操作尚未实现 | 依赖 BE-002、BE-005、BE-006 |
 | BE-030 Organization Leader APIs | 待执行 | 组织负责人管理 API 尚未实现 | 依赖 BE-020 |

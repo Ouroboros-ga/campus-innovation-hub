@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
@@ -68,3 +69,23 @@ class UserProfile(models.Model):
                 name="accounts_profile_grade_range",
             ),
         ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        skills = self.skills_json
+        if not isinstance(skills, list):
+            errors["skills_json"] = "技能必须是字符串数组。"
+        elif len(skills) > 20:
+            errors["skills_json"] = "技能最多保留 20 项。"
+        elif any(not isinstance(skill, str) or not skill.strip() for skill in skills):
+            errors["skills_json"] = "技能项必须是非空字符串。"
+        elif len({skill.strip() for skill in skills}) != len(skills):
+            errors["skills_json"] = "技能项不能重复。"
+
+        if self.avatar_asset_id:
+            asset = self.avatar_asset
+            if asset.kind != "IMAGE" or asset.status != "ACTIVE":
+                errors["avatar_asset"] = "头像必须引用可用的图片 MediaAsset。"
+        if errors:
+            raise ValidationError(errors)

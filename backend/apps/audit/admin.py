@@ -1,10 +1,11 @@
 from django.contrib import admin
 
+from apps.core.admin import NoDeleteAdminMixin
 from apps.audit.models import AuditLog
 
 
 @admin.register(AuditLog)
-class AuditLogAdmin(admin.ModelAdmin):
+class AuditLogAdmin(NoDeleteAdminMixin, admin.ModelAdmin):
     list_display = ["created_at", "actor", "action", "target_type", "target_id", "target_repr"]
     list_filter = ["action", "target_type"]
     search_fields = ["target_repr"]
