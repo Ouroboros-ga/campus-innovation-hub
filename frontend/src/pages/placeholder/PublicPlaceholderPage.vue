@@ -10,7 +10,8 @@ defineProps<{
   <section class="py-12 sm:py-16">
     <PageContainer>
       <div class="max-w-xl space-y-3">
-        <h1 class="text-3xl font-bold leading-tight text-highlighted">
+        <!-- 手机端：标题由居中头部提供，避免重复 -->
+        <h1 class="hidden text-3xl font-bold leading-tight text-highlighted md:block">
           {{ title }}
         </h1>
         <p class="text-base text-muted">

@@ -9,7 +9,11 @@ export const routes: RouteRecordRaw[] = [
         path: '',
         name: 'home',
         component: () => import('@/pages/home/HomePage.vue'),
-        meta: { mobileShell: 'tab', mobileTab: 'home' }
+        meta: {
+          mobileShell: 'tab',
+          mobileTab: 'home',
+          mobileHeaderTitle: '科创与就业服务平台'
+        }
       },
       {
         path: 'competitions',
@@ -34,7 +38,11 @@ export const routes: RouteRecordRaw[] = [
         name: 'organizations',
         component: () =>
           import('@/pages/organizations/OrganizationListPage.vue'),
-        meta: { mobileShell: 'tab', title: '社团与组织' }
+        meta: {
+          mobileShell: 'tab',
+          title: '社团与组织',
+          mobileHeaderTitle: '社团与组织'
+        }
       },
       {
         path: 'organizations/:id/recruitments/:recruitmentId',
@@ -56,14 +64,23 @@ export const routes: RouteRecordRaw[] = [
         component: () =>
           import('@/pages/placeholder/PublicPlaceholderPage.vue'),
         props: { title: '组队广场' },
-        meta: { mobileShell: 'tab', mobileTab: 'teams' }
+        meta: {
+          mobileShell: 'tab',
+          mobileTab: 'teams',
+          mobileHeaderTitle: '组队广场'
+        }
       },
       {
         path: 'activities',
         name: 'activities',
         component: () =>
           import('@/pages/activities/CampusDynamicsPage.vue'),
-        meta: { mobileShell: 'tab', mobileTab: 'activities', title: '校园动态' }
+        meta: {
+          mobileShell: 'tab',
+          mobileTab: 'activities',
+          title: '校园动态',
+          mobileHeaderTitle: '校园动态'
+        }
       },
       {
         path: 'activities/announcements/:announcementId',
@@ -93,7 +110,7 @@ export const routes: RouteRecordRaw[] = [
         component: () =>
           import('@/pages/placeholder/PublicPlaceholderPage.vue'),
         props: { title: '我的' },
-        meta: { mobileShell: 'tab', mobileTab: 'me' }
+        meta: { mobileShell: 'tab', mobileTab: 'me', mobileHeaderTitle: '我的' }
       }
     ]
   }

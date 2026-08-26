@@ -139,6 +139,22 @@ describe('FE-004 公开应用外壳', () => {
     expect(wrapper.get('button[aria-label="返回"]')).toBeTruthy()
   })
 
+  it('手机端 tab 页使用紧凑居中标题头（居中标题 + 右侧搜索），而非完整桌面栏', async () => {
+    setViewportWidth(390)
+    const { wrapper } = await mountAt('/organizations')
+
+    const header = wrapper.get('header')
+    expect(header.attributes('role')).toBe('banner')
+    expect(header.text()).toContain('社团与组织')
+    // 紧凑头不应包含桌面主导航 / 用户菜单 / 外观切换
+    expect(wrapper.find('[aria-label="主导航"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="打开用户菜单"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="切换外观"]').exists()).toBe(false)
+    // 右侧保留全局搜索入口，底部保留主导航
+    expect(wrapper.get('button[aria-label="搜索"]')).toBeTruthy()
+    expect(wrapper.get('[aria-label="底部主导航"]')).toBeTruthy()
+  })
+
   it('在 Footer 中提供平台说明入口', async () => {
     const { wrapper } = await mountAt('/')
     const footer = wrapper.get('footer')

@@ -81,7 +81,8 @@ function applyQuery(patch: {
   <section class="py-10 sm:py-14">
     <PageContainer>
       <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
+        <!-- 手机端：大标题由居中头部提供，页面内不再重复 -->
+        <div class="hidden md:block">
           <h1 class="text-2xl font-bold text-highlighted sm:text-3xl">
             社团与组织
           </h1>

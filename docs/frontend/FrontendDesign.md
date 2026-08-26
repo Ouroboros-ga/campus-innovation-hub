@@ -1019,7 +1019,7 @@ Primary navigation:
 竞赛
 社团组织
 组队广场
-活动
+校园动态
 咨询指南（Q&A）
 ```
 
@@ -1226,22 +1226,18 @@ UAvatar
 
 ## 16.5 Mobile Header
 
-Phone root pages:
+Phone root pages use a **compact centered title header**（推荐高度 52 到 56px），而不是
+桌面端的完整品牌横栏：
 
 ```text
-Page / Product Title
-Search
-Notifications
-Avatar when authenticated
+[ 左侧占位 ]  [ 居中的页面/产品标题 ]  [ 右侧：搜索 ]
 ```
 
-Recommended height:
+- 标题居中，右侧为全局搜索入口；
+- 登录态下可再放通知与头像（保持 44px 触控目标）；
+- 不要在每个手机页都重复完整桌面品牌组合（logo + 名称 + 双行描述）。
 
-```text
-52 to 56px
-```
-
-Phone detail / task pages:
+Phone detail / task pages use a **back header**：
 
 ```text
 Back
@@ -1249,7 +1245,10 @@ Short Page Title
 Context Action / More only when needed
 ```
 
-Do not repeat the full desktop brand lockup on every phone page.
+防止标题重复：若某个 root 页面在内容区还渲染了自己的大号 H1 / 标题，则该标题必须在
+手机端隐藏（`hidden md:block`），让标题只由居中头部承载；桌面 / 平板仍显示页面内标题。
+
+首页可依据 §18.3，在紧凑标题头下方额外提供一个全宽搜索触发。
 
 ---
 

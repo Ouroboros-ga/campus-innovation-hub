@@ -112,7 +112,8 @@ function onPageChange(next: number) {
 
 <template>
   <PageContainer class="py-6 sm:py-8">
-    <header>
+    <!-- 手机端：大标题由居中头部提供，页面内不再重复 -->
+    <header class="hidden md:block">
       <h1 class="text-2xl font-semibold text-highlighted">
         校园动态
       </h1>
