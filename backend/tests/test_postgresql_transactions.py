@@ -293,3 +293,80 @@ class RecruitmentMembershipConcurrencyTests(TransactionTestCase):
             RecruitmentApplication.objects.filter(status=RecruitmentApplication.Status.ACCEPTED).count(),
             2,
         )
+
+    def test_concurrent_accept_cannot_overfill_recruitment_position(self) -> None:
+        leader = self.create_user("20244301")
+        first_applicant = self.create_user("20244302")
+        second_applicant = self.create_user("20244303")
+        organization = Organization.objects.create(
+            name="岗位名额并发测试协会",
+            organization_type=Organization.OrganizationType.STUDENT_CLUB,
+        )
+        OrganizationMembership.objects.create(
+            organization=organization,
+            user=leader,
+            role=OrganizationMembership.Role.LEADER,
+        )
+        recruitment = Recruitment.objects.create(
+            organization=organization,
+            title="岗位名额并发招新",
+            intro_md="验证 PostgreSQL 岗位行锁。",
+            apply_end_at=timezone.now() + timedelta(days=7),
+            publication_state=Recruitment.PublicationState.PUBLISHED,
+            created_by=leader,
+            updated_by=leader,
+        )
+        position = RecruitmentPosition.objects.create(
+            recruitment=recruitment,
+            name="唯一名额岗位",
+            headcount=1,
+        )
+        applications = [
+            RecruitmentApplication.objects.create(
+                recruitment=recruitment,
+                position=position,
+                applicant=applicant,
+                self_intro="我有足够的组织服务经验。",
+                motivation="希望服务学院同学。",
+            )
+            for applicant in (first_applicant, second_applicant)
+        ]
+        barrier = Barrier(2)
+        result_lock = Lock()
+        outcomes: list[str] = []
+
+        def attempt_accept(application_id: object) -> None:
+            close_old_connections()
+            try:
+                barrier.wait(timeout=10)
+                accept_recruitment_application(
+                    actor=User.objects.get(pk=leader.id),
+                    application=RecruitmentApplication.objects.get(pk=application_id),
+                )
+                outcome = "ACCEPTED"
+            except CapacityFull:
+                outcome = "CAPACITY_FULL"
+            finally:
+                close_old_connections()
+            with result_lock:
+                outcomes.append(outcome)
+
+        threads = [Thread(target=attempt_accept, args=(application.id,)) for application in applications]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=15)
+
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        self.assertCountEqual(outcomes, ["ACCEPTED", "CAPACITY_FULL"])
+        self.assertEqual(
+            RecruitmentApplication.objects.filter(
+                position=position,
+                status=RecruitmentApplication.Status.ACCEPTED,
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            OrganizationMembership.objects.filter(organization=organization, is_active=True).count(),
+            2,
+        )

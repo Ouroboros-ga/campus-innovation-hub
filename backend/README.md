@@ -1,4 +1,4 @@
-# BE-001 至 BE-005 Backend Foundation
+# BE-001 至 BE-006 Backend Foundation
 
 本目录包含 Django / Django REST Framework 基础设施、账户与同源 Session 认证、V0.1 全部领域 Model、Django Admin，以及权限和事务 Service。当前仍不包含业务 DRF Serializer / ViewSet / URL，也不切换前端 fixture；业务纵切片必须在用户明确启动后按“竞赛 → 组队 → 组织招新 → 校园动态 → 内容/咨询/消息 → 运营与组织工作台”执行。
 
@@ -111,7 +111,9 @@ python manage.py makemigrations --check --dry-run
 python manage.py test -v 1
 ```
 
-完整功能套件及其精确计数以服务器最终输出为准；PostgreSQL `TransactionTestCase` 覆盖 partial unique、关键索引 introspection、活动容量、组队容量和同组织跨招新轮次 Membership 创建竞态。临时数据库、容器和网络在验证后清理；不会接触服务器已有服务。
+完整功能套件及其精确计数以服务器最终输出为准。BE-006 的 PostgreSQL `TransactionTestCase` 已覆盖：已冻结 app 的 leaf Migration、partial unique 的 PostgreSQL predicate 与真实写入语义、高频索引 introspection、活动容量、组队容量、同岗位招新容量，以及同组织跨招新轮次 Membership 创建竞态。临时数据库、容器和网络在验证后清理；不会接触服务器已有服务。
+
+BE-006 不包含独立 seed、数据 Migration 或更广的数据库回归套件；这些内容必须在后续阶段单独立项和验收。
 
 ## GitHub Actions
 
