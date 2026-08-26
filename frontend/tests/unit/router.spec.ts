@@ -17,12 +17,31 @@ describe('应用路由', () => {
       'organizations',
       'recruitment-detail',
       'organization-detail',
+      'org-manage',
       'teams',
+      'team-plaza-create',
+      'team-detail',
       'activities',
       'announcement-detail',
       'activity-detail',
       'qa',
-      'me'
+      'qa-faqs',
+      'qa-guide-list',
+      'qa-guide-detail',
+      'qa-question-list',
+      'qa-question-detail',
+      'qa-submit',
+      'me',
+      'me-profile',
+      'me-follows',
+      'me-teams',
+      'me-applications',
+      'me-activities',
+      'me-questions',
+      'me-settings',
+      'ops',
+      'login',
+      'register'
     ])
   })
 

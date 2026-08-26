@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
 
@@ -15,13 +15,13 @@ import {
 import OrganizationDetailSection from '@/features/organizations/components/OrganizationDetailSection.vue'
 import RecruitmentApplicationModal from '@/features/organizations/components/RecruitmentApplicationModal.vue'
 import RecruitmentPositionCard from '@/features/organizations/components/RecruitmentPositionCard.vue'
+import { getRecruitment } from '@/features/organizations/api/organizationApi'
 import {
   getMyActiveApplication,
   submitRecruitmentApplication
 } from '@/features/organizations/lib/organizationApplication'
 import {
   deriveRecruitmentPhase,
-  findRecruitmentDetail,
   recruitmentCanApply
 } from '@/features/organizations/lib/organizationDetail'
 import {
@@ -30,7 +30,8 @@ import {
 } from '@/features/organizations/lib/organizationLabels'
 import type {
   MyRecruitmentApplication,
-  RecruitmentApplicationDraft
+  RecruitmentApplicationDraft,
+  RecruitmentDetail
 } from '@/features/organizations/types'
 
 /**
@@ -44,28 +45,41 @@ import type {
 const route = useRoute()
 const toast = useToast()
 
-const organizationId = computed(() => String(route.params.id ?? ''))
 const recruitmentId = computed(() =>
   String(route.params.recruitmentId ?? '')
 )
-const detail = computed(() =>
-  findRecruitmentDetail(organizationId.value, recruitmentId.value)
-)
+const detail = ref<RecruitmentDetail | null>(null)
+const loading = ref(true)
+const error = ref(false)
 const now = computed(() => new Date())
+
+const modalOpen = ref(false)
+const defaultPositionId = ref<string | undefined>(undefined)
+const activeApplication = ref<MyRecruitmentApplication | undefined>(undefined)
+
+async function load() {
+  loading.value = true
+  error.value = false
+  detail.value = null
+  try {
+    const result = await getRecruitment(recruitmentId.value)
+    detail.value = result
+    activeApplication.value = getMyActiveApplication(recruitmentId.value)
+  } catch {
+    error.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(recruitmentId, load, { immediate: true })
+
 const phase = computed(() =>
   detail.value ? deriveRecruitmentPhase(detail.value, now.value) : null
 )
 const canApply = computed(() =>
   phase.value ? recruitmentCanApply(phase.value) : false
 )
-
-const modalOpen = ref(false)
-const defaultPositionId = ref<string | undefined>(undefined)
-const activeApplication = ref<MyRecruitmentApplication | undefined>(undefined)
-
-onMounted(() => {
-  activeApplication.value = getMyActiveApplication(recruitmentId.value)
-})
 
 const deadlineText = computed(() =>
   detail.value ? formatCompactDate(detail.value.applyEndAt) : ''
@@ -122,9 +136,18 @@ function handleSubmit(draft: RecruitmentApplicationDraft) {
     :class="{ 'pb-28 md:pb-14': detail && canApply }"
   >
     <PageContainer class="max-w-3xl">
-      <div v-if="!detail">
+      <template v-if="loading">
+        <div class="space-y-5">
+          <USkeleton class="h-8 w-3/4" />
+          <USkeleton class="h-6 w-1/3" />
+          <USkeleton class="h-40 w-full rounded-card" />
+          <USkeleton class="h-28 w-full rounded-card" />
+        </div>
+      </template>
+
+      <div v-else-if="error">
         <p class="text-base text-muted">
-          未找到该招新。
+          未找到该招新，或加载失败。
         </p>
         <RouterLink
           to="/organizations"
@@ -134,7 +157,7 @@ function handleSubmit(draft: RecruitmentApplicationDraft) {
         </RouterLink>
       </div>
 
-      <template v-else>
+      <template v-else-if="detail">
         <RouterLink
           :to="detail.organization.detailPath"
           class="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-primary-600"

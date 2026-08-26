@@ -36,7 +36,7 @@ describe('FE-020 竞赛筛选逻辑', () => {
   it('按状态 / 分类 / 形式 / 关键词分别筛选', () => {
     expect(run({ status: 'OPEN' })).toHaveLength(6)
     expect(run({ category: 'PROGRAMMING' })).toHaveLength(4)
-    expect(run({ format: 'TEAM' })).toHaveLength(9)
+    expect(run({ format: 'TEAM' })).toHaveLength(10)
     expect(run({ q: '数学' })).toHaveLength(2)
 
     // 组合筛选

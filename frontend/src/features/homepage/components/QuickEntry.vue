@@ -47,7 +47,7 @@ const entries = [
     >
       <RouterLink
         :to="item.to"
-        class="flex items-center gap-3 rounded-card border border-default bg-default p-3 transition-colors hover:border-primary-300 hover:bg-muted"
+        class="group flex items-center gap-3 rounded-card border border-default bg-default p-3 transition-colors hover:border-primary-300 hover:bg-muted"
       >
         <span
           class="flex size-11 shrink-0 items-center justify-center rounded-control bg-primary-50 dark:bg-primary-950/40"
@@ -58,7 +58,7 @@ const entries = [
             class="size-[22px] text-primary-600 dark:text-primary-400"
           />
         </span>
-        <span class="min-w-0">
+        <span class="min-w-0 flex-1">
           <span class="block text-sm font-semibold text-highlighted">
             {{ item.label }}
           </span>
@@ -66,6 +66,11 @@ const entries = [
             {{ item.hint }}
           </span>
         </span>
+        <UIcon
+          name="i-lucide-chevron-right"
+          class="size-5 shrink-0 text-muted transition-colors group-hover:text-primary-600"
+          aria-hidden="true"
+        />
       </RouterLink>
     </li>
   </ul>

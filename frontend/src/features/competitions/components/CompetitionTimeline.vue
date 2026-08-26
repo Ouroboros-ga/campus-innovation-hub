@@ -1,33 +1,78 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { formatFullDate } from '@/shared/lib/date'
 import type { CompetitionDetail } from '../types'
 
 /**
- * 竞赛时间线（FE-021）。
- * 设计来源：PageMap 竞赛详情（日期 / 标题 / 说明），适用时使用 UTimeline。
+ * 关键时间线（按参考设计稿）。
+ * 左侧圆点 + 连接线，右侧标题 + 日期；高亮当前关注节点（如「报名截止」）。
  */
 const props = defineProps<{ detail: CompetitionDetail }>()
 
-const items = computed(() =>
-  props.detail.timeline.map(node => ({
-    title: node.title,
-    description: `${formatFullDate(node.date)}${node.description ? ` · ${node.description}` : ''}`
-  }))
-)
+const items = computed(() => props.detail.timeline)
+const hasItems = computed(() => items.value.length > 0)
+
+/** 格式化：紧凑日期 + 周几 + 时间，如「2026.08.01 周四 00:00」。 */
+function formatNode(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const weekday = new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(date)
+    .replace('周', '')
+  const datePart = new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+    .format(date)
+    .replace(/\//g, '.')
+  const timePart = new Intl.DateTimeFormat('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(date)
+  return `${datePart} ${weekday} ${timePart}`
+}
 </script>
 
 <template>
   <p
-    v-if="items.length === 0"
+    v-if="!hasItems"
     class="text-sm text-muted"
   >
     暂无时间安排，以官方通知为准。
   </p>
-  <UTimeline
+
+  <ol
     v-else
-    :items="items"
-    class="mt-2"
-  />
+    class="relative space-y-0"
+  >
+    <li
+      v-for="(node, index) in items"
+      :key="node.title + node.date"
+      class="relative flex items-start gap-3"
+    >
+      <span class="relative flex h-[1.625rem] flex-col items-center">
+        <span
+          class="mt-1.5 size-2.5 rounded-full"
+          :class="node.highlighted ? 'bg-primary-600' : 'bg-neutral-300 dark:bg-neutral-600'"
+        />
+        <span
+          v-if="index < items.length - 1"
+          class="w-px flex-1 bg-border"
+        />
+      </span>
+
+      <div class="flex min-w-0 flex-1 items-baseline justify-between gap-3 pb-4 last:pb-0">
+        <span
+          class="truncate text-sm"
+          :class="node.highlighted ? 'font-medium text-highlighted' : 'text-highlighted'"
+        >
+          {{ node.title }}
+        </span>
+        <span class="shrink-0 text-xs tabular-nums text-muted">
+          {{ formatNode(node.date) }}
+        </span>
+      </div>
+    </li>
+  </ol>
 </template>

@@ -42,9 +42,7 @@ const hasMedia = computed(() => Boolean(slots.media))
           <p class="mt-4 text-base text-muted">
             连接竞赛、伙伴、组织与活动，助力你的成长与探索
           </p>
-          <div class="mt-8 hidden md:block">
-            <QuickEntry />
-          </div>
+          <QuickEntry class="mt-8" />
           <HeroRecommendation class="mt-8 hidden md:block" />
         </div>
         <div class="min-w-0">

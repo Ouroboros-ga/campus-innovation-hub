@@ -1,12 +1,26 @@
 import ui from '@nuxt/ui/vue-plugin'
 import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import AnnouncementDetailPage from '@/pages/activities/AnnouncementDetailPage.vue'
 import { routes } from '@/router/routes'
+import { getAnnouncement } from '@/features/dynamics/api/dynamicsApi'
+import { dynamicsAnnouncements } from '@/mocks/fixtures/dynamics'
+
+vi.mock('@/features/dynamics/api/dynamicsApi', () => ({
+  getAnnouncement: vi.fn()
+}))
 
 const mounted: ReturnType<typeof mount>[] = []
+
+beforeEach(() => {
+  vi.mocked(getAnnouncement).mockImplementation(async id => {
+    const announcement = dynamicsAnnouncements.find(item => item.id === id)
+    if (!announcement) throw new Error('not found')
+    return announcement
+  })
+})
 
 async function mountPage(announcementId: string) {
   const router = createRouter({
@@ -24,6 +38,7 @@ async function mountPage(announcementId: string) {
   })
   mounted.push(wrapper)
   await flushPromises()
+  await wrapper.vm.$nextTick()
   return wrapper
 }
 
@@ -32,7 +47,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('FE-052 公告详情页', () => {
+describe('FE-052 公告详情页（FE-104 API 驱动）', () => {
   it('展示面包屑、来源、标题、正文与关联对象', async () => {
     const wrapper = await mountPage('announcement-mcm-2026')
 

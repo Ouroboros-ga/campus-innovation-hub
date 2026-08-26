@@ -221,3 +221,9 @@ __marimo__/
 node_modules/
 .DS_Store
 Thumbs.db
+
+# 本地保留、不再追踪的编码代理执行文档（历史提交保留）
+MobileWebHandoff.md
+docs/superpowers/
+docs/frontend/tasks/
+docs/frontend/reviews/

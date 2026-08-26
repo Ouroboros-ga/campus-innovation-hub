@@ -149,7 +149,7 @@ export const organizations: OrganizationSummary[] = [
   }
 ]
 
-/** 登录态「我的组织」（mock 当前用户：会长 + 成员）。 */
+/** 登录态「我的组织」（mock 当前用户：会长 + 成员；6 项以覆盖「查看全部 / 收起」）。 */
 export const myOrganizations: MyOrganization[] = [
   {
     organization: organizations[0]!,
@@ -158,6 +158,26 @@ export const myOrganizations: MyOrganization[] = [
   },
   {
     organization: organizations[1]!,
+    membership: 'MEMBER',
+    roleLabel: '成员'
+  },
+  {
+    organization: organizations[2]!,
+    membership: 'LEADER',
+    roleLabel: '实验室负责人'
+  },
+  {
+    organization: organizations[3]!,
+    membership: 'MEMBER',
+    roleLabel: '成员'
+  },
+  {
+    organization: organizations[4]!,
+    membership: 'LEADER',
+    roleLabel: '部长'
+  },
+  {
+    organization: organizations[5]!,
     membership: 'MEMBER',
     roleLabel: '成员'
   }

@@ -19,7 +19,7 @@ defineProps<{
 <template>
   <RouterLink
     :to="item.detailPath"
-    class="group flex items-start gap-3 rounded-card border border-default bg-default p-4 transition-colors hover:border-primary-300 hover:bg-muted"
+    class="group flex w-full items-start gap-3 rounded-card border border-default bg-default p-4 transition-colors hover:border-primary-300 hover:bg-muted"
   >
     <div class="min-w-0 flex-1">
       <div class="flex items-start gap-2">

@@ -48,6 +48,7 @@ function stateColor(state: RegistrationState): 'success' | 'warning' | 'neutral'
         v-if="props.activity.cover.src"
         :src="props.activity.cover.src"
         :alt="props.activity.cover.alt"
+        loading="lazy"
         class="absolute inset-0 size-full object-cover"
         :style="{ objectPosition: props.activity.cover.position ?? 'center' }"
       >
@@ -72,7 +73,7 @@ function stateColor(state: RegistrationState): 'success' | 'warning' | 'neutral'
     </div>
 
     <!-- 信息 -->
-    <div class="flex flex-1 flex-col p-4">
+    <div class="flex flex-1 flex-col p-3">
       <h3 class="line-clamp-2 text-base font-semibold leading-snug text-highlighted transition-colors group-hover:text-primary-600">
         {{ props.activity.title }}
       </h3>
@@ -83,7 +84,7 @@ function stateColor(state: RegistrationState): 'success' | 'warning' | 'neutral'
         {{ props.activity.summary }}
       </p>
 
-      <dl class="mt-3 space-y-1.5 text-xs text-toned">
+      <dl class="mt-2 space-y-1 text-xs text-toned">
         <div
           v-if="rangeText"
           class="flex items-center gap-1.5"
@@ -116,7 +117,7 @@ function stateColor(state: RegistrationState): 'success' | 'warning' | 'neutral'
         </div>
       </dl>
 
-      <div class="mt-3 flex items-center justify-between border-t border-default pt-3">
+      <div class="mt-2 flex items-center justify-between border-t border-default pt-2">
         <span
           v-if="props.activity.capacity != null"
           class="flex items-center gap-1 text-xs text-muted"

@@ -7,6 +7,7 @@ import PageContainer from '@/shared/components/layout/PageContainer.vue'
 import MyOrganizationsSection from '@/features/organizations/components/MyOrganizationsSection.vue'
 import OrganizationCard from '@/features/organizations/components/OrganizationCard.vue'
 import OrganizationFilterGroup from '@/features/organizations/components/OrganizationFilterGroup.vue'
+import { useOrganizationQuery } from '@/features/organizations/composables/useOrganizationQuery'
 import {
   filterOrganizations,
   normalizeOrgSort,
@@ -17,19 +18,27 @@ import {
   paginateOrganizations,
   sortOrganizations
 } from '@/features/organizations/lib/organizationFilters'
-import { myOrganizations, organizations } from '@/mocks/fixtures/organizations'
+import { myOrganizations } from '@/mocks/fixtures/organizations'
 
 /**
- * 社团与组织（FE-040）— /organizations
+ * 社团与组织（FE-040 / FE-103 API 驱动）— /organizations
  *
  * 设计来源：FrontendDesign.md §23（Org List：logo/name/type/desc/recruitment）、
  * §34.5（筛选 URL 承载）、PageMap §组织列表（我的组织、筛选、卡、排序）。
+ * 全部组织来源 `GET /api/organizations`；「我的组织」为登录态上下文（认证冻结前保留 fixture）。
  */
 const route = useRoute()
 const router = useRouter()
 
 const PAGE_SIZE = 8
 const now = computed(() => new Date())
+
+const {
+  items: organizations,
+  loading,
+  error,
+  reload
+} = useOrganizationQuery()
 
 const q = computed(() => (typeof route.query.q === 'string' ? route.query.q : ''))
 const type = computed(() => normalizeOrgType(route.query.type))
@@ -41,7 +50,7 @@ const page = computed(() => {
 })
 
 const filtered = computed(() =>
-  filterOrganizations(organizations, { type: type.value, status: status.value, q: q.value }, now.value)
+  filterOrganizations(organizations.value, { type: type.value, status: status.value, q: q.value }, now.value)
 )
 const sorted = computed(() => sortOrganizations(filtered.value, sort.value))
 const paged = computed(() =>
@@ -78,7 +87,7 @@ function applyQuery(patch: {
 </script>
 
 <template>
-  <section class="py-10 sm:py-14">
+  <section class="py-6 sm:py-8">
     <PageContainer>
       <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <!-- 手机端：大标题由居中头部提供，页面内不再重复 -->
@@ -94,12 +103,22 @@ function applyQuery(patch: {
           :model-value="q"
           icon="i-lucide-search"
           placeholder="搜索组织名称、关键词"
+          aria-label="搜索组织"
           class="w-full md:w-72"
           @update:model-value="v => applyQuery({ q: v })"
         />
       </div>
 
-      <div class="mt-6 space-y-3">
+      <MyOrganizationsSection
+        v-if="myOrganizations.length"
+        class="mt-8"
+        :items="myOrganizations"
+      />
+
+      <div
+        data-test="org-filters"
+        class="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start"
+      >
         <OrganizationFilterGroup
           label="组织类型"
           :model-value="type"
@@ -114,14 +133,8 @@ function applyQuery(patch: {
         />
       </div>
 
-      <MyOrganizationsSection
-        v-if="myOrganizations.length"
-        class="mt-8"
-        :items="myOrganizations"
-      />
-
       <section
-        class="mt-10"
+        class="mt-8"
         data-test="all-organizations"
       >
         <div class="flex items-center justify-between gap-4">
@@ -141,33 +154,74 @@ function applyQuery(patch: {
               { label: '默认排序', value: 'DEFAULT' },
               { label: '按名称排序', value: 'NAME' }
             ]"
+            aria-label="排序方式"
             class="w-36"
             @update:model-value="v => applyQuery({ sort: v || 'DEFAULT' })"
           />
         </div>
 
-        <ul
-          v-if="paged.items.length"
-          class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-        >
-          <li
-            v-for="item in paged.items"
-            :key="item.id"
-            class="min-w-0"
+        <template v-if="loading">
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <USkeleton
+              v-for="n in 6"
+              :key="n"
+              class="h-40 w-full rounded-card"
+            />
+          </div>
+        </template>
+
+        <template v-else-if="error">
+          <div class="flex flex-col items-center gap-3 py-16 text-center">
+            <span
+              class="flex size-12 items-center justify-center rounded-control bg-danger-50 text-danger-600 dark:bg-danger-500/10 dark:text-danger-400"
+              aria-hidden="true"
+            >
+              <UIcon
+                name="i-lucide-circle-alert"
+                class="size-6"
+              />
+            </span>
+            <p class="text-sm font-medium text-highlighted">
+              组织信息加载失败
+            </p>
+            <p class="text-sm text-muted">
+              请检查网络后重试。
+            </p>
+            <UButton
+              color="primary"
+              variant="solid"
+              icon="i-lucide-refresh-ccw"
+              @click="reload"
+            >
+              重新加载
+            </UButton>
+          </div>
+        </template>
+
+        <template v-else>
+          <ul
+            v-if="paged.items.length"
+            class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
           >
-            <OrganizationCard :org="item" />
-          </li>
-        </ul>
-        <UEmpty
-          v-else
-          icon="i-lucide-users"
-          title="没有符合条件的组织"
-          description="尝试调整筛选条件或清除关键词。"
-          class="mt-6"
-        />
+            <li
+              v-for="item in paged.items"
+              :key="item.id"
+              class="min-w-0"
+            >
+              <OrganizationCard :org="item" />
+            </li>
+          </ul>
+          <UEmpty
+            v-else
+            icon="i-lucide-users"
+            title="没有符合条件的组织"
+            description="尝试调整筛选条件或清除关键词。"
+            class="mt-6"
+          />
+        </template>
 
         <UPagination
-          v-if="paged.totalPages > 1"
+          v-if="!loading && !error && paged.totalPages > 1"
           :model-value="page"
           :total="sorted.length"
           :page-size="PAGE_SIZE"

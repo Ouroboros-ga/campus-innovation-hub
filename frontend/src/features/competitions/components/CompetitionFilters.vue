@@ -28,6 +28,11 @@ const drawerOpen = ref(false)
 function onSearchInput(value: string) {
   emit('change', { q: value })
 }
+
+/** 手机端状态快捷 chip：仅作快捷设置状态，清除走「已选条件」/重置。 */
+function onStatusQuick(value: string) {
+  emit('change', { status: value })
+}
 </script>
 
 <template>
@@ -38,6 +43,7 @@ function onSearchInput(value: string) {
         :model-value="props.query.q ?? ''"
         icon="i-lucide-search"
         placeholder="搜索竞赛名称、关键词"
+        aria-label="搜索竞赛"
         class="w-64"
         @update:model-value="onSearchInput"
       />
@@ -88,23 +94,44 @@ function onSearchInput(value: string) {
       </UButton>
     </div>
 
-    <!-- 手机：搜索 + 筛选按钮 -->
-    <div class="flex items-center gap-2 md:hidden">
+    <!-- 手机：搜索 + 状态快捷筛选 + 筛选按钮（§34.5） -->
+    <div class="md:hidden">
       <UInput
         :model-value="props.query.q ?? ''"
         icon="i-lucide-search"
         placeholder="搜索竞赛名称、关键词"
-        class="flex-1"
+        aria-label="搜索竞赛"
+        class="w-full"
         @update:model-value="onSearchInput"
       />
-      <UButton
-        color="primary"
-        variant="solid"
-        icon="i-lucide-sliders-horizontal"
-        @click="drawerOpen = true"
-      >
-        筛选
-      </UButton>
+
+      <div class="mt-3 flex items-start gap-2">
+        <div
+          class="flex flex-1 flex-wrap gap-2"
+          role="group"
+          aria-label="按报名状态筛选"
+        >
+          <UButton
+            v-for="opt in competitionStatusOptions"
+            :key="opt.value"
+            :variant="props.query.status === opt.value ? 'solid' : 'outline'"
+            :color="props.query.status === opt.value ? 'primary' : 'neutral'"
+            :aria-pressed="props.query.status === opt.value"
+            @click="onStatusQuick(opt.value)"
+          >
+            {{ opt.label }}
+          </UButton>
+        </div>
+
+        <UButton
+          color="primary"
+          variant="outline"
+          icon="i-lucide-sliders-horizontal"
+          @click="drawerOpen = true"
+        >
+          筛选
+        </UButton>
+      </div>
     </div>
 
     <!-- 手机：筛选 Drawer -->

@@ -28,6 +28,7 @@ const props = withDefaults(
       <li
         v-for="item in props.items"
         :key="item.id"
+        class="flex"
       >
         <DeadlineItem :item="item" />
       </li>

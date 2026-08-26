@@ -1,11 +1,24 @@
 import ui from '@nuxt/ui/vue-plugin'
 import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import OrganizationDetailPage from '@/pages/organizations/OrganizationDetailPage.vue'
 import RecruitmentDetailPage from '@/pages/organizations/RecruitmentDetailPage.vue'
 import { routes } from '@/router/routes'
+import {
+  getOrganization,
+  getRecruitment
+} from '@/features/organizations/api/organizationApi'
+import {
+  organizationDetails,
+  recruitmentDetails
+} from '@/mocks/fixtures/organizations'
+
+vi.mock('@/features/organizations/api/organizationApi', () => ({
+  getOrganization: vi.fn(),
+  getRecruitment: vi.fn()
+}))
 
 // RecruitmentDetailPage 在 setup 中调用 useToast()
 vi.mock('@nuxt/ui/composables', () => ({
@@ -13,6 +26,19 @@ vi.mock('@nuxt/ui/composables', () => ({
 }))
 
 const mounted: ReturnType<typeof mount>[] = []
+
+beforeEach(() => {
+  vi.mocked(getOrganization).mockImplementation(async id => {
+    const org = organizationDetails.find(item => item.id === id)
+    if (!org) throw new Error('not found')
+    return org
+  })
+  vi.mocked(getRecruitment).mockImplementation(async id => {
+    const rec = recruitmentDetails.find(item => item.id === id)
+    if (!rec) throw new Error('not found')
+    return rec
+  })
+})
 
 async function mountPage(
   component: typeof OrganizationDetailPage | typeof RecruitmentDetailPage,
@@ -33,6 +59,7 @@ async function mountPage(
   })
   mounted.push(wrapper)
   await flushPromises()
+  await wrapper.vm.$nextTick()
   return wrapper
 }
 
@@ -41,7 +68,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('FE-041 组织详情页', () => {
+describe('FE-041 组织详情页（FE-103 API 驱动）', () => {
   it('渲染身份横幅、信息卡、近期活动与当前招新', async () => {
     const wrapper = await mountPage(OrganizationDetailPage, '/organizations/ai-union')
 
@@ -77,7 +104,7 @@ describe('FE-041 组织详情页', () => {
   })
 })
 
-describe('FE-042 招新详情页', () => {
+describe('FE-042 招新详情页（FE-103 API 驱动）', () => {
   it('渲染标题、开放阶段、岗位与申请入口', async () => {
     const wrapper = await mountPage(
       RecruitmentDetailPage,

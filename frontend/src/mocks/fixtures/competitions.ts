@@ -60,7 +60,7 @@ export const competitions: CompetitionSummary[] = [
     slogan: '成就你的梦想',
     category: 'PROGRAMMING',
     level: 'NATIONAL',
-    participationMode: 'INDIVIDUAL',
+    participationMode: 'TEAM',
     registrationStartAt: '2026-08-01T00:00:00+08:00',
     registrationEndAt: '2026-09-10T23:59:59+08:00',
     eventStartAt: '2026-10-10T09:00:00+08:00',

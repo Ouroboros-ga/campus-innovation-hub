@@ -30,6 +30,7 @@ const emit = defineEmits<{
       :model-value="props.status === 'ALL' ? undefined : props.status"
       :items="activityStatusOptions"
       placeholder="全部状态"
+      aria-label="活动状态"
       class="w-40"
       @update:model-value="
         v => emit('change', { status: v || undefined })
@@ -39,6 +40,7 @@ const emit = defineEmits<{
       :model-value="props.type === 'ALL' ? undefined : props.type"
       :items="activityTypeOptions"
       placeholder="全部类型"
+      aria-label="活动类型"
       class="w-40"
       @update:model-value="
         v => emit('change', { type: v || undefined })

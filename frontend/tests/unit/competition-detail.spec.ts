@@ -9,7 +9,7 @@ describe('FE-021 竞赛详情查询', () => {
     expect(detail!.intro).toContain('中国大学生计算机设计大赛')
     expect(detail!.timeline.length).toBeGreaterThanOrEqual(3)
     expect(detail!.relatedGuides.length).toBeGreaterThan(0)
-    expect(detail!.whoShouldJoin.teamNeeded).toBe(true)
+    expect(detail!.participationMode).toBe('TEAM')
   })
 
   it('无专门详情时由摘要派生兜底详情（时间线由日期生成）', () => {

@@ -148,7 +148,7 @@ export const hotCompetitions: CompetitionSummary[] = [
     slogan: '成就你的梦想',
     category: 'PROGRAMMING',
     level: 'NATIONAL',
-    participationMode: 'INDIVIDUAL',
+    participationMode: 'TEAM',
     registrationStartAt: '2026-08-01T00:00:00+08:00',
     registrationEndAt: '2026-09-10T23:59:59+08:00',
     eventStartAt: '2026-10-10T09:00:00+08:00',
@@ -380,25 +380,25 @@ export const faqList: FaqSummary[] = [
     id: 'faq-how-register-competition',
     category: 'COMPETITION',
     question: '如何报名参加一项竞赛？',
-    detailPath: '/qa/questions/how-register-competition'
+    detailPath: '/qa/faqs'
   },
   {
     id: 'faq-how-create-team',
     category: 'TEAM',
     question: '如何发布组队或寻找队友？',
-    detailPath: '/qa/questions/how-create-team'
+    detailPath: '/qa/faqs'
   },
   {
     id: 'faq-cancel-activity',
     category: 'ACTIVITY',
     question: '活动报名后可以取消吗？',
-    detailPath: '/qa/questions/cancel-activity'
+    detailPath: '/qa/faqs'
   },
   {
     id: 'faq-join-organization',
     category: 'ORGANIZATION',
     question: '如何加入一个学生组织？',
-    detailPath: '/qa/questions/join-organization'
+    detailPath: '/qa/faqs'
   }
 ]
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
@@ -11,10 +11,12 @@ import {
   announcementLinkedKindLabel,
   publisherScopeLabel
 } from '@/features/dynamics/lib/dynamicsLabels'
-import { findAnnouncement, mdToPlainText } from '@/features/dynamics/lib/dynamicsDetail'
+import { getAnnouncement } from '@/features/dynamics/api/dynamicsApi'
+import type { DynamicsAnnouncement } from '@/features/dynamics/types'
+import RichContent from '@/shared/components/reader/RichContent.vue'
 
 /**
- * 公告详情（FE-052）— /activities/announcements/:announcementId
+ * 公告详情（FE-052 / FE-104 API 驱动）— /activities/announcements/:announcementId
  *
  * 展示：发布来源（学院/学校/平台）、标题、日期、Markdown 正文、
  * 关联对象（如有）、站外原文链接（如有，明确「查看原文」操作，不嵌入外站）。
@@ -22,16 +24,41 @@ import { findAnnouncement, mdToPlainText } from '@/features/dynamics/lib/dynamic
  */
 const route = useRoute()
 const id = computed(() => String(route.params.announcementId ?? ''))
-const announcement = computed(() => findAnnouncement(id.value))
-const body = computed(() => mdToPlainText(announcement.value?.bodyMd ?? null))
+const announcement = ref<DynamicsAnnouncement | null>(null)
+const loading = ref(true)
+const error = ref(false)
+
+async function load() {
+  loading.value = true
+  error.value = false
+  announcement.value = null
+  try {
+    announcement.value = await getAnnouncement(id.value)
+  } catch {
+    error.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(id, load, { immediate: true })
 </script>
 
 <template>
   <section class="pt-4 pb-10 sm:pt-6 sm:pb-14">
     <PageContainer class="max-w-3xl">
-      <div v-if="!announcement">
+      <template v-if="loading">
+        <div class="space-y-5">
+          <USkeleton class="h-8 w-3/4" />
+          <USkeleton class="h-6 w-1/3" />
+          <USkeleton class="h-40 w-full rounded-card" />
+          <USkeleton class="h-28 w-full rounded-card" />
+        </div>
+      </template>
+
+      <div v-else-if="error">
         <p class="text-base text-muted">
-          未找到该公告。
+          未找到该公告，或加载失败。
         </p>
         <RouterLink
           to="/activities?tab=announcements"
@@ -41,7 +68,7 @@ const body = computed(() => mdToPlainText(announcement.value?.bodyMd ?? null))
         </RouterLink>
       </div>
 
-      <template v-else>
+      <template v-else-if="announcement">
         <!-- 桌面/平板面包屑：手机端由居中返回头承担返回（§16.5） -->
         <nav
           class="mb-5 hidden items-center gap-1.5 text-sm text-muted md:flex"
@@ -94,8 +121,15 @@ const body = computed(() => mdToPlainText(announcement.value?.bodyMd ?? null))
 
         <div class="mt-8 space-y-8">
           <DynamicsDetailSection title="公告内容">
-            <p class="whitespace-pre-line text-sm leading-7 text-toned">
-              {{ body }}
+            <RichContent
+              v-if="announcement.bodyMd"
+              :content="announcement.bodyMd"
+            />
+            <p
+              v-else
+              class="text-sm text-muted"
+            >
+              暂无正文内容。
             </p>
           </DynamicsDetailSection>
 

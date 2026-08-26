@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+
 import {
   organizationTypeIcon,
   organizationTypeLabel
@@ -13,11 +15,26 @@ import type { MyOrganization } from '../types'
  * - 至多 4 项紧凑展示，超出原位「查看全部 / 收起」；
  * - MEMBER 只能进入组织主页；LEADER 额外获得「进入管理」（携带 organizationId）。
  */
-defineProps<{ items: MyOrganization[] }>()
+const props = defineProps<{ items: MyOrganization[] }>()
+
+const COLLAPSED_LIMIT = 4
+
+const collapsed = ref(true)
+const canToggle = computed(() => props.items.length > COLLAPSED_LIMIT)
+const visibleItems = computed(() =>
+  collapsed.value ? props.items.slice(0, COLLAPSED_LIMIT) : props.items
+)
+
+function toggle() {
+  collapsed.value = !collapsed.value
+}
 </script>
 
 <template>
-  <section aria-labelledby="my-organizations-title">
+  <section
+    data-test="my-organizations"
+    aria-labelledby="my-organizations-title"
+  >
     <div class="flex items-center gap-2">
       <UIcon
         name="i-lucide-users"
@@ -31,9 +48,10 @@ defineProps<{ items: MyOrganization[] }>()
         我的组织
       </h2>
     </div>
+
     <div class="mt-3 grid gap-4 sm:grid-cols-2">
       <article
-        v-for="item in items"
+        v-for="item in visibleItems"
         :key="item.organization.id"
         class="flex gap-3 rounded-card border border-default bg-default p-4"
       >
@@ -86,6 +104,23 @@ defineProps<{ items: MyOrganization[] }>()
           </div>
         </div>
       </article>
+    </div>
+
+    <div
+      v-if="canToggle"
+      class="mt-3 flex justify-center"
+    >
+      <UButton
+        type="button"
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        :aria-expanded="!collapsed"
+        :icon="collapsed ? 'i-lucide-chevron-down' : 'i-lucide-chevron-up'"
+        @click="toggle"
+      >
+        {{ collapsed ? '查看全部' : '收起' }}
+      </UButton>
     </div>
   </section>
 </template>

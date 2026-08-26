@@ -2,10 +2,6 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import {
-  dynamicsActivities,
-  dynamicsAnnouncements
-} from '@/mocks/fixtures/dynamics'
 import { useGlobalSearchStore } from '@/stores/globalSearch'
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
 
@@ -15,6 +11,7 @@ import ActivityListRow from '@/features/dynamics/components/ActivityListRow.vue'
 import AnnouncementListRow from '@/features/dynamics/components/AnnouncementListRow.vue'
 import AnnouncementTable from '@/features/dynamics/components/AnnouncementTable.vue'
 import DynamicsTabList from '@/features/dynamics/components/DynamicsTabList.vue'
+import { useDynamicsQuery } from '@/features/dynamics/composables/useDynamicsQuery'
 import {
   announcementScopeOptions,
   filterActivities,
@@ -41,6 +38,14 @@ import type { DynamicsTab } from '@/features/dynamics/types'
 const route = useRoute()
 const router = useRouter()
 
+const {
+  activities,
+  announcements: announcementCollection,
+  loading,
+  error,
+  reload
+} = useDynamicsQuery()
+
 const PAGE_SIZE = 6
 
 const now = computed(() => new Date())
@@ -57,7 +62,7 @@ const page = computed(() => {
 /** tab=activities：筛选 + 分页后的活动。 */
 const activitiesResult = computed(() => {
   const filtered = filterActivities(
-    dynamicsActivities,
+    activities.value,
     { status: status.value, type: type.value },
     now.value
   )
@@ -67,12 +72,12 @@ const activitiesResult = computed(() => {
 
 /** tab=announcements：按来源筛选后的公告。 */
 const announcements = computed(() =>
-  filterAnnouncements(dynamicsAnnouncements, { scope: scope.value })
+  filterAnnouncements(announcementCollection.value, { scope: scope.value })
 )
 
 /** tab=all：近期活动 + 最新公告两个区块。 */
 const allTab = computed(() =>
-  splitAllTab(dynamicsActivities, dynamicsAnnouncements)
+  splitAllTab(activities.value, announcementCollection.value)
 )
 
 /** 手机端「近期活动」精选卡：取 isFeatured，否则取第一条。 */
@@ -165,195 +170,235 @@ function onPageChange(next: number) {
       @update:model-value="applyTab"
     />
 
-    <!-- tab=all：近期活动 + 最新公告 -->
-    <section
-      v-if="tab === 'all'"
-      class="mt-6 space-y-8"
+    <template v-if="loading">
+      <div class="mt-6 space-y-5">
+        <USkeleton class="h-40 w-full rounded-card" />
+        <USkeleton class="h-40 w-full rounded-card" />
+        <USkeleton class="h-28 w-full rounded-card" />
+      </div>
+    </template>
+
+    <div
+      v-else-if="error"
+      class="mt-6 flex flex-col items-center gap-3 py-16 text-center"
     >
-      <!-- 近期活动 -->
-      <div>
-        <div class="flex items-center justify-between gap-4">
-          <h2 class="text-lg font-semibold text-highlighted">
-            近期活动
-          </h2>
-          <RouterLink
-            :to="{ path: '/activities', query: { tab: 'activities' } }"
-            class="inline-flex shrink-0 items-center gap-0.5 text-sm text-muted transition-colors hover:text-primary-600"
-          >
-            查看全部
-            <UIcon
-              name="i-lucide-chevron-right"
-              class="size-4"
-              aria-hidden="true"
-            />
-          </RouterLink>
-        </div>
+      <span
+        class="flex size-12 items-center justify-center rounded-control bg-danger-50 text-danger-600 dark:bg-danger-500/10 dark:text-danger-400"
+        aria-hidden="true"
+      >
+        <UIcon
+          name="i-lucide-circle-alert"
+          class="size-6"
+        />
+      </span>
+      <p class="text-sm font-medium text-highlighted">
+        动态信息加载失败
+      </p>
+      <p class="text-sm text-muted">
+        请检查网络后重试。
+      </p>
+      <UButton
+        color="primary"
+        variant="solid"
+        icon="i-lucide-refresh-ccw"
+        @click="reload"
+      >
+        重新加载
+      </UButton>
+    </div>
 
-        <!-- 桌面/平板：带封面卡片网格 -->
-        <ul
-          class="mt-4 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-4"
-        >
-          <li
-            v-for="item in allTab.recentActivities"
-            :key="item.id"
-          >
-            <ActivityBrowseCard :activity="item" />
-          </li>
-        </ul>
+    <template v-else>
+      <!-- tab=all：近期活动 + 最新公告 -->
+      <section
+        v-if="tab === 'all'"
+        class="mt-6 space-y-8"
+      >
+        <!-- 近期活动 -->
+        <div>
+          <div class="flex items-center justify-between gap-4">
+            <h2 class="text-lg font-semibold text-highlighted">
+              近期活动
+            </h2>
+            <RouterLink
+              :to="{ path: '/activities', query: { tab: 'activities' } }"
+              class="inline-flex shrink-0 items-center gap-0.5 text-sm text-muted transition-colors hover:text-primary-600"
+            >
+              查看全部
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-4"
+                aria-hidden="true"
+              />
+            </RouterLink>
+          </div>
 
-        <!-- 手机：精选活动卡 + 紧凑列表行 -->
-        <div class="mt-2 md:hidden">
-          <ActivityBrowseCard
-            v-if="featuredRecent"
-            :activity="featuredRecent"
-          />
+          <!-- 桌面/平板：带封面卡片网格 -->
           <ul
-            v-if="restRecent.length"
-            class="mt-2 divide-y divide-default"
+            class="mt-4 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-4"
           >
             <li
-              v-for="item in restRecent"
+              v-for="item in allTab.recentActivities"
+              :key="item.id"
+            >
+              <ActivityBrowseCard :activity="item" />
+            </li>
+          </ul>
+
+          <!-- 手机：精选活动卡 + 紧凑列表行 -->
+          <div class="mt-2 md:hidden">
+            <ActivityBrowseCard
+              v-if="featuredRecent"
+              :activity="featuredRecent"
+            />
+            <ul
+              v-if="restRecent.length"
+              class="mt-2 divide-y divide-default"
+            >
+              <li
+                v-for="item in restRecent"
+                :key="item.id"
+              >
+                <ActivityListRow :activity="item" />
+              </li>
+            </ul>
+            <p class="mt-4 text-center text-xs text-muted">
+              已加载全部内容
+            </p>
+          </div>
+        </div>
+
+        <!-- 最新公告 -->
+        <div>
+          <div class="flex items-center justify-between gap-4">
+            <h2 class="text-lg font-semibold text-highlighted">
+              最新公告
+            </h2>
+            <RouterLink
+              :to="{ path: '/activities', query: { tab: 'announcements' } }"
+              class="inline-flex shrink-0 items-center gap-0.5 text-sm text-muted transition-colors hover:text-primary-600"
+            >
+              查看全部
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-4"
+                aria-hidden="true"
+              />
+            </RouterLink>
+          </div>
+
+          <!-- 桌面/平板：表格化列表 -->
+          <div class="mt-4 hidden md:block">
+            <AnnouncementTable :announcements="allTab.latestAnnouncements" />
+          </div>
+
+          <!-- 手机：紧凑列表行 -->
+          <ul class="mt-2 divide-y divide-default md:hidden">
+            <li
+              v-for="item in allTab.latestAnnouncements"
+              :key="item.id"
+            >
+              <AnnouncementListRow :announcement="item" />
+            </li>
+          </ul>
+          <p class="mt-4 text-center text-xs text-muted md:hidden">
+            已加载全部内容
+          </p>
+        </div>
+      </section>
+
+      <!-- tab=activities：活动列表 -->
+      <section
+        v-else-if="tab === 'activities'"
+        class="mt-6"
+      >
+        <ActivityBrowseFilters
+          :status="status"
+          :type="type"
+          @change="onActivityFilter"
+          @reset="onActivityReset"
+        />
+
+        <template v-if="activitiesResult.filtered.length">
+          <!-- 桌面/平板：卡片网格 -->
+          <ul class="mt-4 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3">
+            <li
+              v-for="item in activitiesResult.filtered"
+              :key="item.id"
+            >
+              <ActivityBrowseCard :activity="item" />
+            </li>
+          </ul>
+          <!-- 手机：紧凑列表行 -->
+          <ul class="mt-2 divide-y divide-default md:hidden">
+            <li
+              v-for="item in activitiesResult.filtered"
               :key="item.id"
             >
               <ActivityListRow :activity="item" />
             </li>
           </ul>
-          <p class="mt-4 text-center text-xs text-muted">
+          <p class="mt-4 text-center text-xs text-muted md:hidden">
             已加载全部内容
           </p>
-        </div>
-      </div>
+        </template>
+        <UEmpty
+          v-else
+          icon="i-lucide-calendar-x"
+          title="暂无匹配的活动"
+          description="尝试调整筛选条件后再试"
+          class="mt-6"
+        />
 
-      <!-- 最新公告 -->
-      <div>
-        <div class="flex items-center justify-between gap-4">
-          <h2 class="text-lg font-semibold text-highlighted">
-            最新公告
-          </h2>
-          <RouterLink
-            :to="{ path: '/activities', query: { tab: 'announcements' } }"
-            class="inline-flex shrink-0 items-center gap-0.5 text-sm text-muted transition-colors hover:text-primary-600"
-          >
-            查看全部
-            <UIcon
-              name="i-lucide-chevron-right"
-              class="size-4"
-              aria-hidden="true"
-            />
-          </RouterLink>
-        </div>
+        <UPagination
+          v-if="activitiesResult.totalPages > 1"
+          :model-value="page"
+          :total="activitiesResult.total"
+          :page-size="PAGE_SIZE"
+          class="mt-6 justify-center"
+          @update:model-value="onPageChange"
+        />
+      </section>
 
-        <!-- 桌面/平板：表格化列表 -->
-        <div class="mt-4 hidden md:block">
-          <AnnouncementTable :announcements="allTab.latestAnnouncements" />
-        </div>
-
-        <!-- 手机：紧凑列表行 -->
-        <ul class="mt-2 divide-y divide-default md:hidden">
-          <li
-            v-for="item in allTab.latestAnnouncements"
-            :key="item.id"
-          >
-            <AnnouncementListRow :announcement="item" />
-          </li>
-        </ul>
-        <p class="mt-4 text-center text-xs text-muted md:hidden">
-          已加载全部内容
-        </p>
-      </div>
-    </section>
-
-    <!-- tab=activities：活动列表 -->
-    <section
-      v-else-if="tab === 'activities'"
-      class="mt-6"
-    >
-      <ActivityBrowseFilters
-        :status="status"
-        :type="type"
-        @change="onActivityFilter"
-        @reset="onActivityReset"
-      />
-
-      <template v-if="activitiesResult.filtered.length">
-        <!-- 桌面/平板：卡片网格 -->
-        <ul class="mt-4 hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3">
-          <li
-            v-for="item in activitiesResult.filtered"
-            :key="item.id"
-          >
-            <ActivityBrowseCard :activity="item" />
-          </li>
-        </ul>
-        <!-- 手机：紧凑列表行 -->
-        <ul class="mt-2 divide-y divide-default md:hidden">
-          <li
-            v-for="item in activitiesResult.filtered"
-            :key="item.id"
-          >
-            <ActivityListRow :activity="item" />
-          </li>
-        </ul>
-        <p class="mt-4 text-center text-xs text-muted md:hidden">
-          已加载全部内容
-        </p>
-      </template>
-      <UEmpty
+      <!-- tab=announcements：公告列表 -->
+      <section
         v-else
-        icon="i-lucide-calendar-x"
-        title="暂无匹配的活动"
-        description="尝试调整筛选条件后再试"
         class="mt-6"
-      />
+      >
+        <USelect
+          :model-value="scope === 'ALL' ? undefined : scope"
+          :items="announcementScopeOptions"
+          placeholder="全部来源"
+          aria-label="公告来源"
+          class="w-44"
+          @update:model-value="value => onAnnouncementScope(value || undefined)"
+        />
 
-      <UPagination
-        v-if="activitiesResult.totalPages > 1"
-        :model-value="page"
-        :total="activitiesResult.total"
-        :page-size="PAGE_SIZE"
-        class="mt-6 justify-center"
-        @update:model-value="onPageChange"
-      />
-    </section>
-
-    <!-- tab=announcements：公告列表 -->
-    <section
-      v-else
-      class="mt-6"
-    >
-      <USelect
-        :model-value="scope === 'ALL' ? undefined : scope"
-        :items="announcementScopeOptions"
-        placeholder="全部来源"
-        class="w-44"
-        @update:model-value="value => onAnnouncementScope(value || undefined)"
-      />
-
-      <template v-if="announcements.length">
-        <!-- 桌面/平板：表格化列表 -->
-        <div class="mt-4 hidden md:block">
-          <AnnouncementTable :announcements="announcements" />
-        </div>
-        <!-- 手机：紧凑列表行 -->
-        <ul class="mt-2 divide-y divide-default md:hidden">
-          <li
-            v-for="item in announcements"
-            :key="item.id"
-          >
-            <AnnouncementListRow :announcement="item" />
-          </li>
-        </ul>
-        <p class="mt-4 text-center text-xs text-muted md:hidden">
-          已加载全部内容
-        </p>
-      </template>
-      <UEmpty
-        v-else
-        icon="i-lucide-inbox"
-        title="暂无公告"
-        description="该来源下暂没有发布公告"
-        class="mt-6"
-      />
-    </section>
+        <template v-if="announcements.length">
+          <!-- 桌面/平板：表格化列表 -->
+          <div class="mt-4 hidden md:block">
+            <AnnouncementTable :announcements="announcements" />
+          </div>
+          <!-- 手机：紧凑列表行 -->
+          <ul class="mt-2 divide-y divide-default md:hidden">
+            <li
+              v-for="item in announcements"
+              :key="item.id"
+            >
+              <AnnouncementListRow :announcement="item" />
+            </li>
+          </ul>
+          <p class="mt-4 text-center text-xs text-muted md:hidden">
+            已加载全部内容
+          </p>
+        </template>
+        <UEmpty
+          v-else
+          icon="i-lucide-inbox"
+          title="暂无公告"
+          description="该来源下暂没有发布公告"
+          class="mt-6"
+        />
+      </section>
+    </template>
   </PageContainer>
 </template>

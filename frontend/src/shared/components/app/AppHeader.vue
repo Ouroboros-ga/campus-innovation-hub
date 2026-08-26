@@ -19,6 +19,10 @@ const shell = route.meta.mobileShell
 const isBackShell =
   shell === 'detail' || shell === 'form' || shell === 'manage'
 const backTitle = computed(() => (route.meta.title as string | undefined) ?? '')
+/** 手机端居中标题头部（如「竞赛中心」）：由路由 meta.mobileHeaderTitle 声明，搜索图标在右。 */
+const mobileHeaderTitle = computed(
+  () => (route.meta.mobileHeaderTitle as string | undefined) ?? ''
+)
 </script>
 
 <template>
@@ -26,6 +30,23 @@ const backTitle = computed(() => (route.meta.title as string | undefined) ?? '')
     v-if="isPhone && isBackShell"
     :title="backTitle"
   />
+
+  <header
+    v-else-if="isPhone && mobileHeaderTitle"
+    role="banner"
+    class="sticky top-0 z-40 border-b border-default bg-default/95 backdrop-blur-sm"
+    style="padding-top: env(safe-area-inset-top)"
+  >
+    <div class="flex h-[3.25rem] items-center justify-between gap-2 px-3">
+      <div class="w-11 shrink-0" />
+      <h1 class="min-w-0 flex-1 truncate text-center text-[17px] font-semibold text-highlighted">
+        {{ mobileHeaderTitle }}
+      </h1>
+      <div class="flex w-11 shrink-0 justify-end">
+        <SearchButton />
+      </div>
+    </div>
+  </header>
 
   <header
     v-else

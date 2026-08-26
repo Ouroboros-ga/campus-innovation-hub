@@ -73,7 +73,7 @@ const statusMeta = computed(() => ({
               {{ item.competitionName }}
             </span>
             <span class="mt-1 flex items-center gap-1.5">
-              <span class="truncate text-xs text-muted">
+              <span class="min-w-0 truncate text-xs text-muted">
                 {{ item.roles.join(' · ') }}
               </span>
               <UBadge

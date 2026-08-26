@@ -1,12 +1,38 @@
 import ui from '@nuxt/ui/vue-plugin'
 import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import ActivityDetailPage from '@/pages/activities/ActivityDetailPage.vue'
 import { routes } from '@/router/routes'
+import {
+  getActivity,
+  listAnnouncements
+} from '@/features/dynamics/api/dynamicsApi'
+import {
+  dynamicsActivities,
+  dynamicsAnnouncements
+} from '@/mocks/fixtures/dynamics'
+
+vi.mock('@/features/dynamics/api/dynamicsApi', () => ({
+  getActivity: vi.fn(),
+  listAnnouncements: vi.fn()
+}))
 
 const mounted: ReturnType<typeof mount>[] = []
+
+beforeEach(() => {
+  vi.mocked(getActivity).mockImplementation(async id => {
+    const activity = dynamicsActivities.find(item => item.id === id)
+    if (!activity) throw new Error('not found')
+    return activity
+  })
+  vi.mocked(listAnnouncements).mockResolvedValue({
+    items: dynamicsAnnouncements,
+    total: dynamicsAnnouncements.length,
+    page: 1
+  })
+})
 
 async function mountPage(activityId: string) {
   const router = createRouter({
@@ -24,6 +50,7 @@ async function mountPage(activityId: string) {
   })
   mounted.push(wrapper)
   await flushPromises()
+  await wrapper.vm.$nextTick()
   return wrapper
 }
 
@@ -32,7 +59,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('FE-051 活动详情页', () => {
+describe('FE-051 活动详情页（FE-104 API 驱动）', () => {
   it('展示面包屑、类型、时间、地点、主办与报名主操作', async () => {
     const wrapper = await mountPage('ai-sharing-4')
 

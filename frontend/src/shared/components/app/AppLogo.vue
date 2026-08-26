@@ -13,7 +13,7 @@
         class="size-5"
       />
     </span>
-    <span class="hidden min-w-0 sm:block">
+    <span class="min-w-0 sm:block">
       <span class="block truncate text-base font-bold leading-5 text-highlighted">
         科创与就业服务平台
       </span>

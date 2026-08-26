@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable no-undef -- tab 聚焦导航（HTMLElement / KeyboardEvent）是浏览器组件的合法依赖 */
 import { ref } from 'vue'
 
 import type { DynamicsTab } from '../types'

@@ -1,12 +1,38 @@
 import ui from '@nuxt/ui/vue-plugin'
 import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import CampusDynamicsPage from '@/pages/activities/CampusDynamicsPage.vue'
 import { routes } from '@/router/routes'
+import {
+  listActivities,
+  listAnnouncements
+} from '@/features/dynamics/api/dynamicsApi'
+import {
+  dynamicsActivities,
+  dynamicsAnnouncements
+} from '@/mocks/fixtures/dynamics'
+
+vi.mock('@/features/dynamics/api/dynamicsApi', () => ({
+  listActivities: vi.fn(),
+  listAnnouncements: vi.fn()
+}))
 
 const mounted: ReturnType<typeof mount>[] = []
+
+beforeEach(() => {
+  vi.mocked(listActivities).mockResolvedValue({
+    items: dynamicsActivities,
+    total: dynamicsActivities.length,
+    page: 1
+  })
+  vi.mocked(listAnnouncements).mockResolvedValue({
+    items: dynamicsAnnouncements,
+    total: dynamicsAnnouncements.length,
+    page: 1
+  })
+})
 
 async function mountPage(query: Record<string, string> = {}) {
   const router = createRouter({
@@ -25,6 +51,7 @@ async function mountPage(query: Record<string, string> = {}) {
   mounted.push(wrapper)
 
   await flushPromises()
+  await wrapper.vm.$nextTick()
   return wrapper
 }
 
@@ -33,7 +60,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('FE-050 校园动态页', () => {
+describe('FE-050 校园动态页（FE-104 API 驱动）', () => {
   it('默认 tab=all 渲染两个独立区块', async () => {
     const wrapper = await mountPage()
 
@@ -93,5 +120,13 @@ describe('FE-050 校园动态页', () => {
     // 手机端「近期活动」以精选活动卡呈现（isFeatured 的 AI 分享会）
     expect(wrapper.text()).toContain('已加载全部内容')
     expect(wrapper.text()).toContain('AI 前沿技术分享会（第 4 期）')
+  })
+
+  it('API 失败时展示可操作的重试', async () => {
+    vi.mocked(listActivities).mockRejectedValueOnce(new Error('boom'))
+    vi.mocked(listAnnouncements).mockRejectedValueOnce(new Error('boom'))
+    const wrapper = await mountPage()
+    expect(wrapper.text()).toContain('动态信息加载失败')
+    expect(wrapper.text()).toContain('重新加载')
   })
 })

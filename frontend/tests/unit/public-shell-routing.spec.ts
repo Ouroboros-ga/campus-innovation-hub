@@ -49,7 +49,7 @@ describe('FE-004 公开应用外壳', () => {
     ['/organizations', '社团与组织'],
     ['/teams', '组队广场'],
     ['/activities', '校园动态'],
-    ['/qa', '咨询指南']
+    ['/qa', '咨询与指南']
   ])('让 %s 共享完整外壳并显示正确页面标题', async (path, title) => {
     const { wrapper } = await mountAt(path)
 
@@ -80,7 +80,8 @@ describe('FE-004 公开应用外壳', () => {
     expect(wrapper.get('button[aria-label="搜索"]')).toBeTruthy()
     expect(wrapper.get('button[aria-label="查看通知"]')).toBeTruthy()
     expect(wrapper.get('button[aria-label="切换外观"]')).toBeTruthy()
-    expect(wrapper.get('button[aria-label="打开用户菜单"]')).toBeTruthy()
+    // 匿名态用户入口为「登录」按钮（FE-105）
+    expect(wrapper.get('button[aria-label="登录"]')).toBeTruthy()
   })
 
   it('Tablet 通过 Drawer 导航并在选择后关闭', async () => {

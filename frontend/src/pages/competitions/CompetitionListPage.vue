@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import CompetitionBannerCard from '@/features/competitions/components/CompetitionBannerCard.vue'
 import CompetitionCard from '@/features/homepage/components/CompetitionCard.vue'
 import CompetitionFilters from '@/features/competitions/components/CompetitionFilters.vue'
-import CompetitionListItem from '@/features/competitions/components/CompetitionListItem.vue'
 import SelectedCompetitionChips from '@/features/competitions/components/SelectedCompetitionChips.vue'
 import {
   COMPETITION_PAGE_SIZE,
@@ -19,10 +19,10 @@ import PageContainer from '@/shared/components/layout/PageContainer.vue'
  */
 const {
   query,
-  filtered,
-  paged,
+  items,
   loading,
   error,
+  total,
   updateQuery,
   reset,
   reload
@@ -30,14 +30,17 @@ const {
 </script>
 
 <template>
-  <section class="py-10 sm:py-14">
+  <section class="py-6 sm:py-8">
     <PageContainer>
-      <h1 class="text-2xl font-bold text-highlighted sm:text-3xl">
-        竞赛中心
-      </h1>
-      <p class="mt-2 max-w-xl text-base text-muted">
-        汇聚校内外优质竞赛资源。发现机会，挑战自我，收获成长。
-      </p>
+      <!-- 手机端：大标题由居中头部提供，页面内不再重复 -->
+      <div class="hidden md:block">
+        <h1 class="text-2xl font-bold text-highlighted sm:text-3xl">
+          竞赛中心
+        </h1>
+        <p class="mt-2 max-w-xl text-base text-muted">
+          汇聚校内外优质竞赛资源。发现机会，挑战自我，收获成长。
+        </p>
+      </div>
 
       <CompetitionFilters
         class="mt-6"
@@ -53,7 +56,7 @@ const {
         @reset="reset"
       />
 
-      <div class="mt-8">
+      <div class="mt-6">
         <template v-if="loading">
           <p class="text-sm text-muted">
             正在加载竞赛……
@@ -95,7 +98,7 @@ const {
           </div>
         </template>
 
-        <template v-else-if="filtered.length === 0">
+        <template v-else-if="total === 0">
           <UEmpty
             icon="i-lucide-search-x"
             title="没有符合条件的竞赛"
@@ -104,20 +107,20 @@ const {
         </template>
 
         <template v-else>
-          <!-- 手机：紧凑列表行（§34.4） -->
-          <ul class="mt-2 divide-y divide-default md:hidden">
+          <!-- 手机：整宽横幅卡（按设计稿） -->
+          <ul class="mt-2 space-y-4 md:hidden">
             <li
-              v-for="item in paged.items"
+              v-for="item in items"
               :key="item.id"
             >
-              <CompetitionListItem :item="item" />
+              <CompetitionBannerCard :item="item" />
             </li>
           </ul>
 
           <!-- 桌面 / 平板：卡片网格 -->
           <ul class="mt-4 hidden grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:grid">
             <li
-              v-for="item in paged.items"
+              v-for="item in items"
               :key="item.id"
               class="min-w-0"
             >
@@ -126,12 +129,12 @@ const {
           </ul>
 
           <UPagination
-            v-if="filtered.length > COMPETITION_PAGE_SIZE"
-            :page="paged.page"
-            :total="filtered.length"
+            v-if="total > COMPETITION_PAGE_SIZE"
+            :model-value="query.page ?? 1"
+            :total="total"
             :items-per-page="COMPETITION_PAGE_SIZE"
             class="mt-8 justify-center"
-            @update:page="p => updateQuery({ page: p })"
+            @update:model-value="(p: number) => updateQuery({ page: p })"
           />
         </template>
       </div>

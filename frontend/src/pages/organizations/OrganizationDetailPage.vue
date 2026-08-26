@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
@@ -13,16 +13,22 @@ import ActivityBrowseCard from '@/features/dynamics/components/ActivityBrowseCar
 import { findActivity, mdToPlainText } from '@/features/dynamics/lib/dynamicsDetail'
 import OrganizationInfoCard from '@/features/organizations/components/OrganizationInfoCard.vue'
 import {
+  getOrganization,
+  getRecruitment
+} from '@/features/organizations/api/organizationApi'
+import {
   deriveRecruitmentPhase,
-  findOrganizationDetail,
-  findRecruitmentDetail,
   recruitmentCanApply
 } from '@/features/organizations/lib/organizationDetail'
 import { recruitmentPhaseLabel } from '@/features/organizations/lib/organizationLabels'
-import type { RecruitmentPhaseState } from '@/features/organizations/types'
+import type {
+  OrganizationDetail,
+  RecruitmentDetail,
+  RecruitmentPhaseState
+} from '@/features/organizations/types'
 
 /**
- * 组织主页（FE-041 双端建设）。
+ * 组织主页（FE-041 / FE-103 API 驱动）。
  *
  * 参考设计稿：面包屑（首页 > 社团组织 > 名称）+ 蓝色 Identity 横幅（logo/名称/类型徽标/简介/
  * 成立时间·成员规模·所属学院）+ 四个信息卡（主要方向/指导老师/负责人/公开联系方式）
@@ -30,11 +36,41 @@ import type { RecruitmentPhaseState } from '@/features/organizations/types'
  *
  * 设计来源：PageMap §组织主页 / FrontendDesign §23、§34.6、§34.7。
  * Phone 使用 Detail Shell + 手机端「申请加入」Sticky 操作条。
+ * 数据来源 `GET /api/organizations/{id}`；当前招新经 `GET /api/recruitments/{id}` 补全岗位。
  */
 const route = useRoute()
 const id = computed(() => String(route.params.id ?? ''))
-const detail = computed(() => findOrganizationDetail(id.value))
+const detail = ref<OrganizationDetail | null>(null)
+const loading = ref(true)
+const error = ref(false)
+const recDetails = ref<Record<string, RecruitmentDetail>>({})
 const now = computed(() => new Date())
+
+async function load() {
+  loading.value = true
+  error.value = false
+  detail.value = null
+  recDetails.value = {}
+  try {
+    const org = await getOrganization(id.value)
+    detail.value = org
+    const ids = org.currentRecruitments.map(rec => rec.id).filter(Boolean)
+    const results = await Promise.all(
+      ids.map(rid => getRecruitment(rid).catch(() => null))
+    )
+    const map: Record<string, RecruitmentDetail> = {}
+    ids.forEach((rid, index) => {
+      if (rid && results[index]) map[rid] = results[index]!
+    })
+    recDetails.value = map
+  } catch {
+    error.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(id, load, { immediate: true })
 
 /** 主要方向（按「/」拆分，去除空项）。 */
 const directions = computed(() =>
@@ -63,7 +99,7 @@ const recentActivities = computed(() =>
 /** 当前招新（含岗位/截止，取自招新详情）。 */
 const currentRecruitments = computed(() =>
   (detail.value?.currentRecruitments ?? []).map(recruitment => {
-    const recDetail = findRecruitmentDetail(detail.value!.id, recruitment.id)
+    const recDetail = recDetails.value[recruitment.id]
     const phase = recDetail ? deriveRecruitmentPhase(recDetail, now.value) : null
     return { recruitment, recDetail, phase }
   })
@@ -71,9 +107,19 @@ const currentRecruitments = computed(() =>
 
 /** 是否有可申请的招新（用于手机端 Sticky「申请加入」）。 */
 const hasApply = computed(() =>
-  Boolean(detail.value?.recruitmentPath) &&
   currentRecruitments.value.some(item => item.phase && recruitmentCanApply(item.phase))
 )
+
+/** 某条招新的申请路径。 */
+function recruitmentApplyPath(recruitmentId: string): string {
+  return `/organizations/${id.value}/recruitments/${recruitmentId}`
+}
+
+/** 手机 Sticky 主操作的目标路径（优先第一个可申请招新）。 */
+function applyPath(): string | undefined {
+  const item = currentRecruitments.value.find(i => i.phase && recruitmentCanApply(i.phase))
+  return item ? recruitmentApplyPath(item.recruitment.id) : undefined
+}
 
 /** 方向标签图标（展示用，非虚构统计）。 */
 function directionIcon(label: string): string {
@@ -95,10 +141,6 @@ function phaseColor(
   if (phase === 'UPCOMING') return 'warning'
   return 'neutral'
 }
-
-function applyPath(): string | undefined {
-  return detail.value?.recruitmentPath ?? undefined
-}
 </script>
 
 <template>
@@ -107,9 +149,17 @@ function applyPath(): string | undefined {
     :class="{ 'pb-28 md:pb-14': hasApply }"
   >
     <PageContainer>
-      <div v-if="!detail">
+      <template v-if="loading">
+        <div class="space-y-5">
+          <USkeleton class="h-32 w-full rounded-card" />
+          <USkeleton class="h-28 w-full rounded-card" />
+          <USkeleton class="h-56 w-full rounded-card" />
+        </div>
+      </template>
+
+      <div v-else-if="error">
         <p class="text-base text-muted">
-          未找到该组织。
+          未找到该组织，或加载失败。
         </p>
         <RouterLink
           to="/organizations"
@@ -119,7 +169,7 @@ function applyPath(): string | undefined {
         </RouterLink>
       </div>
 
-      <template v-else>
+      <template v-else-if="detail">
         <!-- 桌面/平板面包屑：手机端由居中返回头承担返回（§16.5） -->
         <nav
           class="mb-5 hidden items-center gap-1.5 text-sm text-muted md:flex"
@@ -517,8 +567,8 @@ function applyPath(): string | undefined {
 
                   <div class="mt-4 flex flex-col gap-2 sm:flex-row">
                     <UButton
-                      v-if="detail.recruitmentPath"
-                      :to="detail.recruitmentPath"
+                      v-if="item.phase && recruitmentCanApply(item.phase)"
+                      :to="recruitmentApplyPath(item.recruitment.id)"
                       color="primary"
                       variant="solid"
                       block

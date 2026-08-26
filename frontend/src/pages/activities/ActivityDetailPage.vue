@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
@@ -11,26 +11,55 @@ import {
 
 import DynamicsDetailSection from '@/features/dynamics/components/DynamicsDetailSection.vue'
 import {
+  getActivity,
+  listAnnouncements
+} from '@/features/dynamics/api/dynamicsApi'
+import {
   deriveActivityRegistrationState
 } from '@/features/dynamics/lib/dynamicsFilters'
-import {
-  findActivity,
-  mdToPlainText,
-  relatedAnnouncementsForActivity
-} from '@/features/dynamics/lib/dynamicsDetail'
+import type {
+  DynamicsActivity,
+  DynamicsAnnouncement
+} from '@/features/dynamics/types'
+import RichContent from '@/shared/components/reader/RichContent.vue'
 
 /**
- * 活动详情（FE-051）— /activities/:activityId
+ * 活动详情（FE-051 / FE-104 API 驱动）— /activities/:activityId
  *
  * 展示：类型、报名状态、日期时间、地点、主办组织、主讲人（如有）、
- * 容量（仅在有真实数据时）、正文、相关公告；报名为 inline mock（可报名/取消）。
+ * 容量（仅在有真实数据时）、正文、相关公告；报名为 inline mock（可报名/取消，LOGIN 冻结）。
  * Phone 使用 Detail Shell，仅在「可报名」时显示安全区兼容的 Sticky Mobile Action。
  */
 const route = useRoute()
 
 const id = computed(() => String(route.params.activityId ?? ''))
-const activity = computed(() => findActivity(id.value))
+const activity = ref<DynamicsActivity | null>(null)
+const loading = ref(true)
+const error = ref(false)
+const announcements = ref<DynamicsAnnouncement[]>([])
 const now = computed(() => new Date())
+
+async function load() {
+  loading.value = true
+  error.value = false
+  activity.value = null
+  announcements.value = []
+  try {
+    const [act, anns] = await Promise.all([
+      getActivity(id.value),
+      listAnnouncements({ page: 1, pageSize: 100 })
+    ])
+    activity.value = act
+    announcements.value = anns.items
+  } catch {
+    error.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(id, load, { immediate: true })
+
 const state = computed(() =>
   activity.value
     ? deriveActivityRegistrationState(activity.value, now.value)
@@ -50,7 +79,13 @@ function toggleRegistration() {
 }
 
 const relatedAnnouncements = computed(() =>
-  id.value ? relatedAnnouncementsForActivity(id.value) : []
+  announcements.value
+    .filter(
+      item =>
+        item.linkedObject?.kind === 'ACTIVITY' &&
+        item.linkedObject.to === `/activities/${id.value}`
+    )
+    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
 )
 </script>
 
@@ -60,9 +95,18 @@ const relatedAnnouncements = computed(() =>
     :class="{ 'pb-28 md:pb-14': registerable }"
   >
     <PageContainer class="max-w-3xl">
-      <div v-if="!activity">
+      <template v-if="loading">
+        <div class="space-y-5">
+          <USkeleton class="h-8 w-3/4" />
+          <USkeleton class="h-6 w-1/3" />
+          <USkeleton class="h-40 w-full rounded-card" />
+          <USkeleton class="h-28 w-full rounded-card" />
+        </div>
+      </template>
+
+      <div v-else-if="error">
         <p class="text-base text-muted">
-          未找到该活动。
+          未找到该活动，或加载失败。
         </p>
         <RouterLink
           to="/activities?tab=activities"
@@ -72,7 +116,7 @@ const relatedAnnouncements = computed(() =>
         </RouterLink>
       </div>
 
-      <template v-else>
+      <template v-else-if="activity">
         <!-- 桌面/平板面包屑：手机端由居中返回头承担返回（§16.5） -->
         <nav
           class="mb-5 hidden items-center gap-1.5 text-sm text-muted md:flex"
@@ -217,8 +261,15 @@ const relatedAnnouncements = computed(() =>
 
         <div class="mt-8 space-y-8">
           <DynamicsDetailSection title="活动简介">
-            <p class="whitespace-pre-line text-sm leading-7 text-toned">
-              {{ mdToPlainText(activity.descriptionMd) }}
+            <RichContent
+              v-if="activity.descriptionMd"
+              :content="activity.descriptionMd"
+            />
+            <p
+              v-else
+              class="text-sm text-muted"
+            >
+              暂无活动介绍。
             </p>
           </DynamicsDetailSection>
 
