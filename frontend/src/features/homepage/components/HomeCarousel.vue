@@ -70,15 +70,15 @@ const autoplay = computed(() => {
       size: 'md',
       variant: 'solid',
       color: 'primary',
-      class: 'bg-white/90 text-neutral-900 hover:bg-white shadow-md'
+      class: 'opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 bg-white/85 text-neutral-900 shadow-md hover:bg-white'
     }"
     :next="{
       size: 'md',
       variant: 'solid',
       color: 'primary',
-      class: 'bg-white/90 text-neutral-900 hover:bg-white shadow-md'
+      class: 'opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 bg-white/85 text-neutral-900 shadow-md hover:bg-white'
     }"
-    class="mb-7 w-full min-w-0 rounded-surface border border-default bg-neutral-900 shadow-sm"
+    class="group mb-7 w-full min-w-0 rounded-surface border border-default bg-neutral-900 shadow-sm"
     :ui="{
       viewport: 'overflow-hidden rounded-surface',
       prev: 'absolute left-3! top-1/2 z-10 -translate-y-1/2',
