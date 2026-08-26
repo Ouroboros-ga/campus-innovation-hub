@@ -173,8 +173,15 @@ mv -Tf "$temporary_link" "$CURRENT_LINK"
 
 install -o root -g root -m 0644 "$release_dir/deploy/systemd/$UNIT_NAME" "/etc/systemd/system/$UNIT_NAME"
 systemctl daemon-reload
-systemctl enable --now "$UNIT_NAME"
+systemctl enable "$UNIT_NAME"
+systemctl restart "$UNIT_NAME"
 systemctl is-active --quiet "$UNIT_NAME" || fail "Gunicorn service 未进入 active 状态。"
+for _ in $(seq 1 15); do
+  if curl --fail --silent --show-error http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
 curl --fail --silent --show-error http://127.0.0.1:8000/api/health >/dev/null
 curl --fail --silent --show-error http://127.0.0.1:8000/api/ready >/dev/null
 
