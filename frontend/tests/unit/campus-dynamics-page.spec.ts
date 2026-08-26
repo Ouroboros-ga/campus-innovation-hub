@@ -73,4 +73,25 @@ describe('FE-050 校园动态页', () => {
     expect(wrapper.text()).toContain('竞赛')
     expect(wrapper.text()).toContain('原文')
   })
+
+  it('双端建设：副标语 + 右侧搜索 + 桌面公告表格表头', async () => {
+    const wrapper = await mountPage()
+
+    expect(wrapper.text()).toContain('了解学院最新活动与重要公告，参与交流与成长')
+    expect(wrapper.text()).toContain('搜索活动、公告、关键词')
+    // 桌面公告表格列头
+    expect(wrapper.text()).toContain('来源')
+    expect(wrapper.text()).toContain('公告标题')
+    expect(wrapper.text()).toContain('摘要')
+    expect(wrapper.text()).toContain('发布日期')
+    expect(wrapper.text()).toContain('关联标签')
+  })
+
+  it('移动端：精选活动卡 + 已加载全部内容', async () => {
+    const wrapper = await mountPage()
+
+    // 手机端「近期活动」以精选活动卡呈现（isFeatured 的 AI 分享会）
+    expect(wrapper.text()).toContain('已加载全部内容')
+    expect(wrapper.text()).toContain('AI 前沿技术分享会（第 4 期）')
+  })
 })
