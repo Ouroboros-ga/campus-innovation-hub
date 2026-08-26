@@ -104,6 +104,12 @@ elif [[ ! -f "$DEVELOPMENT_ENV" || ! -f "$POSTGRES_ENV" ]]; then
   fail "开发环境文件不完整；为避免覆盖密钥已停止。"
 fi
 
+if ! grep -qx 'UV_HTTP_TIMEOUT=120' "$DEVELOPMENT_ENV"; then
+  printf '%s\n' 'UV_HTTP_TIMEOUT=120' >> "$DEVELOPMENT_ENV"
+  chown root:"$APP_GROUP" "$DEVELOPMENT_ENV"
+  chmod 0640 "$DEVELOPMENT_ENV"
+fi
+
 if ! docker container inspect "$DATABASE_CONTAINER" >/dev/null 2>&1; then
   docker volume create "$DATABASE_VOLUME" >/dev/null
   docker run --detach --name "$DATABASE_CONTAINER" --restart unless-stopped \
