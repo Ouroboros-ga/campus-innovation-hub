@@ -2,7 +2,7 @@
 
 > 产品：人工智能学院科创与就业服务平台
 > 文档版本：1.0
-> 状态：V0.1 API 详细参考（待后端实现）
+> 状态：V0.1 API 详细参考（仅基础设施端点已实现，业务端点待后端实现）
 > 规范总览：[`APIContract.md`](APIContract.md)
 > 字段与持久化约束：[`../backend/database-design.md`](../backend/database-design.md)
 > 产品行为：[`../product/PRD.md`](../product/PRD.md) 与 [`../product/PageMap.md`](../product/PageMap.md)
@@ -302,6 +302,16 @@ Content-Disposition: attachment; filename="activity-<id>-registrations.csv"
 `BannerWrite`：`title`（1–80）、`subtitle`（可空 <=160）、`category_label`（可空 <=30）、`image_asset_id`（ACTIVE IMAGE UUID）、`alt_text`（可空 <=160）、`link_type`（`NONE` / `INTERNAL` / `EXTERNAL`）、`internal_path`（仅 INTERNAL，站内绝对路径 <=500）、`external_url`（仅 EXTERNAL，http(s) URL <=500）、`start_at/end_at`（可空 ISO，合法时间序）、`is_active`（boolean）、`sort_order`（非负整数）。`NONE` 不接受两个链接字段，`INTERNAL` 不接受 external_url，`EXTERNAL` 不接受 internal_path。
 
 `ConsultationWrite`：`category`（`COMPETITION` / `TEAM` / `ORGANIZATION` / `ACTIVITY` / `FURTHER_STUDY` / `CERTIFICATE` / `OTHER`）、`competition_id`（可空 UUID）、`title`（4–120）、`body_md`（10–5000）、`visibility`（`PUBLIC` / `PRIVATE`）。`ConsultationReplyWrite` 只接受 `{ "body_md": "1–10000 字符 Markdown" }`。
+
+## 0.7 `GET /api/health`
+
+| 项 | 契约 |
+|---|---|
+| 权限 | PUBLIC；不读取 Session，也不执行领域权限判断 |
+| Request | 无 body |
+| Success | `200 {"status":"ok"}` |
+| Error | `405 METHOD_NOT_ALLOWED`；未预期异常为 `500 INTERNAL_ERROR` |
+| 副作用 | 无；该端点用于部署探活，不读取或写入业务数据 |
 
 ---
 

@@ -226,6 +226,7 @@ ordering         显式排序（可选）
 401 Unauthorized 未登录
 403 Forbidden    已登录但无权限
 404 Not Found    不存在或按隐私策略隐藏
+405 Method Not Allowed 请求方法不被端点支持
 409 Conflict     唯一约束 / 状态冲突（重复关注、重复报名、状态不允许）
 422 Unprocessable Entity 业务规则拒绝（容量已满、截止已过）
 429 Too Many Requests    限流（如启用）
@@ -269,6 +270,12 @@ SENSITIVE   仅本人或必要运营人员
 ---
 
 # 2. 端点总览
+
+## 2.0 基础设施
+
+```text
+GET  /api/health                                    服务健康检查（PUBLIC）
+```
 
 ## 2.1 公开浏览域（PUBLIC）
 
@@ -1529,6 +1536,7 @@ ACCOUNT_UNAVAILABLE    403  账号尚未启用或不可用（不暴露内部原�
 ACCOUNT_EXISTS          409  学号或用户名已存在
 PERMISSION_DENIED      403  无权限
 NOT_FOUND              404  不存在或按隐私策略隐藏
+METHOD_NOT_ALLOWED     405  请求方法不被端点支持
 VALIDATION_ERROR       400  参数校验失败（含 fieldErrors）
 ALREADY_FOLLOWED       409  重复关注
 DUPLICATE_APPLICATION  409  已存在有效申请
