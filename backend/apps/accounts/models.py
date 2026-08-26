@@ -45,6 +45,13 @@ class UserProfile(models.Model):
         on_delete=models.PROTECT,
         related_name="profile",
     )
+    avatar_asset = models.ForeignKey(
+        "media.MediaAsset",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="profile_avatars",
+    )
     nickname = models.CharField(max_length=40, null=True, blank=True)
     major = models.CharField(max_length=80, null=True, blank=True)
     grade = models.SmallIntegerField(null=True, blank=True)

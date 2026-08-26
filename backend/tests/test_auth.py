@@ -154,6 +154,37 @@ class SessionAuthTests(TestCase):
         self.assertEqual(logout_response.status_code, 204)
         self.assertEqual(client.get("/api/auth/me").status_code, 401)
 
+    def test_current_user_exposes_only_active_organization_permission_context(self) -> None:
+        user_model = get_user_model()
+        organization_model = apps.get_model("organizations", "Organization")
+        membership_model = apps.get_model("organizations", "OrganizationMembership")
+        user = user_model.objects.create_user(
+            username="20240012",
+            student_no="20240012",
+            real_name="组织负责人",
+            password=self.password,
+            is_active=True,
+        )
+        active_organization = organization_model.objects.create(name="人工智能协会", organization_type="STUDENT_CLUB")
+        inactive_organization = organization_model.objects.create(name="机器人协会", organization_type="STUDENT_CLUB")
+        membership_model.objects.create(
+            organization=active_organization,
+            user=user,
+            role="LEADER",
+            title="技术部部长",
+        )
+        membership_model.objects.create(organization=inactive_organization, user=user, is_active=False)
+        client = Client()
+        self.assertTrue(client.login(username=user.username, password=self.password))
+
+        response = client.get("/api/auth/me")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["permissions"]["organization_memberships"],
+            [{"organization_id": str(active_organization.id), "role": "LEADER", "title": "技术部部长"}],
+        )
+
 
 class AccountModelTests(TestCase):
     password = "CorrectHorseBatteryStaple9!"

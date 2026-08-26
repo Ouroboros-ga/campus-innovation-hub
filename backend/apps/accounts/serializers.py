@@ -4,6 +4,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from apps.accounts.models import User
+from apps.organizations.models import OrganizationMembership
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -38,6 +39,7 @@ def current_user_payload(user: User) -> dict[str, Any]:
         "skills": profile.skills_json if profile else [],
     }
     platform_role = "SUPERADMIN" if user.is_superuser else user.platform_role
+    memberships = OrganizationMembership.objects.filter(user=user, is_active=True).order_by("organization_id")
     return {
         "user": {
             "id": str(user.id),
@@ -50,6 +52,13 @@ def current_user_payload(user: User) -> dict[str, Any]:
         },
         "permissions": {
             "platform_role": platform_role,
-            "organization_memberships": [],
+            "organization_memberships": [
+                {
+                    "organization_id": str(membership.organization_id),
+                    "role": membership.role,
+                    "title": membership.title,
+                }
+                for membership in memberships
+            ],
         },
     }

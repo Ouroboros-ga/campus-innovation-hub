@@ -65,6 +65,15 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "apps.accounts",
+    "apps.media",
+    "apps.organizations",
+    "apps.competitions",
+    "apps.teams",
+    "apps.activities",
+    "apps.content",
+    "apps.consultations",
+    "apps.notifications",
+    "apps.audit",
     "apps.core",
 ]
 
