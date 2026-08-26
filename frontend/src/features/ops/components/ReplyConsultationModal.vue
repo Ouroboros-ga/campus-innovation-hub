@@ -4,6 +4,7 @@ import { useToast } from '@nuxt/ui/composables'
 
 import { replyQuestion, validateReply } from '../lib/opsStore'
 import type { ConsultQaPost } from '@/features/consultation/types'
+import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 
 /** 回复咨询（FE-090 /ops/questions）。 */
 const props = defineProps<{ open: boolean; question: ConsultQaPost | null }>()
@@ -67,11 +68,9 @@ function save() {
           label="回复内容"
           :error="error"
         >
-          <UTextarea
+          <MarkdownEditor
             v-model="answer"
-            :rows="4"
-            placeholder="填写回复内容"
-            class="w-full"
+            :height="240"
           />
         </UFormField>
       </div>

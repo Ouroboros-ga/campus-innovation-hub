@@ -10,6 +10,7 @@ import {
   type RecruitEditorDraft
 } from '../lib/orgManagement'
 import type { OrganizationPosition, RecruitmentDetail } from '../types'
+import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 
 /**
  * 招新编辑器（FE-080 / PageMap §新建/编辑招新）。
@@ -164,10 +165,9 @@ function save() {
           required
           :error="errors.introMd"
         >
-          <UTextarea
+          <MarkdownEditor
             v-model="introMd"
-            :rows="3"
-            class="w-full"
+            :height="260"
           />
         </UFormField>
 

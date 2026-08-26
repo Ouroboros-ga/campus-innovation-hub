@@ -23,6 +23,9 @@ importers:
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
+      vditor:
+        specifier: ^3.11.3
+        version: 3.11.3
       vue:
         specifier: ^3.5.41
         version: 3.5.41(typescript@5.9.3)
@@ -1429,6 +1432,9 @@ packages:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
 
+  diff-match-patch@1.0.5:
+    resolution: {integrity: sha512-IayShXAgj/QMXgB0IWmKx+rOPuGMhqm5w6jvFxmVenXKIzRqTAAsbBPT3kWQeGANj3jGgvcvv4yK6SxqYmikgw==}
+
   dompurify@3.4.14:
     resolution: {integrity: sha512-dVoH9z+MY+C9IilgGCk3YfFqjLi3fChm2OiKJMzh6axrJ5qwxqWaZamgmHrpv22CN/KdbZJuGEGgfQoL00LTdg==}
 
@@ -2628,6 +2634,9 @@ packages:
     peerDependencies:
       reka-ui: ^2.0.0
       vue: ^3.3.0
+
+  vditor@3.11.3:
+    resolution: {integrity: sha512-9SXqM81fFbQJoOiRIxYj7TJmIhh1nfNyZ4fpAlicL+zc4DvGKhfppIhlVN0rN/Ks3uthjy8VaQqh2Dw1HTXUCA==}
 
   verkit@0.3.2:
     resolution: {integrity: sha512-zj/ob3UsvJGN0whEAKFp53REA5X66hvffVqoCtVQAakJKnKlH+/PcOfMoFwIG/o4rElqLv/ycAFlx8ZlXUorCg==}
@@ -4266,6 +4275,8 @@ snapshots:
 
   detect-libc@2.1.2: {}
 
+  diff-match-patch@1.0.5: {}
+
   dompurify@3.4.14:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
@@ -5432,6 +5443,10 @@ snapshots:
       vue: 3.5.41(typescript@5.9.3)
     transitivePeerDependencies:
       - '@vue/composition-api'
+
+  vditor@3.11.3:
+    dependencies:
+      diff-match-patch: 1.0.5
 
   verkit@0.3.2: {}
 

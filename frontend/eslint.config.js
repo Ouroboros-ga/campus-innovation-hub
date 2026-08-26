@@ -21,13 +21,18 @@ export default tseslint.config(
         document: 'readonly',
         window: 'readonly',
         HTMLElement: 'readonly',
+        HTMLDivElement: 'readonly',
         HTMLImageElement: 'readonly',
         HTMLAnchorElement: 'readonly',
+        HTMLInputElement: 'readonly',
         Node: 'readonly',
         NodeListOf: 'readonly',
         KeyboardEvent: 'readonly',
         Event: 'readonly',
-        AbortSignal: 'readonly'
+        AbortSignal: 'readonly',
+        MutationObserver: 'readonly',
+        FileReader: 'readonly',
+        File: 'readonly'
       },
       parserOptions: {
         parser: tseslint.parser,

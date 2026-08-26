@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
+import FormSection from '@/shared/components/form/FormSection.vue'
 
 import {
   consultationTypeOptions,
@@ -102,74 +103,86 @@ function submit() {
         </p>
 
         <form
-          class="mt-8 space-y-4"
+          class="mt-8 space-y-8"
           novalidate
           @submit.prevent="submit"
         >
-          <UFormField
-            label="咨询类型"
-            name="type"
-            required
-            :error="errors.type"
+          <FormSection
+            title="问题信息"
+            description="类型、标题与你的问题描述"
           >
-            <USelect
-              v-model="type"
-              :items="consultationTypeOptions"
-              placeholder="请选择咨询类型"
-              class="w-full"
-            />
-          </UFormField>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField
+                label="咨询类型"
+                name="type"
+                required
+                :error="errors.type"
+              >
+                <USelect
+                  v-model="type"
+                  :items="consultationTypeOptions"
+                  placeholder="请选择咨询类型"
+                  class="w-full"
+                />
+              </UFormField>
 
-          <UFormField
-            label="标题"
-            name="title"
-            required
-            :error="errors.title"
-          >
-            <UInput
-              v-model="title"
-              placeholder="用一句话概括你的问题"
-              class="w-full"
-            />
-          </UFormField>
+              <UFormField
+                label="标题"
+                name="title"
+                required
+                :error="errors.title"
+              >
+                <UInput
+                  v-model="title"
+                  placeholder="用一句话概括你的问题"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
 
-          <UFormField
-            label="详细描述"
-            name="description"
-            required
-            :error="errors.description"
-          >
-            <UTextarea
-              v-model="description"
-              :rows="4"
-              placeholder="请尽量详细描述你的问题或需求"
-              class="w-full"
-            />
-          </UFormField>
+            <UFormField
+              label="详细描述"
+              name="description"
+              required
+              :error="errors.description"
+            >
+              <UTextarea
+                v-model="description"
+                :rows="4"
+                placeholder="请尽量详细描述你的问题或需求"
+                class="w-full"
+              />
+            </UFormField>
 
-          <UFormField
-            label="关联竞赛（选填）"
-            name="relatedCompetition"
-          >
-            <UInput
-              v-model="related"
-              placeholder="如：全国大学生数学建模竞赛"
-              class="w-full"
-            />
-          </UFormField>
+            <UFormField
+              label="关联竞赛（选填）"
+              name="relatedCompetition"
+            >
+              <UInput
+                v-model="related"
+                placeholder="如：全国大学生数学建模竞赛"
+                class="w-full"
+              />
+            </UFormField>
+          </FormSection>
 
-          <UFormField
-            label="联系方式"
-            name="contact"
-            required
-            :error="errors.contact"
+          <FormSection
+            title="联系方式"
+            description="便于我们与你取得联系"
           >
-            <UInput
-              v-model="contact"
-              placeholder="微信 / 手机号 / 邮箱"
-              class="w-full"
-            />
-          </UFormField>
+            <UFormField
+              label="联系方式"
+              name="contact"
+              required
+              :error="errors.contact"
+            >
+              <UInput
+                v-model="contact"
+                placeholder="微信 / 手机号 / 邮箱"
+                class="w-full"
+              />
+            </UFormField>
+          </FormSection>
 
           <div class="flex items-center justify-end gap-2 pt-2">
             <UButton

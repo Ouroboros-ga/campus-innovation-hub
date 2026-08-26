@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
+import FormSection from '@/shared/components/form/FormSection.vue'
 
 import {
   submitTeamPost,
@@ -12,6 +13,7 @@ import {
 } from '@/features/teams/lib/teamPost'
 import type { TeamPostType } from '@/shared/types/homepage'
 import type { TeamPost, TeamPostDraft } from '@/features/teams/types'
+import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 
 /**
  * 发布组队（FE-032）— /teams/create
@@ -135,213 +137,232 @@ async function submit() {
         </p>
 
         <form
-          class="mt-8 space-y-4"
+          class="mt-8 space-y-8"
           novalidate
           @submit.prevent="submit"
         >
-          <UFormField
-            label="关联竞赛"
-            name="competitionId"
-            required
-            :error="errors.competitionId"
+          <FormSection
+            title="基本信息"
+            description="关联竞赛与信息类型"
           >
-            <USelect
-              v-model="competitionId"
-              :items="competitionOptions"
-              placeholder="请选择关联竞赛"
-              class="w-full"
-            />
-          </UFormField>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField
+                label="关联竞赛"
+                name="competitionId"
+                required
+                :error="errors.competitionId"
+              >
+                <USelect
+                  v-model="competitionId"
+                  :items="competitionOptions"
+                  placeholder="请选择关联竞赛"
+                  class="w-full"
+                />
+              </UFormField>
 
-          <UFormField
-            label="信息类型"
-            name="postType"
-            required
-            :error="errors.postType"
-          >
-            <USelect
-              v-model="postType"
-              :items="teamPostTypeOptions"
-              placeholder="请选择信息类型"
-              class="w-full"
-            />
-          </UFormField>
+              <UFormField
+                label="信息类型"
+                name="postType"
+                required
+                :error="errors.postType"
+              >
+                <USelect
+                  v-model="postType"
+                  :items="teamPostTypeOptions"
+                  placeholder="请选择信息类型"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
 
-          <UFormField
-            label="标题"
-            name="title"
-            required
-            :error="errors.title"
-          >
-            <UInput
-              v-model="title"
-              placeholder="如：一起冲省赛，缺一名前端"
-              class="w-full"
-            />
-          </UFormField>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField
+                label="标题"
+                name="title"
+                required
+                :error="errors.title"
+              >
+                <UInput
+                  v-model="title"
+                  placeholder="如：一起冲省赛，缺一名前端"
+                  class="w-full"
+                />
+              </UFormField>
 
-          <UFormField
-            label="队伍名称（选填）"
-            name="teamName"
-          >
-            <UInput
-              v-model="teamName"
-              placeholder="如：算法冲锋队"
-              class="w-full"
-            />
-          </UFormField>
+              <UFormField
+                label="队伍名称（选填）"
+                name="teamName"
+              >
+                <UInput
+                  v-model="teamName"
+                  placeholder="如：算法冲锋队"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
 
-          <UFormField
-            label="项目 / 方向简介"
-            name="direction"
-            required
-            :error="errors.direction"
-          >
-            <UInput
-              v-model="direction"
-              placeholder="如：图像识别 / 小程序开发"
-              class="w-full"
-            />
-          </UFormField>
-
-          <div class="grid gap-4 sm:grid-cols-2">
             <UFormField
-              label="当前人数"
-              name="baseMemberCount"
+              label="项目 / 方向简介"
+              name="direction"
               required
-              :error="errors.baseMemberCount"
+              :error="errors.direction"
             >
-              <UInputNumber
-                v-model="baseCount"
-                :min="0"
+              <UInput
+                v-model="direction"
+                placeholder="如：图像识别 / 小程序开发"
                 class="w-full"
               />
             </UFormField>
+          </FormSection>
+
+          <FormSection
+            title="队伍与分工"
+            description="人数、岗位与技能要求"
+          >
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField
+                label="当前人数"
+                name="baseMemberCount"
+                required
+                :error="errors.baseMemberCount"
+              >
+                <UInputNumber
+                  v-model="baseCount"
+                  :min="0"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField
+                label="计划人数"
+                name="targetMemberCount"
+                required
+                :error="errors.targetMemberCount"
+              >
+                <UInputNumber
+                  v-model="targetCount"
+                  :min="0"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
             <UFormField
-              label="计划人数"
-              name="targetMemberCount"
-              required
-              :error="errors.targetMemberCount"
+              label="已有成员情况"
+              name="currentMembers"
             >
-              <UInputNumber
-                v-model="targetCount"
-                :min="0"
+              <UTextarea
+                v-model="currentMembers"
+                :rows="2"
+                placeholder="如：2 名后端、1 名算法"
                 class="w-full"
               />
             </UFormField>
-          </div>
 
-          <UFormField
-            label="已有成员情况"
-            name="currentMembers"
-          >
-            <UTextarea
-              v-model="currentMembers"
-              :rows="2"
-              placeholder="如：2 名后端、1 名算法"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField
-            label="招募岗位"
-            name="roles"
-            required
-            :error="errors.roles"
-          >
-            <UInput
-              v-model="rolesText"
-              placeholder="多个岗位用逗号分隔，如：前端, 算法, 文案"
-              class="w-full"
-            />
-            <div
-              v-if="roleChips.length > 0"
-              class="mt-2 flex flex-wrap gap-1.5"
+            <UFormField
+              label="招募岗位"
+              name="roles"
+              required
+              :error="errors.roles"
             >
-              <span
-                v-for="chip in roleChips"
-                :key="chip"
-                class="rounded-md bg-neutral-100 px-2 py-0.5 text-xs text-highlighted dark:bg-neutral-800"
+              <UInput
+                v-model="rolesText"
+                placeholder="多个岗位用逗号分隔，如：前端, 算法, 文案"
+                class="w-full"
+              />
+              <div
+                v-if="roleChips.length > 0"
+                class="mt-2 flex flex-wrap gap-1.5"
               >
-                {{ chip }}
-              </span>
-            </div>
-          </UFormField>
+                <span
+                  v-for="chip in roleChips"
+                  :key="chip"
+                  class="rounded-md bg-neutral-100 px-2 py-0.5 text-xs text-highlighted dark:bg-neutral-800"
+                >
+                  {{ chip }}
+                </span>
+              </div>
+            </UFormField>
 
-          <UFormField
-            label="技能要求"
-            name="skills"
-          >
-            <UInput
-              v-model="skillsText"
-              placeholder="多个技能用逗号分隔，如：Python, 数据分析"
-              class="w-full"
-            />
-            <div
-              v-if="skillChips.length > 0"
-              class="mt-2 flex flex-wrap gap-1.5"
+            <UFormField
+              label="技能要求"
+              name="skills"
             >
-              <span
-                v-for="chip in skillChips"
-                :key="chip"
-                class="rounded-md bg-primary-50 px-2 py-0.5 text-xs text-primary-700 dark:bg-primary-950 dark:text-primary-300"
+              <UInput
+                v-model="skillsText"
+                placeholder="多个技能用逗号分隔，如：Python, 数据分析"
+                class="w-full"
+              />
+              <div
+                v-if="skillChips.length > 0"
+                class="mt-2 flex flex-wrap gap-1.5"
               >
-                {{ chip }}
-              </span>
+                <span
+                  v-for="chip in skillChips"
+                  :key="chip"
+                  class="rounded-md bg-primary-50 px-2 py-0.5 text-xs text-primary-700 dark:bg-primary-950 dark:text-primary-300"
+                >
+                  {{ chip }}
+                </span>
+              </div>
+            </UFormField>
+          </FormSection>
+
+          <FormSection
+            title="目标与联系"
+            description="目标、投入时间与联系方式"
+          >
+            <UFormField
+              label="目标"
+              name="goal"
+              required
+              :error="errors.goal"
+            >
+              <UTextarea
+                v-model="goal"
+                :rows="3"
+                placeholder="描述你们的目标，如：冲击省级一等奖"
+                class="w-full"
+              />
+            </UFormField>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField
+                label="预计投入时间"
+                name="expectedEffort"
+                required
+                :error="errors.expectedEffort"
+              >
+                <UInput
+                  v-model="effort"
+                  placeholder="如：每周 6–8 小时"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <UFormField
+                label="联系方式"
+                name="contact"
+                required
+                :error="errors.contact"
+              >
+                <UInput
+                  v-model="contact"
+                  placeholder="微信 / 手机号 / 邮箱（默认不公开）"
+                  class="w-full"
+                />
+              </UFormField>
             </div>
-          </UFormField>
 
-          <UFormField
-            label="目标"
-            name="goal"
-            required
-            :error="errors.goal"
-          >
-            <UTextarea
-              v-model="goal"
-              :rows="3"
-              placeholder="描述你们的目标，如：冲击省级一等奖"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField
-            label="预计投入时间"
-            name="expectedEffort"
-            required
-            :error="errors.expectedEffort"
-          >
-            <UInput
-              v-model="effort"
-              placeholder="如：每周 6–8 小时"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField
-            label="联系方式"
-            name="contact"
-            required
-            :error="errors.contact"
-          >
-            <UInput
-              v-model="contact"
-              placeholder="微信 / 手机号 / 邮箱（默认不公开）"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField
-            label="其他说明"
-            name="notes"
-          >
-            <UTextarea
-              v-model="notes"
-              :rows="2"
-              placeholder="补充说明（选填）"
-              class="w-full"
-            />
-          </UFormField>
+            <UFormField
+              label="其他说明"
+              name="notes"
+            >
+              <MarkdownEditor
+                v-model="notes"
+                :height="220"
+              />
+            </UFormField>
+          </FormSection>
 
           <div class="flex items-center justify-end gap-2 pt-2">
             <UButton

@@ -9,6 +9,7 @@ import {
 } from '../lib/opsStore'
 import { announcementScopeOptions } from '@/features/dynamics/lib/dynamicsFilters'
 import type { AnnouncementLinkedKind, AnnouncementPublisherScope } from '@/features/dynamics/types'
+import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 
 /** 公告编辑 / 发布（FE-090 /ops/activities，公告独立表单字段）。 */
 const props = defineProps<{ open: boolean }>()
@@ -122,10 +123,9 @@ function save() {
           required
           :error="errors.bodyMd"
         >
-          <UTextarea
+          <MarkdownEditor
             v-model="bodyMd"
-            :rows="5"
-            class="w-full"
+            :height="280"
           />
         </UFormField>
 

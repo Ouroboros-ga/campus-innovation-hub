@@ -10,6 +10,7 @@ import {
   type ActivityEditorDraft
 } from '../lib/opsStore'
 import { activityTypeOptions } from '@/features/dynamics/lib/dynamicsFilters'
+import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 import type { DynamicsActivity } from '@/features/dynamics/types'
 import type { ActivityType } from '@/shared/types/homepage'
 
@@ -205,10 +206,9 @@ function save() {
         </div>
 
         <UFormField label="活动介绍">
-          <UTextarea
+          <MarkdownEditor
             v-model="descriptionMd"
-            :rows="3"
-            class="w-full"
+            :height="260"
           />
         </UFormField>
       </form>
