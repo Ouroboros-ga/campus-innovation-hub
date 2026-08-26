@@ -11,7 +11,7 @@ from apps.accounts.models import User
 from apps.activities.models import Activity, Registration
 from apps.activities.services import register_activity
 from apps.competitions.models import Competition, Follow
-from apps.domain_errors import CapacityFull
+from apps.domain_errors import CapacityFull, InvalidState
 from apps.notifications.models import Notification
 from apps.organizations.models import Organization, OrganizationMembership, Recruitment, RecruitmentApplication, RecruitmentPosition
 from apps.organizations.services import accept_recruitment_application
@@ -184,6 +184,9 @@ class TeamApplicationConcurrencyTests(TransactionTestCase):
                 outcome = "ACCEPTED"
             except CapacityFull:
                 outcome = "CAPACITY_FULL"
+            except InvalidState:
+                # 首个事务已将帖子置为 FULL 时，第二个事务命中状态机冲突。
+                outcome = "POST_FULL"
             finally:
                 close_old_connections()
             with result_lock:
@@ -199,7 +202,7 @@ class TeamApplicationConcurrencyTests(TransactionTestCase):
             thread.join(timeout=15)
 
         self.assertTrue(all(not thread.is_alive() for thread in threads))
-        self.assertCountEqual(outcomes, ["ACCEPTED", "CAPACITY_FULL"])
+        self.assertCountEqual(outcomes, ["ACCEPTED", "POST_FULL"])
         self.assertEqual(
             TeamApplication.objects.filter(team_post=post, status=TeamApplication.Status.ACCEPTED).count(),
             1,
