@@ -8,8 +8,8 @@ from apps.core.admin import AuditedAdminMixin
 
 @admin.register(User)
 class AccountsUserAdmin(AuditedAdminMixin, UserAdmin):
-    list_display = ["username", "student_no", "real_name", "platform_role", "is_active", "is_staff"]
-    list_filter = ["is_active", "platform_role", "is_staff", "is_superuser"]
+    list_display = ["username", "identity_type", "student_no", "employee_no", "real_name", "platform_role", "is_active", "is_staff"]
+    list_filter = ["is_active", "identity_type", "platform_role", "is_staff", "is_superuser"]
     actions = [
         "activate_pending_accounts",
         "deactivate_accounts",
@@ -17,12 +17,16 @@ class AccountsUserAdmin(AuditedAdminMixin, UserAdmin):
         "grant_operator",
         "revoke_operator",
     ]
-    readonly_fields = ["is_active", "platform_role", "is_staff", "is_superuser"]
+    readonly_fields = ["is_active", "platform_role", "is_staff", "is_superuser", "identity_type", "student_no", "employee_no"]
     fieldsets = UserAdmin.fieldsets + (
-        ("平台信息", {"fields": ("student_no", "real_name", "platform_role")}),
+        ("平台信息", {"fields": ("identity_type", "student_no", "employee_no", "real_name", "platform_role")}),
     )
-    add_fieldsets = UserAdmin.add_fieldsets + (
-        ("平台信息", {"fields": ("student_no", "real_name", "platform_role")}),
+    add_fieldsets = (
+        (
+            "账号信息",
+            {"fields": ("username", "password1", "password2", "identity_type", "student_no", "employee_no", "real_name")},
+        ),
+        ("平台信息", {"fields": ("platform_role", "is_active")}),
     )
 
     def has_add_permission(self, request):
@@ -52,13 +56,13 @@ class AccountsUserAdmin(AuditedAdminMixin, UserAdmin):
     @admin.action(description="撤销平台运营角色")
     def revoke_operator(self, request, queryset):
         for user in queryset:
-            set_platform_role(actor=request.user, user=user, platform_role=User.PlatformRole.STUDENT)
+            set_platform_role(actor=request.user, user=user, platform_role=User.PlatformRole.USER)
 
 
 @admin.register(UserProfile)
 class UserProfileAdmin(AuditedAdminMixin, admin.ModelAdmin):
-    list_display = ["user", "nickname", "major", "grade", "updated_at"]
-    search_fields = ["user__username", "nickname", "major"]
+    list_display = ["user", "nickname", "public_name", "major", "grade", "department", "academic_title", "updated_at"]
+    search_fields = ["user__username", "nickname", "public_name", "major", "department"]
     raw_id_fields = ["user"]
     readonly_fields = ["avatar_asset"]
 

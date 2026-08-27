@@ -22,17 +22,33 @@ def is_operator(user: User | None) -> bool:
     return effective_platform_role(user) in {User.PlatformRole.OPERATOR, "SUPERADMIN"}
 
 
-def can_manage_organization(user: User | None, organization_id: object) -> bool:
+def is_org_manager(user: User | None, organization_id: object) -> bool:
+    """ORG_MANAGER(org) = active membership + role IN (LEADER, ADVISOR) + orgId 严格匹配."""
     if user is None or not user.is_authenticated:
         return False
     if user.is_superuser:
         return True
-    return OrganizationMembership.objects.filter(
+    membership = OrganizationMembership.objects.filter(
         organization_id=organization_id,
         user=user,
-        role=OrganizationMembership.Role.LEADER,
+        role__in=[OrganizationMembership.Role.LEADER, OrganizationMembership.Role.ADVISOR],
         is_active=True,
-    ).exists()
+    ).first()
+    if membership is None:
+        return False
+    if membership.role == OrganizationMembership.Role.ADVISOR:
+        # ADVISOR 必须对应 TEACHER 且 public_name 非空（database-design.md §10.2）
+        if getattr(user, "identity_type", None) != User.IdentityType.TEACHER:
+            return False
+        profile = getattr(user, "profile", None)
+        if profile is None or not getattr(profile, "public_name", None):
+            return False
+    return True
+
+
+def can_manage_organization(user: User | None, organization_id: object) -> bool:
+    # 兼容旧调用，转发至 ORG_MANAGER
+    return is_org_manager(user, organization_id)
 
 
 def consultation_visibility_filter(user: User | None) -> Q:

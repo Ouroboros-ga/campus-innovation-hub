@@ -14,10 +14,10 @@ import type {
   RecruitmentPublicationState
 } from '../types'
 
-/** 当前 mock 用户是否可管理指定组织（仅 LEADER）。 */
+/** 当前 mock 用户是否可管理指定组织（LEADER 或 ADVISOR）。 */
 export function canManageOrganization(orgId: string): boolean {
   return myOrganizations.some(
-    entry => entry.organization.id === orgId && entry.membership === 'LEADER'
+    entry => entry.organization.id === orgId && (entry.membership === 'LEADER' || entry.membership === 'ADVISOR')
   )
 }
 
@@ -25,7 +25,7 @@ export function canManageOrganization(orgId: string): boolean {
 export function managedMembership(orgId: string): MyOrganization | null {
   return (
     myOrganizations.find(
-      entry => entry.organization.id === orgId && entry.membership === 'LEADER'
+      entry => entry.organization.id === orgId && (entry.membership === 'LEADER' || entry.membership === 'ADVISOR')
     ) ?? null
   )
 }

@@ -25,9 +25,11 @@ const studentMe = {
   user: {
     id: 'u1',
     username: '20240001',
+    identity_type: 'STUDENT' as const,
     student_no: '20240001',
+    employee_no: null,
     real_name: '张三',
-    platform_role: 'STUDENT' as const,
+    platform_role: 'USER' as const,
     is_superuser: false,
     profile: {
       nickname: '阿三',
@@ -39,7 +41,7 @@ const studentMe = {
     }
   },
   permissions: {
-    platform_role: 'STUDENT' as const,
+    platform_role: 'USER' as const,
     organization_memberships: []
   }
 }

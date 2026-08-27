@@ -28,7 +28,6 @@ class Organization(UUIDTimestampedModel):
     banner_asset = models.ForeignKey(
         "media.MediaAsset", null=True, blank=True, on_delete=models.SET_NULL, related_name="organization_banners"
     )
-    advisor_name = models.CharField(max_length=100, null=True, blank=True)
     public_contact = models.CharField(max_length=200, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(
@@ -49,6 +48,7 @@ class OrganizationMembership(UUIDTimestampedModel):
     class Role(models.TextChoices):
         MEMBER = "MEMBER", "成员"
         LEADER = "LEADER", "负责人"
+        ADVISOR = "ADVISOR", "指导老师"
 
     organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="memberships")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="organization_memberships")

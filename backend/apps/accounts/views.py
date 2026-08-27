@@ -129,14 +129,28 @@ def sign_in(request: HttpRequest) -> JsonResponse:
     if not serializer.is_valid():
         return validation_error(serializer.errors)
 
-    username = serializer.validated_data["username"]
+    raw_username = serializer.validated_data["username"]
     password = serializer.validated_data["password"]
     origin_ip = client_ip(request)
     try:
-        enforce_auth_throttles(client_ip=origin_ip, username=username, scope="LOGIN")
+        enforce_auth_throttles(client_ip=origin_ip, username=raw_username, scope="LOGIN")
     except RateLimitExceeded as error:
         return rate_limited(error)
-    candidate = User.objects.filter(username=username).first()
+    # 支持学号/工号/username 登录（identity_type 分区后 username 仍为真实登录名）
+    from django.db.models import Q
+
+    resolved_username = raw_username
+    matched = (
+        User.objects.filter(Q(username=raw_username) | Q(student_no=raw_username) | Q(employee_no=raw_username))
+        .values_list("username", flat=True)
+        .first()
+    )
+    if matched:
+        resolved_username = str(matched)
+        # 节流仍以归一化后的真实 username 为 key，避免学号/工号绕过限制
+        candidate = User.objects.filter(username=resolved_username).first()
+    else:
+        candidate = User.objects.filter(username=raw_username).first()
     if candidate and candidate.check_password(password) and not candidate.is_active:
         return api_error(
             code="ACCOUNT_UNAVAILABLE",
@@ -144,13 +158,13 @@ def sign_in(request: HttpRequest) -> JsonResponse:
             status=403,
         )
 
-    user = authenticate(request, username=username, password=password)
+    user = authenticate(request, username=resolved_username, password=password)
     if user is None:
-        record_auth_failure(client_ip=origin_ip, username=username)
+        record_auth_failure(client_ip=origin_ip, username=raw_username)
         return api_error(code="AUTH_REQUIRED", message="用户名或密码错误", status=401)
 
     login(request, user)
-    clear_login_throttle(client_ip=origin_ip, username=username)
+    clear_login_throttle(client_ip=origin_ip, username=raw_username)
     return JsonResponse(current_user_payload(user), json_dumps_params={"ensure_ascii": False})
 
 

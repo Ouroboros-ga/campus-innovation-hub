@@ -9,23 +9,34 @@
  */
 
 /** 平台角色（§角色模型：SUPERADMIN 由 is_superuser 表达）。 */
-export type PlatformRole = 'STUDENT' | 'OPERATOR'
+export type PlatformRole = 'USER' | 'OPERATOR'
 
-/** 个人资料（本人视角，含 SENSITIVE 字段）。 */
+/** 身份类型。 */
+export type IdentityType = 'STUDENT' | 'TEACHER'
+
+/** 个人资料（本人视角，含 SENSITIVE 字段；按身份分区）。 */
 export interface AuthUserProfile {
   nickname: string | null
+  public_name?: string | null
   avatar?: { id?: string; url?: string | null } | null
   major: string | null
   grade: number | null
+  department?: string | null
+  academic_title?: string | null
+  public_email?: string | null
+  office_location?: string | null
   bio: string
   skills: string[]
+  research_interests?: string[]
 }
 
 /** 当前用户。 */
 export interface AuthUser {
   id: string
   username: string
-  student_no: string
+  identity_type: IdentityType
+  student_no: string | null
+  employee_no: string | null
   real_name: string
   platform_role: PlatformRole
   is_superuser: boolean
@@ -35,7 +46,7 @@ export interface AuthUser {
 /** 组织成员关系（权限上下文）。 */
 export interface OrganizationMembership {
   organization_id: string
-  role: 'MEMBER' | 'LEADER'
+  role: 'MEMBER' | 'LEADER' | 'ADVISOR'
   title: string
 }
 

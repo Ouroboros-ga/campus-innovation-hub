@@ -11,15 +11,26 @@ import type {
   TeamPostType
 } from '@/shared/types/homepage'
 
-/** 个人资料。 */
+/** 个人资料（按 identity_type 分区）。 */
 export interface AccountProfile {
+  identityType: 'STUDENT' | 'TEACHER'
   nickname: string
   realName: string
+  studentNo?: string | null
+  employeeNo?: string | null
   major: string
   grade: string
   bio: string
   skills: string[]
   avatar: HomepageImage
+  // TEACHER 专属
+  publicName?: string | null
+  department?: string | null
+  academicTitle?: string | null
+  publicEmail?: string | null
+  officeLocation?: string | null
+  researchInterests?: string[]
+  className?: string | null
 }
 
 /** 关注的竞赛。 */

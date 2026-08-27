@@ -29,10 +29,10 @@ const detailDto = {
   founded_at: '2018-09-01T00:00:00+08:00',
   member_count: 286,
   college: '人工智能学院',
-  advisor_name: '王丽华',
-  advisor_title: '教授',
-  advisor_college: '人工智能学院',
-  advisor_research: '机器学习、自然语言处理',
+  advisors: [{ membership_id: 'adv-1', user_id: 'teacher-1', public_name: '王丽华', display_name: '王丽华', department: '人工智能学院', academic_title: '教授', public_email: 'wang@ai.edu.cn', office_location: '科研楼 210', research_interests: ['机器学习', '自然语言处理'], title: '指导老师' }],
+  leaders: [],
+  can_manage: null,
+  current_user_organization_role: null,
   leader_name: '张同学',
   leader_title: '会长',
   leader_grade: '2023级',
@@ -133,10 +133,10 @@ describe('FE-103 组织 API 适配器', () => {
       foundedAt: '2018-09-01T00:00:00+08:00',
       memberCount: 286,
       college: '人工智能学院',
-      advisorName: '王丽华',
       leaderName: '张同学',
       contactEmail: 'ai.association@ai.edu.cn'
     })
+    expect(detail.advisors[0]).toMatchObject({ publicName: '王丽华', academicTitle: '教授' })
     expect(detail.recentActivities[0]).toMatchObject({
       title: '大模型应用实战分享会',
       detailPath: '/activities/a1'

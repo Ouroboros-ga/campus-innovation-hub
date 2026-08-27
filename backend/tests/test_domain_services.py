@@ -27,7 +27,7 @@ class DomainServiceTests(TestCase):
             student_no=student_no,
             real_name="测试用户",
             password="SafePassword123!",
-            platform_role=User.PlatformRole.OPERATOR if operator else User.PlatformRole.STUDENT,
+            platform_role=User.PlatformRole.OPERATOR if operator else User.PlatformRole.USER,
             is_superuser=superuser,
             is_staff=superuser,
         )

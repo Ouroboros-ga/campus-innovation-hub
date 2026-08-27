@@ -58,7 +58,7 @@ class SessionAuthTests(TestCase):
         user = get_user_model().objects.get(student_no="20240001")
         profile_model = apps.get_model("accounts", "UserProfile")
         self.assertEqual(user.username, "20240001")
-        self.assertEqual(user.platform_role, "STUDENT")
+        self.assertEqual(user.platform_role, "USER")
         self.assertFalse(user.is_active)
         self.assertTrue(profile_model.objects.filter(user=user).exists())
         self.assertNotIn(settings.SESSION_COOKIE_NAME, client.cookies)
@@ -127,7 +127,7 @@ class SessionAuthTests(TestCase):
 
         self.assertEqual(login_response.status_code, 200)
         self.assertIn(settings.SESSION_COOKIE_NAME, client.cookies)
-        self.assertEqual(login_response.json()["permissions"]["platform_role"], "STUDENT")
+        self.assertEqual(login_response.json()["permissions"]["platform_role"], "USER")
         self.assertEqual(login_response.json()["permissions"]["organization_memberships"], [])
         self.assertIsNone(login_response.json()["user"]["profile"]["avatar"])
 

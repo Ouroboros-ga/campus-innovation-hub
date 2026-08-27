@@ -15,8 +15,10 @@ import type {
 } from '@/features/account/types'
 
 export const accountProfile: AccountProfile = {
+  identityType: 'STUDENT',
   nickname: '张同学',
   realName: '张明',
+  studentNo: '20230001',
   major: '人工智能学院',
   grade: '2023级',
   bio: '关注编程与算法竞赛，乐于组队协作，一起冲击高目标。',

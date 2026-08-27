@@ -8,7 +8,7 @@ import PageContainer from '@/shared/components/layout/PageContainer.vue'
 import { useAuthStore } from '@/stores/auth'
 
 /** 登录（FE-105）— /login。
- *  用户名即学号；成功后按 `?redirect=` 或回个人中心。写请求依赖已初始化的 CSRF。
+ *  用户名即学号或工号；成功后按 `?redirect=` 或回个人中心。写请求依赖已初始化的 CSRF。
  */
 const router = useRouter()
 const route = useRoute()
@@ -36,7 +36,7 @@ function messageFor(errorValue: unknown): string {
 
 async function submit() {
   if (!username.value.trim()) {
-    error.value = '请输入用户名（学号）。'
+    error.value = '请输入用户名（学号或工号）。'
     return
   }
   if (!password.value) {
@@ -70,7 +70,7 @@ async function submit() {
           登录
         </h1>
         <p class="mt-2 text-sm text-muted">
-          使用学号账号登录，继续你的科创与就业之旅。
+          使用学号或工号账号登录，继续你的科创与就业之旅。
         </p>
 
         <form
@@ -79,13 +79,13 @@ async function submit() {
           @submit.prevent="submit"
         >
           <UFormField
-            label="用户名 / 学号"
+            label="用户名 / 学号或工号"
             name="username"
           >
             <UInput
               v-model="username"
               autocomplete="username"
-              placeholder="如：20240001"
+              placeholder="学号如 20240001，工号如 T2024001"
               class="w-full"
             />
           </UFormField>

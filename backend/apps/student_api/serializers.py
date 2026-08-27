@@ -126,11 +126,21 @@ class MediaUploadSerializer(StrictSerializer):
 
 class ProfilePatchSerializer(StrictSerializer):
     nickname = serializers.CharField(max_length=40, required=False, allow_null=True, allow_blank=False)
+    public_name = serializers.CharField(max_length=80, required=False, allow_null=True, allow_blank=False)
     avatar_asset_id = serializers.UUIDField(required=False, allow_null=True)
     major = serializers.CharField(max_length=80, required=False, allow_null=True, allow_blank=False)
     grade = serializers.IntegerField(min_value=1, max_value=4, required=False, allow_null=True)
+    department = serializers.CharField(max_length=120, required=False, allow_null=True, allow_blank=False)
+    academic_title = serializers.CharField(max_length=80, required=False, allow_null=True, allow_blank=False)
+    public_email = serializers.EmailField(max_length=254, required=False, allow_null=True, allow_blank=False)
+    office_location = serializers.CharField(max_length=160, required=False, allow_null=True, allow_blank=False)
     bio = serializers.CharField(max_length=500, required=False, allow_null=True, allow_blank=False)
     skills = serializers.ListField(
+        child=serializers.CharField(max_length=40, allow_blank=False, trim_whitespace=True),
+        max_length=20,
+        required=False,
+    )
+    research_interests = serializers.ListField(
         child=serializers.CharField(max_length=40, allow_blank=False, trim_whitespace=True),
         max_length=20,
         required=False,
@@ -155,24 +165,70 @@ class ProfilePatchSerializer(StrictSerializer):
             raise serializers.ValidationError("技能项不能重复。")
         return normalised
 
+    def validate_research_interests(self, interests: list[str]) -> list[str]:
+        normalised = [item.strip() for item in interests]
+        if len(set(normalised)) != len(normalised):
+            raise serializers.ValidationError("研究方向项不能重复。")
+        return normalised
+
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         if not attrs:
             raise serializers.ValidationError({"non_field_errors": ["至少提供一个可编辑字段。"]})
+        user: User | None = self.context.get("user")
+        if user is not None:
+            if user.identity_type == User.IdentityType.TEACHER:
+                # 教师仅允许教师字段 + bio/avatar；学生字段不接受
+                forbidden_for_teacher = {"major", "grade"}
+                hit = forbidden_for_teacher & set(attrs.keys())
+                if hit:
+                    raise serializers.ValidationError({k: ["教师资料不支持该字段。"] for k in hit})
+            else:
+                forbidden_for_student = {"public_name", "department", "academic_title", "public_email", "office_location", "research_interests"}
+                hit = forbidden_for_student & set(attrs.keys())
+                if hit:
+                    raise serializers.ValidationError({k: ["学生资料不支持该字段。"] for k in hit})
         return attrs
 
 
 def serialize_profile(user: User, profile: UserProfile, request: Request) -> dict[str, Any]:
-    return {
+    base: dict[str, Any] = {
         "real_name": user.real_name,
+        "identity_type": getattr(user, "identity_type", User.IdentityType.STUDENT),
         "student_no": user.student_no,
+        "employee_no": getattr(user, "employee_no", None),
         "class_name": profile.class_name,
         "nickname": profile.nickname,
         "avatar": media_ref(profile.avatar_asset, request) if profile.avatar_asset_id else None,
-        "major": profile.major,
-        "grade": profile.grade,
         "bio": profile.bio,
         "skills": profile.skills_json,
     }
+    if getattr(user, "identity_type", None) == User.IdentityType.TEACHER:
+        base.update(
+            {
+                "public_name": getattr(profile, "public_name", None),
+                "department": getattr(profile, "department", None),
+                "academic_title": getattr(profile, "academic_title", None),
+                "public_email": getattr(profile, "public_email", None),
+                "office_location": getattr(profile, "office_location", None),
+                "research_interests": getattr(profile, "research_interests_json", []),
+                "major": profile.major,
+                "grade": profile.grade,
+            }
+        )
+    else:
+        base.update(
+            {
+                "major": profile.major,
+                "grade": profile.grade,
+                "public_name": getattr(profile, "public_name", None),
+                "department": getattr(profile, "department", None),
+                "academic_title": getattr(profile, "academic_title", None),
+                "public_email": getattr(profile, "public_email", None),
+                "office_location": getattr(profile, "office_location", None),
+                "research_interests": getattr(profile, "research_interests_json", []),
+            }
+        )
+    return base
 
 
 def serialize_organization_membership(membership: Any) -> dict[str, Any]:

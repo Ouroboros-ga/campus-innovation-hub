@@ -54,16 +54,31 @@ interface CurrentRecruitmentDto {
   application_state?: string | null
 }
 
+interface AdvisorDto {
+  membership_id?: string
+  user_id?: string
+  public_name?: string | null
+  display_name?: string | null
+  avatar?: ImageDto | null
+  department?: string | null
+  academic_title?: string | null
+  public_email?: string | null
+  office_location?: string | null
+  research_interests?: string[] | null
+  title?: string | null
+}
+
 interface OrganizationDetailDto extends OrganizationListItemDto {
   description_md?: string | null
   direction?: string | null
   founded_at?: string | null
   member_count?: number | null
   college?: string | null
-  advisor_name?: string | null
-  advisor_title?: string | null
-  advisor_college?: string | null
-  advisor_research?: string | null
+  advisors?: AdvisorDto[] | null
+  leaders?: AdvisorDto[] | null
+  current_user_organization_role?: string | null
+  can_manage?: boolean | null
+  is_leader?: boolean
   leader_name?: string | null
   leader_title?: string | null
   leader_grade?: string | null
@@ -79,7 +94,11 @@ interface OrganizationDetailDto extends OrganizationListItemDto {
     start_at?: string | null
     detail_path?: string | null
   }>
-  is_leader?: boolean
+  // 兼容旧后端（滚动发布期间）
+  advisor_name?: string | null
+  advisor_title?: string | null
+  advisor_college?: string | null
+  advisor_research?: string | null
 }
 
 interface RecruitmentPositionDto {
@@ -152,8 +171,35 @@ function toRecruitment(dto: CurrentRecruitmentDto): OrganizationRecruitment {
   }
 }
 
+function toAdvisor(dto: AdvisorDto): import('@/features/organizations/types').OrganizationAdvisor {
+  return {
+    membershipId: dto.membership_id ?? dto.user_id ?? '',
+    userId: dto.user_id ?? '',
+    publicName: dto.public_name ?? dto.display_name ?? null,
+    displayName: dto.display_name ?? dto.public_name ?? null,
+    avatar: dto.avatar ? { alt: dto.display_name ?? dto.public_name ?? '', src: dto.avatar.url ?? null } : null,
+    department: dto.department ?? null,
+    academicTitle: dto.academic_title ?? null,
+    publicEmail: dto.public_email ?? null,
+    officeLocation: dto.office_location ?? null,
+    researchInterests: dto.research_interests ?? [],
+    title: dto.title ?? null
+  }
+}
+
 function toDetail(dto: OrganizationDetailDto): OrganizationDetail {
   const summary = toSummary(dto)
+  // 兼容旧后端：若新字段缺失但旧 advisor_name 存在，则构造单条 advisor
+  const advisorsRaw = dto.advisors ?? (dto.advisor_name ? [{
+    public_name: dto.advisor_name,
+    display_name: dto.advisor_name,
+    academic_title: dto.advisor_title ?? null,
+    department: dto.advisor_college ?? null,
+    research_interests: dto.advisor_research ? [dto.advisor_research] : [],
+    title: null,
+    user_id: '',
+    membership_id: ''
+  } as AdvisorDto] : [])
   return {
     ...summary,
     descriptionMd: dto.description_md ?? '',
@@ -161,10 +207,11 @@ function toDetail(dto: OrganizationDetailDto): OrganizationDetail {
     foundedAt: dto.founded_at ?? null,
     memberCount: dto.member_count ?? null,
     college: dto.college ?? null,
-    advisorName: dto.advisor_name ?? null,
-    advisorTitle: dto.advisor_title ?? null,
-    advisorCollege: dto.advisor_college ?? null,
-    advisorResearch: dto.advisor_research ?? null,
+    advisors: advisorsRaw.map(toAdvisor),
+    leaders: (dto.leaders ?? []).map(toAdvisor),
+    currentUserOrganizationRole: (dto.current_user_organization_role as OrganizationDetail['currentUserOrganizationRole']) ?? null,
+    canManage: dto.can_manage ?? null,
+    isLeader: dto.is_leader ?? null,
     leaderName: dto.leader_name ?? '',
     leaderTitle: dto.leader_title ?? '',
     leaderGrade: dto.leader_grade ?? null,

@@ -93,7 +93,7 @@ function toggle() {
               查看组织
             </UButton>
             <UButton
-              v-if="item.membership === 'LEADER'"
+              v-if="item.membership === 'LEADER' || item.membership === 'ADVISOR'"
               :to="`/manage/organizations/${item.organization.id}`"
               color="primary"
               variant="solid"

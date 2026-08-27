@@ -55,10 +55,25 @@ export interface OrganizationSummary {
 /** 登录态「我的组织」成员关系（PageMap §组织列表）。 */
 export interface MyOrganization {
   organization: OrganizationSummary
-  /** 成员身份：MEMBER / LEADER。 */
-  membership: 'MEMBER' | 'LEADER'
+  /** 成员身份：MEMBER / LEADER / ADVISOR（ADVISOR 仅 TEACHER）。 */
+  membership: 'MEMBER' | 'LEADER' | 'ADVISOR'
   /** 职位名称，如「会长」「部长」。 */
   roleLabel: string
+}
+
+/** 指导老师卡片（database-design.md §10.1/§10.2，由 Membership ADVISOR 派生）。 */
+export interface OrganizationAdvisor {
+  membershipId: string
+  userId: string
+  publicName: string | null
+  displayName: string | null
+  avatar: HomepageImage | null
+  department: string | null
+  academicTitle: string | null
+  publicEmail: string | null
+  officeLocation: string | null
+  researchInterests: string[]
+  title: string | null
 }
 
 /** 组织类型筛选值（`ALL` 表示不筛）。 */
@@ -121,13 +136,14 @@ export interface OrganizationDetail extends OrganizationSummary {
   memberCount: number | null
   /** 所属学院。 */
   college: string | null
-  advisorName: string | null
-  /** 指导老师职称，如「教授」。 */
-  advisorTitle: string | null
-  /** 指导老师所属单位。 */
-  advisorCollege: string | null
-  /** 指导老师研究方向。 */
-  advisorResearch: string | null
+  /** 指导老师（由 ADVISOR membership 派生，禁止 real_name 穿透）。 */
+  advisors: OrganizationAdvisor[]
+  /** 负责人（由 LEADER membership 派生，供兼容展示）。 */
+  leaders: OrganizationAdvisor[]
+  /** 当前登录用户在该组织的角色/是否可管理。 */
+  currentUserOrganizationRole: 'MEMBER' | 'LEADER' | 'ADVISOR' | null
+  canManage: boolean | null
+  isLeader: boolean | null
   leaderName: string
   /** 负责人职位名，如「会长」。 */
   leaderTitle: string

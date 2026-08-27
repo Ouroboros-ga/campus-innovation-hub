@@ -19,9 +19,11 @@ const studentMe: AuthMeResult = {
   user: {
     id: 'u1',
     username: '20240001',
+    identity_type: 'STUDENT',
     student_no: '20240001',
+    employee_no: null,
     real_name: '张三',
-    platform_role: 'STUDENT',
+    platform_role: 'USER',
     is_superuser: false,
     profile: {
       nickname: '阿三',
@@ -33,7 +35,7 @@ const studentMe: AuthMeResult = {
     }
   },
   permissions: {
-    platform_role: 'STUDENT',
+    platform_role: 'USER',
     organization_memberships: []
   }
 }
@@ -42,7 +44,9 @@ const operatorMe: AuthMeResult = {
   user: {
     id: 'op1',
     username: 'op',
+    identity_type: 'STUDENT',
     student_no: 'op',
+    employee_no: null,
     real_name: '运营',
     platform_role: 'OPERATOR',
     is_superuser: false,
@@ -133,7 +137,7 @@ describe('FE-105 认证会话与路由守卫', () => {
     await auth.login({ username: '20240001', password: 'secret' })
 
     expect(auth.isAuthenticated).toBe(true)
-    expect(auth.platformRole).toBe('STUDENT')
+    expect(auth.platformRole).toBe('USER')
     expect(auth.isOperator).toBe(false)
   })
 

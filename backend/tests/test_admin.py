@@ -25,7 +25,7 @@ class DjangoAdminTests(TestCase):
             is_active=True,
             is_staff=superuser or staff,
             is_superuser=superuser,
-            platform_role=User.PlatformRole.OPERATOR if operator else User.PlatformRole.STUDENT,
+            platform_role=User.PlatformRole.OPERATOR if operator else User.PlatformRole.USER,
         )
 
     def test_all_system_models_are_registered_and_audit_log_is_read_only(self) -> None:

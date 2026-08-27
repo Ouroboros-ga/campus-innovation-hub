@@ -41,12 +41,23 @@ def media_ref(asset: MediaAsset | None, request: Request) -> dict[str, str] | No
 
 def actor_summary(user: Any, request: Request) -> dict[str, Any]:
     profile = getattr(user, "profile", None)
+    # TEACHER 的公开显示名优先 public_name
+    display_name = None
+    if profile:
+        if getattr(profile, "public_name", None):
+            display_name = profile.public_name
+        else:
+            display_name = profile.nickname
     return {
         "id": str(user.id),
         "nickname": profile.nickname if profile else None,
+        "public_name": getattr(profile, "public_name", None) if profile else None,
+        "display_name": display_name,
         "avatar": media_ref(profile.avatar_asset, request) if profile and profile.avatar_asset_id else None,
         "major": profile.major if profile else None,
         "grade": profile.grade if profile else None,
+        "department": getattr(profile, "department", None) if profile else None,
+        "academic_title": getattr(profile, "academic_title", None) if profile else None,
     }
 
 
@@ -269,16 +280,56 @@ def serialize_organization(organization: Organization, request: Request) -> dict
     }
 
 
+def _advisor_card(membership: OrganizationMembership, request: Request) -> dict[str, Any]:
+    user = membership.user
+    profile = getattr(user, "profile", None)
+    return {
+        "membership_id": str(membership.id),
+        "user_id": str(user.id),
+        "public_name": getattr(profile, "public_name", None) if profile else None,
+        "display_name": (getattr(profile, "public_name", None) or profile.nickname if profile else None),
+        "avatar": media_ref(profile.avatar_asset, request) if profile and profile.avatar_asset_id else None,
+        "department": getattr(profile, "department", None) if profile else None,
+        "academic_title": getattr(profile, "academic_title", None) if profile else None,
+        "public_email": getattr(profile, "public_email", None) if profile else None,
+        "office_location": getattr(profile, "office_location", None) if profile else None,
+        "research_interests": getattr(profile, "research_interests_json", []) if profile else [],
+        "title": membership.title,
+    }
+
+
 def serialize_organization_detail(organization: Organization, request: Request) -> dict[str, Any]:
     payload = serialize_organization(organization, request)
     is_leader: bool | None = None
+    can_manage: bool | None = None
+    current_user_role: str | None = None
     if is_authenticated(request):
+        # ORG_MANAGER 权限：LEADER 或 ADVISOR
+        membership = OrganizationMembership.objects.filter(
+            organization=organization, user=request.user, is_active=True
+        ).first()
+        if membership:
+            current_user_role = membership.role
         is_leader = OrganizationMembership.objects.filter(
             organization=organization,
             user=request.user,
             role=OrganizationMembership.Role.LEADER,
             is_active=True,
         ).exists()
+        from apps.permissions import is_org_manager
+
+        can_manage = is_org_manager(request.user, organization.id)
+    # 指导老师由 Membership 派生（database-design.md §10.1）
+    advisors = list(
+        OrganizationMembership.objects.filter(
+            organization=organization, role=OrganizationMembership.Role.ADVISOR, is_active=True
+        ).select_related("user", "user__profile", "user__profile__avatar_asset")
+    )
+    leaders = list(
+        OrganizationMembership.objects.filter(
+            organization=organization, role=OrganizationMembership.Role.LEADER, is_active=True
+        ).select_related("user", "user__profile", "user__profile__avatar_asset")
+    )
     current_recruitments = organization.recruitments.filter(
         publication_state=Recruitment.PublicationState.PUBLISHED
     ).select_related("organization")
@@ -294,11 +345,14 @@ def serialize_organization_detail(organization: Organization, request: Request) 
         {
             "description_md": organization.description_md,
             "banner": media_ref(organization.banner_asset, request),
-            "advisor_name": organization.advisor_name,
             "public_contact": organization.public_contact,
+            "advisors": [_advisor_card(m, request) for m in advisors],
+            "leaders": [_advisor_card(m, request) for m in leaders],
             "current_recruitments": [serialize_recruitment(item, request) for item in ordered_recruitments],
             "recent_activities": [serialize_activity(item, request) for item in recent_activities],
             "is_leader": is_leader,
+            "can_manage": can_manage,
+            "current_user_organization_role": current_user_role,
         }
     )
     return payload

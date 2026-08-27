@@ -5,6 +5,7 @@ from apps.core.admin import AuditedAdminMixin, NoDeleteAdminMixin
 from apps.organizations.models import Organization, OrganizationMembership, Recruitment, RecruitmentApplication, RecruitmentPosition
 from apps.organizations.services import (
     accept_recruitment_application,
+    grant_organization_advisor,
     grant_organization_leader,
     reject_recruitment_application,
     set_membership_active,
@@ -51,10 +52,17 @@ class OrganizationAdmin(NoDeleteAdminMixin, admin.ModelAdmin):
 class OrganizationMembershipAdmin(AuditedAdminMixin, admin.ModelAdmin):
     list_display = ["organization", "user", "role", "title", "is_active", "joined_at"]
     list_filter = ["role", "is_active"]
-    search_fields = ["organization__name", "user__username", "title"]
+    search_fields = ["organization__name", "user__username", "user__employee_no", "title"]
     raw_id_fields = ["organization", "user"]
     readonly_fields = ["role", "is_active", "joined_at", "left_at"]
-    actions = ["grant_leader", "revoke_leader", "activate_memberships", "deactivate_memberships"]
+    actions = [
+        "grant_leader",
+        "revoke_leader",
+        "grant_advisor",
+        "revoke_advisor",
+        "activate_memberships",
+        "deactivate_memberships",
+    ]
 
     @admin.action(description="授予组织负责人")
     def grant_leader(self, request, queryset):
@@ -65,6 +73,16 @@ class OrganizationMembershipAdmin(AuditedAdminMixin, admin.ModelAdmin):
     def revoke_leader(self, request, queryset):
         for membership in queryset:
             grant_organization_leader(actor=request.user, membership=membership, grant=False)
+
+    @admin.action(description="授予指导老师（需教师账号）")
+    def grant_advisor(self, request, queryset):
+        for membership in queryset:
+            grant_organization_advisor(actor=request.user, membership=membership, grant=True)
+
+    @admin.action(description="撤销指导老师")
+    def revoke_advisor(self, request, queryset):
+        for membership in queryset:
+            grant_organization_advisor(actor=request.user, membership=membership, grant=False)
 
     @admin.action(description="恢复所选成员关系")
     def activate_memberships(self, request, queryset):

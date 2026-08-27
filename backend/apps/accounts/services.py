@@ -16,9 +16,11 @@ def register_pending_user(*, student_no: str, real_name: str, password: str) -> 
         with transaction.atomic():
             user = User(
                 username=student_no,
+                identity_type=User.IdentityType.STUDENT,
                 student_no=student_no,
+                employee_no=None,
                 real_name=real_name,
-                platform_role=User.PlatformRole.STUDENT,
+                platform_role=User.PlatformRole.USER,
                 is_active=False,
             )
             user.set_password(password)
@@ -31,17 +33,34 @@ def register_pending_user(*, student_no: str, real_name: str, password: str) -> 
 
 @transaction.atomic
 def update_own_profile(*, actor: User, payload: dict[str, Any]) -> UserProfile:
-    """只锁定当前用户 Profile，且不接收账户身份或平台权限字段。"""
+    """只锁定当前用户 Profile，且不接收账户身份或平台权限字段；按 identity_type 分区校验。"""
 
     profile = UserProfile.objects.select_for_update().get(user=actor)
     changed_fields: list[str] = []
-    for field in ("nickname", "avatar_asset_id", "major", "grade", "bio"):
-        if field in payload:
-            setattr(profile, field, payload[field])
-            changed_fields.append(field)
-    if "skills" in payload:
-        profile.skills_json = payload["skills"]
-        changed_fields.append("skills_json")
+    if actor.identity_type == User.IdentityType.TEACHER:
+        for field in ("public_name", "avatar_asset_id", "department", "academic_title", "public_email", "office_location", "bio"):
+            if field in payload:
+                setattr(profile, field, payload[field])
+                changed_fields.append(field)
+        if "research_interests" in payload:
+            profile.research_interests_json = payload["research_interests"]
+            changed_fields.append("research_interests_json")
+        # 允许教师同时维护 nickname/skills 但不强制
+        for field in ("nickname",):
+            if field in payload:
+                setattr(profile, field, payload[field])
+                changed_fields.append(field)
+        if "skills" in payload:
+            profile.skills_json = payload["skills"]
+            changed_fields.append("skills_json")
+    else:
+        for field in ("nickname", "avatar_asset_id", "major", "grade", "bio"):
+            if field in payload:
+                setattr(profile, field, payload[field])
+                changed_fields.append(field)
+        if "skills" in payload:
+            profile.skills_json = payload["skills"]
+            changed_fields.append("skills_json")
     profile.save(update_fields=[*changed_fields, "updated_at"])
     return profile
 
@@ -72,7 +91,7 @@ def set_platform_role(*, actor: User, user: User, platform_role: str) -> User:
 
     if not actor.is_superuser:
         raise PermissionDenied
-    if platform_role not in {User.PlatformRole.STUDENT, User.PlatformRole.OPERATOR}:
+    if platform_role not in {User.PlatformRole.USER, User.PlatformRole.OPERATOR}:
         raise ValueError("不支持的平台角色")
     locked_user = User.objects.select_for_update().get(pk=user.pk)
     previous_role = locked_user.platform_role
@@ -122,17 +141,19 @@ def anonymize_deactivated_user(*, actor: User, user: User) -> User:
 
     locked_user.username = f"deactivated-{locked_user.id}"
     locked_user.student_no = None
+    locked_user.employee_no = None
     locked_user.real_name = "已注销用户"
     locked_user.email = ""
     locked_user.first_name = ""
     locked_user.last_name = ""
-    locked_user.platform_role = User.PlatformRole.STUDENT
+    locked_user.platform_role = User.PlatformRole.USER
     locked_user.is_staff = False
     locked_user.set_unusable_password()
     locked_user.save(
         update_fields=[
             "username",
             "student_no",
+            "employee_no",
             "real_name",
             "email",
             "first_name",
@@ -147,20 +168,32 @@ def anonymize_deactivated_user(*, actor: User, user: User) -> User:
     if profile is not None:
         profile.avatar_asset = None
         profile.nickname = None
+        profile.public_name = None
         profile.major = None
         profile.grade = None
         profile.class_name = None
+        profile.department = None
+        profile.academic_title = None
+        profile.public_email = None
+        profile.office_location = None
         profile.bio = None
         profile.skills_json = []
+        profile.research_interests_json = []
         profile.save(
             update_fields=[
                 "avatar_asset",
                 "nickname",
+                "public_name",
                 "major",
                 "grade",
                 "class_name",
+                "department",
+                "academic_title",
+                "public_email",
+                "office_location",
                 "bio",
                 "skills_json",
+                "research_interests_json",
                 "updated_at",
             ]
         )

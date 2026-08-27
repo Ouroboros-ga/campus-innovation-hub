@@ -31,7 +31,6 @@ class OrganizationProfilePatchSerializer(StrictSerializer):
     description_md = serializers.CharField(max_length=10000, required=False, allow_null=True, allow_blank=True)
     logo_asset_id = serializers.UUIDField(required=False, allow_null=True)
     banner_asset_id = serializers.UUIDField(required=False, allow_null=True)
-    advisor_name = serializers.CharField(max_length=100, required=False, allow_null=True, allow_blank=True)
     public_contact = serializers.CharField(max_length=200, required=False, allow_null=True, allow_blank=True)
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
@@ -132,7 +131,6 @@ def serialize_organization_management_profile(organization: Organization, reques
         "description_md": organization.description_md,
         "logo": media_ref(organization.logo_asset, request),
         "banner": media_ref(organization.banner_asset, request),
-        "advisor_name": organization.advisor_name,
         "public_contact": organization.public_contact,
         "is_active": organization.is_active,
         "created_at": organization.created_at,

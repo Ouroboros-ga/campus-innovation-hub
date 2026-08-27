@@ -374,6 +374,35 @@ def grant_organization_leader(*, actor: User, membership: OrganizationMembership
 
 
 @transaction.atomic
+def grant_organization_advisor(*, actor: User, membership: OrganizationMembership, grant: bool = True) -> OrganizationMembership:
+    """ADVISOR 必须对应 TEACHER 且 public_name 非空，仅 SUPERADMIN 可授予/撤销。"""
+
+    if not actor.is_superuser:
+        raise PermissionDenied
+    locked_membership = OrganizationMembership.objects.select_for_update().select_related("user", "user__profile").get(pk=membership.pk)
+    previous_role = locked_membership.role
+    desired_role = OrganizationMembership.Role.ADVISOR if grant else OrganizationMembership.Role.MEMBER
+    if previous_role == desired_role:
+        return locked_membership
+    if grant:
+        user = locked_membership.user
+        if getattr(user, "identity_type", None) != User.IdentityType.TEACHER:
+            raise InvalidState("只有教师账号可以被授予指导老师。")
+        profile = getattr(user, "profile", None)
+        if profile is None or not getattr(profile, "public_name", None):
+            raise InvalidState("教师的公开姓名必填后才能担任指导老师。")
+    locked_membership.role = desired_role
+    locked_membership.save(update_fields=["role", "updated_at"])
+    record_audit(
+        actor=actor,
+        action="ORGANIZATION_ADVISOR_GRANTED" if grant else "ORGANIZATION_ADVISOR_REVOKED",
+        target=locked_membership,
+        changes={"role": {"from": previous_role, "to": desired_role}},
+    )
+    return locked_membership
+
+
+@transaction.atomic
 def set_organization_active(*, actor: User, organization: Organization, is_active: bool) -> Organization:
     if not actor.is_superuser:
         raise PermissionDenied
