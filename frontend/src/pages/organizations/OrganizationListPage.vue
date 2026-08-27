@@ -18,14 +18,15 @@ import {
   paginateOrganizations,
   sortOrganizations
 } from '@/features/organizations/lib/organizationFilters'
-import { myOrganizations } from '@/mocks/fixtures/organizations'
+import { useAuthStore } from '@/stores/auth'
+import type { MyOrganization } from '@/features/organizations/types'
 
 /**
  * 社团与组织（FE-040 / FE-103 API 驱动）— /organizations
  *
  * 设计来源：FrontendDesign.md §23（Org List：logo/name/type/desc/recruitment）、
  * §34.5（筛选 URL 承载）、PageMap §组织列表（我的组织、筛选、卡、排序）。
- * 全部组织来源 `GET /api/organizations`；「我的组织」为登录态上下文（认证冻结前保留 fixture）。
+ * 全部组织来源 `GET /api/organizations`；「我的组织」由 `GET /api/auth/me` 的 memberships 派生（无 Mock）。
  */
 const route = useRoute()
 const router = useRouter()
@@ -39,6 +40,21 @@ const {
   error,
   reload
 } = useOrganizationQuery()
+
+const auth = useAuthStore()
+const myOrganizations = computed<MyOrganization[]>(() => {
+  const memberships = auth.organizationMemberships as Array<{ organization_id: string; role: string; title: string | null }>
+  if (!memberships.length) return []
+  return memberships
+    .map(m => {
+      const org = organizations.value.find(o => o.id === m.organization_id)
+      if (!org) return null
+      const role = m.role as MyOrganization['membership']
+      const roleLabel = m.title || (role === 'ADVISOR' ? '指导老师' : role === 'LEADER' ? '负责人' : '成员')
+      return { organization: org, membership: role, roleLabel } as MyOrganization
+    })
+    .filter(Boolean) as MyOrganization[]
+})
 
 const q = computed(() => (typeof route.query.q === 'string' ? route.query.q : ''))
 const type = computed(() => normalizeOrgType(route.query.type))

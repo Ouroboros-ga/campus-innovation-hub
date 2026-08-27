@@ -1,23 +1,49 @@
 <script setup lang="ts">
-import PageContainer from '@/shared/components/layout/PageContainer.vue'
+import { computed } from 'vue'
 
-import { profile } from '@/features/account/lib/account'
+import PageContainer from '@/shared/components/layout/PageContainer.vue'
+import { useAuthStore } from '@/stores/auth'
 
 /** 个人中心概览（FE-070）— /me。
  *  展示个人资料摘要 + 账号功能入口；组织身份不在此处（见 FE-040）。
+ *  按 identity_type 分区（PageMap §个人中心）：TEACHER 隐藏 学生专属入口。
  */
-const sections = [
-  { name: 'me-profile', label: '个人资料', icon: 'i-lucide-user-round', description: '查看与编辑个人信息' },
-  { name: 'me-follows', label: '我的关注', icon: 'i-lucide-heart', description: '关注的竞赛' },
-  { name: 'me-teams', label: '我的组队', icon: 'i-lucide-users', description: '我发布的 / 我加入的组队' },
-  { name: 'me-applications', label: '我的申请', icon: 'i-lucide-file-text', description: '组队与组织申请' },
-  { name: 'me-activities', label: '我的活动', icon: 'i-lucide-calendar-check', description: '我报名的活动' },
-  { name: 'me-questions', label: '我的咨询', icon: 'i-lucide-message-square', description: '我的提问与公开问答' },
-  { name: 'me-settings', label: '账号设置', icon: 'i-lucide-settings', description: '外观模式与账号偏好' }
-]
+const auth = useAuthStore()
+const isTeacher = computed(() => auth.user?.identity_type === 'TEACHER')
+const profile = computed(() => {
+  const user = auth.user
+  if (!user) return { nickname: '', publicName: '', major: '', grade: '', bio: '', department: '', academicTitle: '', displayName: '' }
+  const p = user.profile as unknown as Record<string, unknown>
+  return {
+    nickname: (p.nickname as string) ?? '',
+    publicName: (p.public_name as string) ?? '',
+    major: (p.major as string) ?? '',
+    grade: p.grade != null ? String(p.grade) : '',
+    bio: (p.bio as string) ?? '',
+    department: (p.department as string) ?? '',
+    academicTitle: (p.academic_title as string) ?? '',
+    displayName: (p.public_name as string) || (p.nickname as string) || user.real_name,
+  }
+})
+
+const sections = computed(() => {
+  const base = [
+    { name: 'me-profile', label: '个人资料', icon: 'i-lucide-user-round', description: '查看与编辑个人信息' },
+    { name: 'me-follows', label: '我的关注', icon: 'i-lucide-heart', description: '关注的竞赛' },
+    { name: 'me-teams', label: '我的组队', icon: 'i-lucide-users', description: '我发布的 / 我加入的组队' },
+    { name: 'me-applications', label: '我的申请', icon: 'i-lucide-file-text', description: '组队与组织申请' },
+    { name: 'me-activities', label: '我的活动', icon: 'i-lucide-calendar-check', description: '我报名的活动' },
+    { name: 'me-questions', label: '我的咨询', icon: 'i-lucide-message-square', description: '我的提问与公开问答' },
+    { name: 'me-settings', label: '账号设置', icon: 'i-lucide-settings', description: '外观模式与账号偏好' },
+  ]
+  if (isTeacher.value) {
+    return base.filter(s => !['me-teams', 'me-applications', 'me-activities'].includes(s.name))
+  }
+  return base
+})
 
 function initial(name: string) {
-  return name.slice(0, 1)
+  return (name || '—').slice(0, 1)
 }
 </script>
 
@@ -35,14 +61,15 @@ function initial(name: string) {
           class="grid size-16 shrink-0 place-items-center rounded-full bg-primary-50 text-xl font-semibold text-primary-600 dark:bg-primary-950 dark:text-primary-400"
           aria-hidden="true"
         >
-          {{ initial(profile.nickname) }}
+          {{ initial(profile.displayName) }}
         </span>
         <div class="min-w-0">
           <p class="text-lg font-semibold text-highlighted">
-            {{ profile.nickname }}
+            {{ profile.displayName }} <span v-if="isTeacher" class="ml-1 text-xs font-normal text-muted">教师</span>
           </p>
           <p class="mt-0.5 text-sm text-muted">
-            {{ profile.major }} · {{ profile.grade }}
+            <template v-if="isTeacher">{{ profile.department }}<span v-if="profile.academicTitle"> · {{ profile.academicTitle }}</span></template>
+            <template v-else>{{ profile.major }}<span v-if="profile.grade"> · {{ profile.grade }}</span></template>
           </p>
           <p
             v-if="profile.bio"

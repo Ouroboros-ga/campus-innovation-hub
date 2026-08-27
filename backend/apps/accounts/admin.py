@@ -30,8 +30,22 @@ class AccountsUserAdmin(AuditedAdminMixin, UserAdmin):
     )
 
     def has_add_permission(self, request):
-        # 正式账号只经待审核注册创建；初始超级管理员使用 createsuperuser。
-        return False
+        # 仅 SUPERADMIN 可经 Admin 创建教师账号（database-design.md §8.1）
+        return bool(request.user and request.user.is_authenticated and request.user.is_superuser)
+
+    def save_model(self, request, obj, form, change):
+        # 教师身份由 identity_type 决定，确保 Profile 存在且满足 ADVISOR 前置（public_name）
+        is_new = obj.pk is None or change is False
+        super().save_model(request, obj, form, change)
+        if is_new:
+            from apps.accounts.models import UserProfile
+
+            if not hasattr(obj, "profile") or obj.profile is None:
+                try:
+                    # 尝试获取已创建的 profile（信号或 previous）
+                    UserProfile.objects.get(user=obj)
+                except UserProfile.DoesNotExist:
+                    UserProfile.objects.create(user=obj)
 
     @admin.action(description="启用待审核账号")
     def activate_pending_accounts(self, request, queryset):

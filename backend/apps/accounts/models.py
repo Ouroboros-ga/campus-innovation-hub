@@ -45,7 +45,8 @@ class User(AbstractUser):
                 condition=(
                     Q(identity_type="STUDENT", student_no__isnull=False, employee_no__isnull=True)
                     | Q(identity_type="TEACHER", employee_no__isnull=False, student_no__isnull=True)
-                    | Q(is_active=False)
+                    | Q(is_superuser=True)
+                    | Q(is_active=False, student_no__isnull=True, employee_no__isnull=True)
                 ),
                 name="accounts_user_identity_no_check",
             ),

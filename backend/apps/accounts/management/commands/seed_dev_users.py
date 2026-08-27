@@ -40,19 +40,32 @@ class Command(BaseCommand):
             self.stdout.write(f"超管 {SUPERADMIN_USERNAME} 已存在，已重置密码并确保管理员位")
 
         # 运营：platform_role=OPERATOR，可访问运营 API（非 /admin）
+        # 为满足 identity 约束，运营账号按 STUDENT 身份创建（仅开发用）
         operator = user_model.objects.filter(username=OPERATOR_USERNAME).first()
         if operator is None:
-            operator = user_model.objects.create_user(
+            operator = user_model(
                 username=OPERATOR_USERNAME,
+                identity_type=User.IdentityType.STUDENT,
+                student_no="OP20260001",
+                employee_no=None,
                 real_name="平台运营",
-                password=OPERATOR_PASSWORD,
+                platform_role=User.PlatformRole.OPERATOR,
                 is_active=True,
             )
+            operator.set_password(OPERATOR_PASSWORD)
+            operator.save()
+            from apps.accounts.models import UserProfile
+
+            UserProfile.objects.get_or_create(user=operator)
             self.stdout.write(f"已创建运营 {OPERATOR_USERNAME}")
         else:
             operator.is_active = True
+            operator.identity_type = User.IdentityType.STUDENT
+            if not operator.student_no:
+                operator.student_no = "OP20260001"
+            operator.employee_no = None
             operator.set_password(OPERATOR_PASSWORD)
-            operator.save(update_fields=["is_active", "password", "updated_at"])
+            operator.save(update_fields=["is_active", "identity_type", "student_no", "employee_no", "password", "updated_at"])
         operator.platform_role = User.PlatformRole.OPERATOR
         operator.save(update_fields=["platform_role", "updated_at"])
 

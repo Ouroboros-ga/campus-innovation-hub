@@ -2,6 +2,8 @@ from typing import Any
 
 from django.db import IntegrityError, transaction
 
+from django.utils import timezone
+
 from apps.audit.services import record_audit
 from apps.accounts.models import User, UserProfile
 from apps.domain_errors import InvalidState, PermissionDenied
@@ -36,6 +38,16 @@ def update_own_profile(*, actor: User, payload: dict[str, Any]) -> UserProfile:
     """只锁定当前用户 Profile，且不接收账户身份或平台权限字段；按 identity_type 分区校验。"""
 
     profile = UserProfile.objects.select_for_update().get(user=actor)
+    # ADVISOR 的 public_name 清空会导致 is_org_manager 静默失权（M-4），需显式拦截
+    if actor.identity_type == User.IdentityType.TEACHER and "public_name" in payload:
+        new_public = payload["public_name"]
+        if new_public is None or (isinstance(new_public, str) and not new_public.strip()):
+            from apps.organizations.models import OrganizationMembership
+
+            if OrganizationMembership.objects.filter(
+                user=actor, role=OrganizationMembership.Role.ADVISOR, is_active=True
+            ).exists():
+                raise InvalidState("担任指导老师期间不能清空公开姓名，请先撤销指导身份。")
     changed_fields: list[str] = []
     if actor.identity_type == User.IdentityType.TEACHER:
         for field in ("public_name", "avatar_asset_id", "department", "academic_title", "public_email", "office_location", "bio"):
@@ -197,6 +209,28 @@ def anonymize_deactivated_user(*, actor: User, user: User) -> User:
                 "updated_at",
             ]
         )
+
+    # 匿名后不得残留活跃 ADVISOR 身份（database-design.md §10.2）
+    from apps.organizations.models import OrganizationMembership
+
+    active_memberships = list(
+        OrganizationMembership.objects.select_for_update().filter(user=locked_user, is_active=True)
+    )
+    for membership in active_memberships:
+        previous_role = membership.role
+        membership.is_active = False
+        membership.left_at = timezone.now()
+        # 若为 ADVISOR，审计需体现角色降级，避免“公开可见但不可管”幽灵
+        if previous_role == OrganizationMembership.Role.ADVISOR:
+            membership.role = OrganizationMembership.Role.MEMBER
+        membership.save(update_fields=["is_active", "left_at", "role", "updated_at"])
+        record_audit(
+            actor=actor,
+            action="ORGANIZATION_MEMBERSHIP_DEACTIVATED_ON_ANONYMIZE",
+            target=membership,
+            changes={"role": {"from": previous_role, "to": membership.role}, "is_active": {"from": True, "to": False}},
+        )
+
     record_audit(
         actor=actor,
         action="USER_ANONYMIZED",
@@ -205,10 +239,12 @@ def anonymize_deactivated_user(*, actor: User, user: User) -> User:
             "fields": [
                 "username",
                 "student_no",
+                "employee_no",
                 "real_name",
                 "email",
                 "profile_identity_fields",
                 "password",
+                "organization_memberships",
             ]
         },
     )

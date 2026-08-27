@@ -13,9 +13,23 @@ import type {
   RecruitmentDetail,
   RecruitmentPublicationState
 } from '../types'
+import { useAuthStore } from '@/stores/auth'
 
-/** 当前 mock 用户是否可管理指定组织（LEADER 或 ADVISOR）。 */
+function authMemberships(): Array<{ organization_id: string; role: string; title: string | null }> {
+  try {
+    const auth = useAuthStore()
+    return (auth.organizationMemberships as unknown as Array<{ organization_id: string; role: string; title: string | null }>) ?? []
+  } catch {
+    return []
+  }
+}
+
+/** 是否可管理指定组织（LEADER 或 ADVISOR），优先真实会话，其次 Mock。 */
 export function canManageOrganization(orgId: string): boolean {
+  const real = authMemberships()
+  if (real.length) {
+    return real.some(entry => entry.organization_id === orgId && (entry.role === 'LEADER' || entry.role === 'ADVISOR'))
+  }
   return myOrganizations.some(
     entry => entry.organization.id === orgId && (entry.membership === 'LEADER' || entry.membership === 'ADVISOR')
   )
@@ -23,6 +37,30 @@ export function canManageOrganization(orgId: string): boolean {
 
 /** 可管理组织的当前成员关系；不可管理则返回 null。 */
 export function managedMembership(orgId: string): MyOrganization | null {
+  const real = authMemberships()
+  if (real.length) {
+    const m = real.find(entry => entry.organization_id === orgId && (entry.role === 'LEADER' || entry.role === 'ADVISOR'))
+    if (m) {
+      // 尽力从已加载的组织详情中还原 OrganizationSummary，无则构造最小对象
+      const mock = myOrganizations.find(entry => entry.organization.id === orgId)
+      if (mock) return { organization: mock.organization, membership: m.role as MyOrganization['membership'], roleLabel: m.title || (m.role === 'ADVISOR' ? '指导老师' : '负责人') }
+      return {
+        organization: {
+          id: orgId,
+          name: '未知组织',
+          type: 'STUDENT_CLUB',
+          description: null,
+          logo: { alt: 'logo', src: null },
+          recruitment: null,
+          detailPath: `/organizations/${orgId}`,
+          recruitmentPath: null,
+        },
+        membership: m.role as MyOrganization['membership'],
+        roleLabel: m.title || (m.role === 'ADVISOR' ? '指导老师' : '负责人'),
+      }
+    }
+    return null
+  }
   return (
     myOrganizations.find(
       entry => entry.organization.id === orgId && (entry.membership === 'LEADER' || entry.membership === 'ADVISOR')
