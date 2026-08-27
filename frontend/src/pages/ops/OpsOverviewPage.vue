@@ -1,27 +1,52 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
-import { opsActivities, opsCompetitions, opsQuestions } from '@/features/ops/lib/opsStore'
+import { listCompetitions } from '@/features/ops/api/opsCompetitionApi'
+import { listActivities } from '@/features/ops/api/opsActivityApi'
+import { listConsultations } from '@/features/ops/api/opsConsultationApi'
 import { recruitmentDetails } from '@/mocks/fixtures/organizations'
 import { deriveRegistrationState } from '@/shared/lib/date'
 
-/** 平台运营工作台（FE-090 /ops），只显示真实数据计数。 */
+/** 平台运营工作台（FE-090 /ops），分类计数来自运营 API。 */
 const now = computed(() => new Date())
 
-const registeringCompetitions = computed(() =>
-  opsCompetitions.filter(
-    item =>
-      deriveRegistrationState({
-        required: true,
-        startAt: item.registrationStartAt,
-        endAt: item.registrationEndAt,
-        now: now.value
-      }) === 'OPEN'
-  ).length
+const competitions = ref<Array<{ registrationStartAt: string | null; registrationEndAt: string | null }>>([])
+const activities = ref<Array<{ startAt: string; endAt: string | null }>>([])
+const questions = ref<Array<{ status: string }>>([])
+
+onMounted(async () => {
+  try {
+    competitions.value = (await listCompetitions({})).items
+  } catch {
+    competitions.value = []
+  }
+  try {
+    activities.value = (await listActivities({})).items
+  } catch {
+    activities.value = []
+  }
+  try {
+    questions.value = (await listConsultations({})).items
+  } catch {
+    questions.value = []
+  }
+})
+
+const registeringCompetitions = computed(
+  () =>
+    competitions.value.filter(
+      item =>
+        deriveRegistrationState({
+          required: true,
+          startAt: item.registrationStartAt,
+          endAt: item.registrationEndAt,
+          now: now.value
+        }) === 'OPEN'
+    ).length
 )
 
 const ongoingActivities = computed(() =>
-  opsActivities.filter(activity => {
+  activities.value.filter(activity => {
     const start = new Date(activity.startAt).getTime()
     const end = activity.endAt ? new Date(activity.endAt).getTime() : start
     const t = now.value.getTime()
@@ -30,7 +55,7 @@ const ongoingActivities = computed(() =>
 )
 
 const pendingQuestions = computed(
-  () => opsQuestions.filter(post => post.status === 'PENDING').length
+  () => questions.value.filter(post => post.status === 'PENDING').length
 )
 
 const recruitingCount = computed(

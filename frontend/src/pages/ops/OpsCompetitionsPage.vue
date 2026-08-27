@@ -1,22 +1,38 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useToast } from '@nuxt/ui/composables'
+import { computed, onMounted, ref } from 'vue'
 
 import CompetitionEditorModal from '@/features/ops/components/CompetitionEditorModal.vue'
-import { opsCompetitions } from '@/features/ops/lib/opsStore'
+import { listCompetitions, type OpsCompetition } from '@/features/ops/api/opsCompetitionApi'
 import { competitionLevelLabel } from '@/shared/lib/domain-labels'
 import { deriveRegistrationState, formatDateTimeCompact } from '@/shared/lib/date'
-import type { CompetitionSummary, RegistrationState } from '@/shared/types/homepage'
+import type { RegistrationState } from '@/shared/types/homepage'
 
 /** 竞赛管理（FE-090 /ops/competitions）。 */
-const toast = useToast()
-
 type Filter = 'ALL' | RegistrationState
 
 const now = computed(() => new Date())
 const filter = ref<Filter>('ALL')
 
-const statusOf = (item: CompetitionSummary) =>
+const competitions = ref<OpsCompetition[]>([])
+const loading = ref(false)
+const error = ref('')
+
+async function loadCompetitions() {
+  loading.value = true
+  error.value = ''
+  try {
+    const result = await listCompetitions({})
+    competitions.value = result.items
+  } catch {
+    error.value = '竞赛列表加载失败，请稍后重试。'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadCompetitions)
+
+const statusOf = (item: OpsCompetition) =>
   deriveRegistrationState({
     required: true,
     startAt: item.registrationStartAt,
@@ -26,8 +42,8 @@ const statusOf = (item: CompetitionSummary) =>
 
 const rows = computed(() =>
   filter.value === 'ALL'
-    ? opsCompetitions
-    : opsCompetitions.filter(item => statusOf(item) === filter.value)
+    ? competitions.value
+    : competitions.value.filter(item => statusOf(item) === filter.value)
 )
 
 const filters: Array<{ value: Filter; label: string }> = [
@@ -56,25 +72,16 @@ const badgeLabel: Record<RegistrationState, string> = {
 }
 
 const editorOpen = ref(false)
-const editing = ref<CompetitionSummary | null>(null)
+const editing = ref<OpsCompetition | null>(null)
 
 function openCreate() {
   editing.value = null
   editorOpen.value = true
 }
 
-function openEdit(item: CompetitionSummary) {
+function openEdit(item: OpsCompetition) {
   editing.value = item
   editorOpen.value = true
-}
-
-function notify(title: string) {
-  toast.add({
-    title,
-    description: '演示环境（mock）。',
-    color: 'neutral',
-    icon: 'i-lucide-info'
-  })
 }
 </script>
 
@@ -109,8 +116,20 @@ function notify(title: string) {
       </UButton>
     </div>
 
+    <p
+      v-if="loading"
+      class="text-sm text-muted"
+    >
+      正在加载竞赛…
+    </p>
+    <p
+      v-else-if="error"
+      class="text-sm text-danger-600 dark:text-danger-400"
+    >
+      {{ error }}
+    </p>
     <ul
-      v-if="rows.length"
+      v-else-if="rows.length"
       class="space-y-3"
     >
       <li
@@ -155,15 +174,6 @@ function notify(title: string) {
           >
             编辑
           </UButton>
-          <UButton
-            size="sm"
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-star"
-            @click="notify('切换推荐')"
-          >
-            推荐
-          </UButton>
         </div>
       </li>
     </ul>
@@ -179,6 +189,7 @@ function notify(title: string) {
       :open="editorOpen"
       :competition="editing"
       @update:open="editorOpen = $event"
+      @saved="loadCompetitions"
     />
   </div>
 </template>

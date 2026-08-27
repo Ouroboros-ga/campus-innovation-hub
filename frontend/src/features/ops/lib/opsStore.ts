@@ -31,6 +31,10 @@ export interface CompetitionEditorDraft {
   registrationStartAt: string
   registrationEndAt: string
   officialUrl: string
+  /** 竞赛介绍（Markdown 正文，映射 `description_md`）。 */
+  descriptionMd: string
+  /** 是否学院主办（映射 `college_organized`）。 */
+  collegeOrganized: boolean
   /** 封面图（`cover_asset_id` 前端态；无则空）。 */
   cover?: HomepageImage | null
 }
@@ -85,6 +89,7 @@ export function validateCompetition(draft: CompetitionEditorDraft): Record<strin
   if (!draft.name.trim()) errors.name = '请填写竞赛名称'
   if (!draft.edition.trim()) errors.edition = '请填写年份'
   if (!draft.registrationEndAt) errors.registrationEndAt = '请选择报名截止时间'
+  if (!draft.descriptionMd.trim()) errors.descriptionMd = '请填写竞赛介绍'
   return errors
 }
 

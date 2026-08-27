@@ -6,6 +6,7 @@ import PublishDynamicsModal from '@/features/ops/components/PublishDynamicsModal
 import ActivityEditorModal from '@/features/ops/components/ActivityEditorModal.vue'
 import AnnouncementEditorModal from '@/features/ops/components/AnnouncementEditorModal.vue'
 import { listActivities } from '@/features/ops/api/opsActivityApi'
+import { listAnnouncements } from '@/features/ops/api/opsAnnouncementApi'
 import {
   activityStatusOptions,
   activityTypeOptions,
@@ -22,8 +23,7 @@ import {
   publisherScopeLabel
 } from '@/features/dynamics/lib/dynamicsLabels'
 import { activityTypeLabel } from '@/shared/lib/domain-labels'
-import { opsAnnouncements } from '@/features/ops/lib/opsStore'
-import type { DynamicsActivity } from '@/features/dynamics/types'
+import type { DynamicsActivity, DynamicsAnnouncement } from '@/features/dynamics/types'
 import { formatDateTimeCompact } from '@/shared/lib/date'
 
 /** 校园动态管理（FE-090 /ops/activities）。
@@ -42,10 +42,14 @@ const activityEditorOpen = ref(false)
 const editingActivity = ref<DynamicsActivity | null>(null)
 const syncAnnouncement = ref(false)
 const announcementEditorOpen = ref(false)
+const editingAnnouncement = ref<DynamicsAnnouncement | null>(null)
 
 const activities = ref<DynamicsActivity[]>([])
 const activitiesLoading = ref(false)
 const activitiesError = ref('')
+const announcements = ref<DynamicsAnnouncement[]>([])
+const announcementsLoading = ref(false)
+const announcementsError = ref('')
 
 async function loadActivities() {
   activitiesLoading.value = true
@@ -63,7 +67,25 @@ async function loadActivities() {
   }
 }
 
-onMounted(loadActivities)
+async function loadAnnouncements() {
+  announcementsLoading.value = true
+  announcementsError.value = ''
+  try {
+    const result = await listAnnouncements({
+      publisherScope: announcementScope.value === 'ALL' ? undefined : announcementScope.value
+    })
+    announcements.value = result.items
+  } catch {
+    announcementsError.value = '公告列表加载失败，请稍后重试。'
+  } finally {
+    announcementsLoading.value = false
+  }
+}
+
+onMounted(() => {
+  loadActivities()
+  loadAnnouncements()
+})
 
 const activityRows = computed(() =>
   filterActivities(
@@ -73,7 +95,7 @@ const activityRows = computed(() =>
   )
 )
 const announcementRows = computed(() =>
-  filterAnnouncements(opsAnnouncements, { scope: announcementScope.value as AnnouncementScopeFilter })
+  filterAnnouncements(announcements.value, { scope: announcementScope.value as AnnouncementScopeFilter })
 )
 
 const registerBadge: Record<string, 'success' | 'info' | 'warning' | 'neutral'> = {
@@ -99,6 +121,7 @@ function registrationLabel(state: ReturnType<typeof deriveActivityRegistrationSt
 
 function onPublishSelect(type: 'ACTIVITY' | 'ANNOUNCEMENT' | 'BOTH') {
   if (type === 'ANNOUNCEMENT') {
+    editingAnnouncement.value = null
     announcementEditorOpen.value = true
   } else {
     editingActivity.value = null
@@ -111,6 +134,11 @@ function editActivity(activity: DynamicsActivity) {
   editingActivity.value = activity
   syncAnnouncement.value = false
   activityEditorOpen.value = true
+}
+
+function editAnnouncement(announcement: DynamicsAnnouncement) {
+  editingAnnouncement.value = announcement
+  announcementEditorOpen.value = true
 }
 
 function notify(title: string) {
@@ -265,8 +293,20 @@ const tabs = [
         />
       </div>
 
+      <p
+        v-if="announcementsLoading"
+        class="text-sm text-muted"
+      >
+        正在加载公告…
+      </p>
+      <p
+        v-else-if="announcementsError"
+        class="text-sm text-danger-600 dark:text-danger-400"
+      >
+        {{ announcementsError }}
+      </p>
       <ul
-        v-if="announcementRows.length"
+        v-else-if="announcementRows.length"
         class="space-y-3"
       >
         <li
@@ -315,7 +355,7 @@ const tabs = [
               color="neutral"
               variant="ghost"
               icon="i-lucide-pencil"
-              @click="notify('编辑公告')"
+              @click="editAnnouncement(announcement)"
             >
               编辑
             </UButton>
@@ -353,7 +393,9 @@ const tabs = [
     />
     <AnnouncementEditorModal
       :open="announcementEditorOpen"
+      :announcement="editingAnnouncement"
       @update:open="announcementEditorOpen = $event"
+      @saved="loadAnnouncements"
     />
   </div>
 </template>

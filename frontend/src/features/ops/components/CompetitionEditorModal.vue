@@ -3,11 +3,16 @@ import { computed, ref, watch } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 
 import {
-  addCompetition,
-  updateCompetition,
   validateCompetition,
   type CompetitionEditorDraft
 } from '../lib/opsStore'
+import {
+  createCompetition,
+  publishCompetition,
+  updateCompetition as apiUpdateCompetition,
+  type OpsCompetition
+} from '../api/opsCompetitionApi'
+import { AppError } from '@/shared/http/types'
 import {
   competitionCategoryLabel,
   competitionLevelLabel,
@@ -16,18 +21,19 @@ import {
 import ContentEditorShell from '@/shared/components/editor/ContentEditorShell.vue'
 import CoverUpload from '@/shared/components/upload/CoverUpload.vue'
 import FormSection from '@/shared/components/form/FormSection.vue'
+import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
+import RichContent from '@/shared/components/reader/RichContent.vue'
 import type {
   CompetitionCategory,
   CompetitionLevel,
-  CompetitionSummary,
   MediaImage,
   ParticipationMode
 } from '@/shared/types/homepage'
 
-/** 竞赛编辑（FE-090 /ops/competitions）。
- *  结构化字段分组 + 封面媒体上传 + 卡片化实时预览（桌面双栏 / 移动 编辑↔预览）。
+/** 竞赛编辑 / 发布（FE-090 /ops/competitions）。
+ *  结构化字段分组 + 封面媒体上传 + 正文所见即所得 + 卡片化实时预览（桌面双栏 / 移动 编辑↔预览）。
  */
-const props = defineProps<{ open: boolean; competition?: CompetitionSummary | null }>()
+const props = defineProps<{ open: boolean; competition?: OpsCompetition | null }>()
 const emit = defineEmits<{ 'update:open': [open: boolean]; saved: [] }>()
 const toast = useToast()
 
@@ -39,8 +45,11 @@ const participationMode = ref<ParticipationMode>('INDIVIDUAL')
 const registrationStartAt = ref('')
 const registrationEndAt = ref('')
 const officialUrl = ref('')
+const descriptionMd = ref('')
+const collegeOrganized = ref(false)
 const cover = ref<MediaImage | null>(null)
 const errors = ref<Record<string, string>>({})
+const submitting = ref(false)
 
 const isEdit = computed(() => Boolean(props.competition))
 
@@ -68,6 +77,8 @@ watch(
     registrationStartAt.value = competition?.registrationStartAt?.slice(0, 16) ?? ''
     registrationEndAt.value = competition?.registrationEndAt?.slice(0, 16) ?? ''
     officialUrl.value = competition?.officialUrl ?? ''
+    descriptionMd.value = competition?.descriptionMd ?? ''
+    collegeOrganized.value = competition?.collegeOrganized ?? false
     cover.value = competition?.cover ? { id: null, src: competition.cover.src, alt: competition.cover.alt } : null
     errors.value = {}
   }
@@ -77,7 +88,24 @@ function close() {
   emit('update:open', false)
 }
 
-function save() {
+/** 后端字段错误 key（蛇形）→ 前端 errors key（驼峰）。 */
+const FIELD_MAP: Record<string, string> = {
+  name: 'name',
+  edition: 'edition',
+  description_md: 'descriptionMd',
+  registration_end_at: 'registrationEndAt',
+  cover_asset_id: 'cover'
+}
+
+function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const [key, value] of Object.entries(fieldErrors)) {
+    result[FIELD_MAP[key] ?? key] = value
+  }
+  return result
+}
+
+async function save() {
   const draft: CompetitionEditorDraft = {
     name: name.value,
     edition: edition.value,
@@ -87,25 +115,46 @@ function save() {
     registrationStartAt: registrationStartAt.value,
     registrationEndAt: registrationEndAt.value,
     officialUrl: officialUrl.value,
+    descriptionMd: descriptionMd.value,
+    collegeOrganized: collegeOrganized.value,
     cover: cover.value
   }
   const formErrors = validateCompetition(draft)
   errors.value = formErrors
   if (Object.keys(formErrors).length > 0) return
 
-  if (isEdit.value && props.competition) {
-    updateCompetition(props.competition.id, draft)
-  } else {
-    addCompetition(draft)
+  submitting.value = true
+  try {
+    const coverAssetId = cover.value?.id ?? null
+    if (isEdit.value && props.competition) {
+      await apiUpdateCompetition(props.competition.id, draft, coverAssetId)
+    } else {
+      const id = await createCompetition(draft, coverAssetId)
+      await publishCompetition(id)
+    }
+    toast.add({
+      title: isEdit.value ? '已更新竞赛' : '已发布竞赛',
+      description: '已保存到服务器。',
+      color: 'success',
+      icon: 'i-lucide-check-circle'
+    })
+    close()
+    emit('saved')
+  } catch (err) {
+    if (err instanceof AppError && err.fieldErrors) {
+      errors.value = { ...errors.value, ...mapFieldErrors(err.fieldErrors) }
+    } else {
+      const message = err instanceof AppError ? err.message : '保存失败，请稍后重试。'
+      toast.add({
+        title: '保存失败',
+        description: message,
+        color: 'error',
+        icon: 'i-lucide-alert-circle'
+      })
+    }
+  } finally {
+    submitting.value = false
   }
-  toast.add({
-    title: isEdit.value ? '已更新竞赛' : '已新建竞赛',
-    description: '已保存（mock）。',
-    color: 'success',
-    icon: 'i-lucide-check-circle'
-  })
-  close()
-  emit('saved')
 }
 </script>
 
@@ -189,6 +238,13 @@ function save() {
                   class="w-full"
                 />
               </UFormField>
+
+              <UFormField label="主办方">
+                <UCheckbox
+                  v-model="collegeOrganized"
+                  :label="collegeOrganized ? '学院主办' : '非学院主办'"
+                />
+              </UFormField>
             </FormSection>
 
             <FormSection
@@ -222,6 +278,21 @@ function save() {
                   v-model="officialUrl"
                   placeholder="https://example.com"
                   class="w-full"
+                />
+              </UFormField>
+            </FormSection>
+
+            <FormSection
+              title="竞赛介绍"
+              description="使用 Markdown 编辑，右侧/预览页实时查看渲染效果"
+            >
+              <UFormField
+                name="descriptionMd"
+                :error="errors.descriptionMd"
+              >
+                <MarkdownEditor
+                  v-model="descriptionMd"
+                  :height="280"
                 />
               </UFormField>
             </FormSection>
@@ -269,6 +340,7 @@ function save() {
               />
               查看官网
             </a>
+            <RichContent :content="descriptionMd" />
           </template>
         </ContentEditorShell>
       </form>
@@ -287,6 +359,7 @@ function save() {
           color="primary"
           variant="solid"
           icon="i-lucide-save"
+          :loading="submitting"
           @click="save"
         >
           保存

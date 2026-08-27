@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import ReplyConsultationModal from '@/features/ops/components/ReplyConsultationModal.vue'
-import { opsQuestions } from '@/features/ops/lib/opsStore'
+import { listConsultations } from '@/features/ops/api/opsConsultationApi'
 import { qaStatusMeta } from '@/features/consultation/lib/consultationLabels'
 import type { ConsultQaPost } from '@/features/consultation/types'
 import { formatDateTimeCompact } from '@/shared/lib/date'
@@ -10,10 +10,29 @@ import { formatDateTimeCompact } from '@/shared/lib/date'
 /** 咨询管理（FE-090 /ops/questions）。 */
 const filter = ref<'ALL' | 'PENDING' | 'ANSWERED'>('ALL')
 
+const questions = ref<ConsultQaPost[]>([])
+const loading = ref(false)
+const error = ref('')
+
+async function loadQuestions() {
+  loading.value = true
+  error.value = ''
+  try {
+    const result = await listConsultations({})
+    questions.value = result.items
+  } catch {
+    error.value = '咨询列表加载失败，请稍后重试。'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadQuestions)
+
 const rows = computed(() =>
   filter.value === 'ALL'
-    ? opsQuestions
-    : opsQuestions.filter(post => post.status === filter.value)
+    ? questions.value
+    : questions.value.filter(post => post.status === filter.value)
 )
 
 const replyOpen = ref(false)
@@ -51,8 +70,20 @@ const filters = [
       </UButton>
     </div>
 
+    <p
+      v-if="loading"
+      class="text-sm text-muted"
+    >
+      正在加载咨询…
+    </p>
+    <p
+      v-else-if="error"
+      class="text-sm text-danger-600 dark:text-danger-400"
+    >
+      {{ error }}
+    </p>
     <ul
-      v-if="rows.length"
+      v-else-if="rows.length"
       class="space-y-3"
     >
       <li
@@ -121,6 +152,7 @@ const filters = [
       :open="replyOpen"
       :question="replying"
       @update:open="replyOpen = $event"
+      @saved="loadQuestions"
     />
   </div>
 </template>

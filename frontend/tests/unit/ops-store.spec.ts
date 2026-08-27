@@ -24,10 +24,13 @@ describe('FE-090 运营 store 持久化', () => {
       participationMode: 'INDIVIDUAL',
       registrationStartAt: '',
       registrationEndAt: '',
-      officialUrl: ''
+      officialUrl: '',
+      descriptionMd: '',
+      collegeOrganized: false
     })
     expect(errors.name).toBeTruthy()
     expect(errors.edition).toBeTruthy()
+    expect(errors.descriptionMd).toBeTruthy()
 
     const before = opsCompetitions.length
     addCompetition({
@@ -38,7 +41,9 @@ describe('FE-090 运营 store 持久化', () => {
       participationMode: 'TEAM',
       registrationStartAt: '2026-09-01T00:00:00',
       registrationEndAt: '2026-09-20T00:00:00',
-      officialUrl: ''
+      officialUrl: '',
+      descriptionMd: '竞赛介绍',
+      collegeOrganized: false
     })
     expect(opsCompetitions.length).toBe(before + 1)
   })

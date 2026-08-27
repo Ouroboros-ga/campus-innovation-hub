@@ -2,7 +2,8 @@
 import { ref, watch } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 
-import { replyQuestion, validateReply } from '../lib/opsStore'
+import { validateReply } from '../lib/opsStore'
+import { replyConsultation } from '../api/opsConsultationApi'
 import type { ConsultQaPost } from '@/features/consultation/types'
 import ContentEditorShell from '@/shared/components/editor/ContentEditorShell.vue'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
@@ -15,6 +16,7 @@ const toast = useToast()
 
 const answer = ref('')
 const error = ref('')
+const submitting = ref(false)
 
 watch(
   () => props.open,
@@ -29,22 +31,34 @@ function close() {
   emit('update:open', false)
 }
 
-function save() {
+async function save() {
   if (!props.question) return
   const message = validateReply(answer.value)
   if (message) {
     error.value = message
     return
   }
-  replyQuestion(props.question.id, answer.value)
-  toast.add({
-    title: '已回复',
-    description: '该咨询已标记为已回复。',
-    color: 'success',
-    icon: 'i-lucide-check-circle'
-  })
-  close()
-  emit('saved')
+  submitting.value = true
+  try {
+    await replyConsultation(props.question.id, answer.value)
+    toast.add({
+      title: '已回复',
+      description: '该咨询已标记为已回复。',
+      color: 'success',
+      icon: 'i-lucide-check-circle'
+    })
+    close()
+    emit('saved')
+  } catch {
+    toast.add({
+      title: '回复失败',
+      description: '请稍后重试。',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -97,6 +111,7 @@ function save() {
           color="primary"
           variant="solid"
           icon="i-lucide-send"
+          :loading="submitting"
           @click="save"
         >
           回复

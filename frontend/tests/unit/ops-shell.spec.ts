@@ -7,10 +7,25 @@ import OpsShell from '@/features/ops/components/OpsShell.vue'
 import OpsOverviewPage from '@/pages/ops/OpsOverviewPage.vue'
 import OpsActivitiesPage from '@/pages/ops/OpsActivitiesPage.vue'
 import { listActivities } from '@/features/ops/api/opsActivityApi'
-import { dynamicsActivities } from '@/mocks/fixtures/dynamics'
+import { listAnnouncements } from '@/features/ops/api/opsAnnouncementApi'
+import { listCompetitions } from '@/features/ops/api/opsCompetitionApi'
+import { listConsultations } from '@/features/ops/api/opsConsultationApi'
+import { dynamicsActivities, dynamicsAnnouncements } from '@/mocks/fixtures/dynamics'
 
 vi.mock('@/features/ops/api/opsActivityApi', () => ({
   listActivities: vi.fn()
+}))
+vi.mock('@/features/ops/api/opsAnnouncementApi', () => ({
+  listAnnouncements: vi.fn()
+}))
+vi.mock('@/features/ops/api/opsCompetitionApi', () => ({
+  listCompetitions: vi.fn()
+}))
+vi.mock('@/features/ops/api/opsConsultationApi', () => ({
+  listConsultations: vi.fn()
+}))
+vi.mock('@/features/ops/api/opsGuideApi', () => ({
+  listGuides: vi.fn()
 }))
 
 const mounted: ReturnType<typeof mount>[] = []
@@ -59,7 +74,12 @@ describe('FE-090 平台运营外壳', () => {
   })
 
   it('工作台展示真实数据统计卡', async () => {
+    vi.mocked(listCompetitions).mockResolvedValue({ items: [], total: 0, page: 1 })
+    vi.mocked(listActivities).mockResolvedValue({ items: [], total: 0, page: 1 })
+    vi.mocked(listConsultations).mockResolvedValue({ items: [], total: 0, page: 1 })
+
     const wrapper = await mountComponent(OpsOverviewPage, '/ops', '/ops')
+    await flushPromises()
     for (const label of ['报名中的竞赛', '进行中的活动', '待回复咨询', '当前招新']) {
       expect(wrapper.text()).toContain(label)
     }
@@ -69,6 +89,11 @@ describe('FE-090 平台运营外壳', () => {
     vi.mocked(listActivities).mockResolvedValue({
       items: dynamicsActivities,
       total: dynamicsActivities.length,
+      page: 1
+    })
+    vi.mocked(listAnnouncements).mockResolvedValue({
+      items: dynamicsAnnouncements,
+      total: dynamicsAnnouncements.length,
       page: 1
     })
 
