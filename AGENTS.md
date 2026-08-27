@@ -732,6 +732,54 @@ pnpm build
 
 ---
 
+# 开发与部署工作流（Development & Deployment Workflow）
+
+当前为开发阶段，采用 Git 驱动的部署流程：
+
+```text
+本地修改（local edit）
+-> 本地验证（local verification）
+-> 提交并推送（commit & push）
+-> 服务器拉取（server pull）
+-> 部署（deploy）
+-> 服务器验证（server verification）
+```
+
+## 本地修改与验证
+
+- 修改前按本文件"代理任务协议"阅读必读文档；
+- UI 变更按"完成前验证"执行；非 UI 变更至少过 lint / typecheck / build；
+- 前端全量验证：`pnpm check`（lint + typecheck + test + build）；
+- 后端：运行相关 pytest / `manage.py test`；涉及数据库行为的用例必须跑 PostgreSQL，不能只依赖 SQLite；
+- 契约变更：若修改 API 或数据库语义，先更新 `APIContract.md` / `database-design.md` 再改代码，禁止单侧静默修改。
+
+## 提交与推送
+
+- 只推送经过本地验证的提交；commit message 使用简体中文，注明关键变更；
+- 开发阶段直接推 `main`（单人 / 小团队），不创建长期 feature 分支；
+- 禁止把本地密钥、`*.env`、未渲染模板推入仓库。
+
+## 服务器拉取与部署
+
+- 通过 SSH 到服务器；部署遵循 `deploy/README.md`（release 目录 + 目标 SHA 回滚）；
+- 以目标 Git SHA 在 `/opt/campus-innovation-hub-dev/releases/<SHA>` 做干净 checkout，再运行 provision 脚本（development 环境）；
+- 开发阶段不得触碰生产 systemd unit、Nginx TLS 模板与 production env；生产发布走 `deploy/README.md` §2 的单独授权流程；
+- 临时公网展示需单独授权后使用 `deploy/scripts/provision-temporary-public.sh`；
+- 数据库变更：先 `deploy/scripts/backup-postgres.sh` 备份，migration 由 provision 流程执行。
+
+## 服务器验证
+
+- 健康检查：`/api/health` 与 `/api/ready` 可达；
+- 冒烟：登录、核心读接口、目标页面可访问；
+- 记录实际执行的命令与结果，不虚构验证。
+
+## 回滚
+
+- 部署以 release 目录 + 目标 SHA 为准；回滚即切回前一 SHA 并重新 provision；
+- 回滚前确认 migration 是否向后兼容（deploy/README.md §3）。
+
+---
+
 # 完成前验证（Verification Before Completion）
 
 不要仅凭代码检查就报告成功。
