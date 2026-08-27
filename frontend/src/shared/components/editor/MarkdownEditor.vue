@@ -2,6 +2,8 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Vditor from 'vditor'
 import 'vditor/dist/index.css'
+// 将 Vditor 自带的简体中文语言包打进本地 bundle，运行时不再从 unpkg 拉取 i18n（该 CDN 路径在部分环境 404）。
+import 'vditor/dist/js/i18n/zh_CN.js'
 
 import { uploadImage } from '@/shared/http/media'
 
@@ -140,6 +142,9 @@ onMounted(() => {
       cache: { enable: false },
       theme: isDark() ? 'dark' : 'classic',
       counter: { enable: true },
+      // 使用本地打包的中文语言包，避免运行时从 CDN 加载 i18n 造成 404。
+      lang: 'zh_CN',
+      i18n: window.VditorI18n,
       toolbar: TOOLBAR,
       input: onEditorInput
     })
