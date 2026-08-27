@@ -23,10 +23,12 @@ const route = useRoute()
       >
         <RouterLink
           :to="item.to"
-          class="flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-xs font-medium text-toned transition-colors"
-          :class="{
-            'text-primary': isNavigationItemActive(route.path, item.to)
-          }"
+          class="flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-xs font-medium transition-colors"
+          :class="
+            isNavigationItemActive(route.path, item.to)
+              ? 'text-primary'
+              : 'text-toned'
+          "
           :aria-current="
             isNavigationItemActive(route.path, item.to) ? 'page' : undefined
           "

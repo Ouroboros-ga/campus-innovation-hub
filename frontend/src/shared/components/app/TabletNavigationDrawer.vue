@@ -39,11 +39,12 @@ const isOpen = ref(false)
             v-for="item in publicNavigationItems"
             :key="item.to"
             :to="item.to"
-            class="flex min-h-11 items-center justify-between rounded-control px-3 text-sm font-medium text-toned transition-colors hover:bg-muted hover:text-highlighted"
-            :class="{
-              'bg-primary-50 text-primary dark:bg-primary-950/40':
-                isNavigationItemActive(route.path, item.to)
-            }"
+            class="flex min-h-11 items-center justify-between rounded-control px-3 text-sm font-medium transition-colors hover:bg-muted hover:text-highlighted"
+            :class="
+              isNavigationItemActive(route.path, item.to)
+                ? 'bg-primary-50 text-primary dark:bg-primary-950/40'
+                : 'text-toned'
+            "
             :aria-current="
               isNavigationItemActive(route.path, item.to) ? 'page' : undefined
             "

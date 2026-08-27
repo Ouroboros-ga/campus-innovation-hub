@@ -18,10 +18,12 @@ const route = useRoute()
       v-for="item in publicNavigationItems"
       :key="item.to"
       :to="item.to"
-      class="relative flex h-full items-center px-3 text-[15px] font-medium text-toned transition-colors hover:text-highlighted"
-      :class="{
-        'text-primary': isNavigationItemActive(route.path, item.to)
-      }"
+      class="relative flex h-full items-center px-3 text-[15px] font-medium transition-colors hover:text-highlighted"
+      :class="
+        isNavigationItemActive(route.path, item.to)
+          ? 'text-primary'
+          : 'text-toned'
+      "
       :aria-current="
         isNavigationItemActive(route.path, item.to) ? 'page' : undefined
       "

@@ -77,6 +77,10 @@ describe('FE-004 公开应用外壳', () => {
     expect(
       desktopNavigation.get('a[href="/activities"]').attributes('aria-current')
     ).toBe('page')
+    // 活动项字体色需真实生效，避免 `text-toned` 覆盖 `text-primary` 导致不高亮
+    const activeItem = desktopNavigation.get('a[href="/activities"]')
+    expect(activeItem.classes()).toContain('text-primary')
+    expect(activeItem.classes()).not.toContain('text-toned')
     expect(wrapper.get('button[aria-label="搜索"]')).toBeTruthy()
     expect(wrapper.get('button[aria-label="查看通知"]')).toBeTruthy()
     expect(wrapper.get('button[aria-label="切换外观"]')).toBeTruthy()
@@ -129,7 +133,19 @@ describe('FE-004 公开应用外壳', () => {
     expect(bottomNav.text()).toContain('组队')
     expect(bottomNav.text()).toContain('动态')
     expect(bottomNav.text()).toContain('我的')
-    expect(bottomNav.get('a[href="/"]').attributes('aria-current')).toBe('page')
+
+    const homeItem = bottomNav.get('a[href="/"]')
+    expect(homeItem.attributes('aria-current')).toBe('page')
+    // 活动态字体色必须真正生效：`text-primary` 与 `text-toned` 不能同时在
+    // 同一元素上（同似性下 `text-toned` 在样式表后置会覆盖 `text-primary`，
+    // 导致当前页图标不高亮）。活动项只挂 primary，非活动项只挂 toned。
+    expect(homeItem.classes()).toContain('text-primary')
+    expect(homeItem.classes()).not.toContain('text-toned')
+
+    const competitionsItem = bottomNav.get('a[href="/competitions"]')
+    expect(competitionsItem.attributes('aria-current')).toBeUndefined()
+    expect(competitionsItem.classes()).toContain('text-toned')
+    expect(competitionsItem.classes()).not.toContain('text-primary')
   })
 
   it('手机端详情页隐藏底部导航并展示返回头部', async () => {
