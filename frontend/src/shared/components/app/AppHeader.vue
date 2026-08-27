@@ -23,6 +23,7 @@ const backTitle = computed(() => (route.meta.title as string | undefined) ?? '')
 const mobileHeaderTitle = computed(
   () => (route.meta.mobileHeaderTitle as string | undefined) ?? ''
 )
+const isMeTab = computed(() => route.name === 'me')
 </script>
 
 <template>
@@ -43,7 +44,15 @@ const mobileHeaderTitle = computed(
         {{ mobileHeaderTitle }}
       </h1>
       <div class="flex w-11 shrink-0 justify-end">
-        <SearchButton />
+        <UButton
+          v-if="isMeTab"
+          to="/me/settings"
+          aria-label="账号设置"
+          icon="i-lucide-settings"
+          color="neutral"
+          variant="ghost"
+        />
+        <SearchButton v-else />
       </div>
     </div>
   </header>

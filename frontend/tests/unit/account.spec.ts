@@ -1,15 +1,20 @@
 import ui from '@nuxt/ui/vue-plugin'
 import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import AccountOverviewPage from '@/pages/me/AccountOverviewPage.vue'
 import AccountFollowsPage from '@/pages/me/AccountFollowsPage.vue'
 import AccountApplicationsPage from '@/pages/me/AccountApplicationsPage.vue'
+import { follows, applications } from '@/features/account/lib/account'
+import { accountGames, accountApplications } from '@/mocks/fixtures/account'
 
 const mounted: ReturnType<typeof mount>[] = []
 
 async function mountComponent(component: unknown, pattern: string, url: string) {
+  setActivePinia(createPinia())
+  const pinia = createPinia()
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: pattern, component: component as never }]
@@ -20,13 +25,19 @@ async function mountComponent(component: unknown, pattern: string, url: string) 
   const wrapper = mount(component as never, {
     attachTo: document.body,
     global: {
-      plugins: [router, ui],
+      plugins: [router, ui, pinia],
       stubs: { RouterLink: true }
     }
   })
   mounted.push(wrapper)
   return wrapper
 }
+
+beforeEach(() => {
+  // 重置可变 fixtures（避免跨用例污染）
+  follows.splice(0, follows.length, ...accountGames)
+  applications.splice(0, applications.length, ...accountApplications)
+})
 
 afterEach(() => {
   mounted.splice(0).forEach(wrapper => wrapper.unmount())
@@ -60,13 +71,20 @@ describe('FE-070 账号外壳', () => {
     )
     expect(wrapper.text()).toContain('蓝桥杯全国软件和信息技术专业人才大赛')
 
-    const cancel = wrapper
-      .findAll('button')
+    const beforeCount = wrapper.findAll('li').length
+    // 点击该竞赛所在行的取消关注按钮（而非固定第一项，避免 fixtures 顺序变更导致失败）
+    const targetRow = wrapper
+      .findAll('li')
+      .find(li => li.text().includes('蓝桥杯全国软件和信息技术专业人才大赛'))
+    const cancel = targetRow
+      ?.findAll('button')
       .find(b => b.text() === '取消关注')
+    expect(cancel).toBeTruthy()
     await cancel!.trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).not.toContain('蓝桥杯全国软件和信息技术专业人才大赛')
+    expect(wrapper.findAll('li').length).toBe(beforeCount - 1)
+    expect(wrapper.text()).not.toContain('蓝桥杯全国软件和信息技术专业人才大赛 2024')
   })
 
   it('我的申请支持撤回待处理申请', async () => {

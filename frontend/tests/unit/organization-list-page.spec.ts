@@ -1,5 +1,6 @@
 import ui from '@nuxt/ui/vue-plugin'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
@@ -23,6 +24,31 @@ beforeEach(() => {
 })
 
 async function mountPage(query: Record<string, string> = {}) {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  // 为「我的组织」种子登录态权限（对应 fixtures/organizations.myOrganizations 前 6 项）
+  const { useAuthStore } = await import('@/stores/auth')
+  const auth = useAuthStore()
+  auth.permissions = {
+    organization_memberships: [
+      { organization_id: 'ai-union', role: 'LEADER', title: '会长', is_active: true },
+      { organization_id: 'data-science-club', role: 'MEMBER', title: '成员', is_active: true },
+      { organization_id: 'robot-lab', role: 'LEADER', title: '实验室负责人', is_active: true },
+      { organization_id: 'innovation-center', role: 'MEMBER', title: '成员', is_active: true },
+      { organization_id: 'sci-employment', role: 'LEADER', title: '部长', is_active: true },
+      { organization_id: 'green-public', role: 'MEMBER', title: '成员', is_active: true },
+    ],
+  } as unknown as typeof auth.permissions
+  auth.user = {
+    id: 'test-user',
+    username: 'test',
+    real_name: '测试用户',
+    identity_type: 'STUDENT',
+    platform_role: 'USER',
+    is_superuser: false,
+    profile: {},
+  } as unknown as typeof auth.user
+  auth.status = 'authenticated' as unknown as typeof auth.status
   const router = createRouter({
     history: createMemoryHistory(),
     routes
@@ -33,7 +59,7 @@ async function mountPage(query: Record<string, string> = {}) {
   const wrapper = mount(OrganizationListPage, {
     attachTo: document.body,
     global: {
-      plugins: [router, ui]
+      plugins: [router, ui, pinia]
     }
   })
   mounted.push(wrapper)

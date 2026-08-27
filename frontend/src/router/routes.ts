@@ -201,7 +201,7 @@ export const routes: RouteRecordRaw[] = [
         meta: {
           mobileShell: 'tab',
           mobileTab: 'me',
-          mobileHeaderTitle: '我的',
+          mobileHeaderTitle: '个人中心',
           auth: 'auth'
         }
       },

@@ -22,17 +22,41 @@ export const accountProfile: AccountProfile = {
   major: '人工智能学院',
   grade: '2023级',
   bio: '关注编程与算法竞赛，乐于组队协作，一起冲击高目标。',
-  skills: ['Python', '算法', '数据分析'],
+  skills: ['算法爱好者', '团队协作', '竞赛参与者'],
   avatar: { alt: '头像', src: null }
 }
 
 export const accountGames: AccountFollowedCompetition[] = [
   {
-    id: 'lanqiao-2026',
+    id: 'ccpc-2024',
+    name: '中国大学生程序设计竞赛（CCPC）',
+    edition: '2024',
+    deadlineAt: '2024-06-15T23:59:59+08:00',
+    detailPath: '/competitions/ccpc-2024',
+    followedAt: '2024-06-14T10:24:00+08:00'
+  },
+  {
+    id: 'lanqiao-2024',
     name: '蓝桥杯全国软件和信息技术专业人才大赛',
+    edition: '2024',
+    deadlineAt: '2024-06-01T23:59:59+08:00',
+    detailPath: '/competitions/lanqiao-2024',
+    followedAt: '2024-05-30T09:00:00+08:00'
+  },
+  {
+    id: 'huawei-ict-2024',
+    name: '华为 ICT 大赛',
+    edition: '2024',
+    deadlineAt: '2024-07-20T23:59:59+08:00',
+    detailPath: '/competitions/huawei-ict-2024',
+    followedAt: '2024-06-18T09:00:00+08:00'
+  },
+  {
+    id: 'lanqiao-2026',
+    name: '全国大学生信息安全竞赛',
     edition: '2026',
     deadlineAt: '2026-09-10T23:59:59+08:00',
-    detailPath: '/competitions/lanqiao-2026',
+    detailPath: '/competitions/infosec-2026',
     followedAt: '2026-08-20T10:00:00+08:00'
   },
   {
@@ -54,6 +78,30 @@ export const accountGames: AccountFollowedCompetition[] = [
 ]
 
 export const accountTeamPosts: AccountTeamPost[] = [
+  {
+    id: 'team-ai-explorer',
+    title: 'AI 探索者小队',
+    competitionName: '“智汇未来”人工智能创新挑战赛',
+    position: 'PUBLISHED',
+    postType: 'TEAM_RECRUITING',
+    status: 'RECRUITING',
+    memberCount: 5,
+    targetMemberCount: 6,
+    publishedAt: '2024-05-19T10:00:00+08:00',
+    detailPath: '/teams/team-ai-explorer'
+  },
+  {
+    id: 'team-algo-advance',
+    title: '算法进阶学习组',
+    competitionName: '2024 高校算法精英大赛',
+    position: 'JOINED',
+    postType: 'TEAM_RECRUITING',
+    status: 'RECRUITING',
+    memberCount: 8,
+    targetMemberCount: 10,
+    publishedAt: '2024-05-18T10:00:00+08:00',
+    detailPath: '/teams/team-algo-advance'
+  },
   {
     id: 'team-acm-06',
     title: 'ACM 队招 2 名队员',
@@ -94,6 +142,33 @@ export const accountTeamPosts: AccountTeamPost[] = [
 
 export const accountApplications: AccountApplication[] = [
   {
+    id: 'app-zhihui-2024',
+    targetType: 'TEAM',
+    targetName: '“智汇未来”人工智能创新挑战赛',
+    positionName: 'AI 探索者小队',
+    state: 'PENDING',
+    submittedAt: '2024-05-20T14:32:00+08:00',
+    detailPath: '/teams/team-ai-explorer'
+  },
+  {
+    id: 'app-algo-elite-2024',
+    targetType: 'TEAM',
+    targetName: '2024 高校算法精英大赛',
+    positionName: 'Byte Knights',
+    state: 'ACCEPTED',
+    submittedAt: '2024-05-10T09:15:00+08:00',
+    detailPath: '/teams/team-algo-advance'
+  },
+  {
+    id: 'app-incubation-1',
+    targetType: 'ORG',
+    targetName: '科创项目孵化计划（第一期）',
+    positionName: null,
+    state: 'REJECTED',
+    submittedAt: '2024-04-28T18:40:00+08:00',
+    detailPath: '/organizations/incubation-1'
+  },
+  {
     id: 'app-team-acm-06',
     targetType: 'TEAM',
     targetName: 'ACM 队招 2 名队员',
@@ -123,6 +198,30 @@ export const accountApplications: AccountApplication[] = [
 ]
 
 export const accountActivities: AccountActivity[] = [
+  {
+    id: 'math-competition-15',
+    title: '第十五届全国大学生数学竞赛宣讲会',
+    startAt: '2024-05-25T14:00:00+08:00',
+    location: '图书馆报告厅',
+    registrationState: 'OPEN',
+    detailPath: '/activities/math-competition-15'
+  },
+  {
+    id: 'algo-camp-4',
+    title: '算法训练营（第 4 期）',
+    startAt: '2024-05-28T19:00:00+08:00',
+    location: '科技楼 3 楼报告厅',
+    registrationState: 'OPEN',
+    detailPath: '/activities/algo-camp-4'
+  },
+  {
+    id: 'project-share-0602',
+    title: '科创项目路演分享会',
+    startAt: '2024-06-02T10:00:00+08:00',
+    location: '创新创业中心',
+    registrationState: 'OPEN',
+    detailPath: '/activities/project-share-0602'
+  },
   {
     id: 'ai-sharing-4',
     title: '大模型应用实战分享会',
@@ -157,5 +256,54 @@ export const accountQuestions: AccountQuestion[] = [
     state: 'ANSWERED',
     updatedAt: '2026-08-13T10:00:00+08:00',
     detailPath: '/qa/questions/duplicate-rate'
+  }
+]
+
+export interface AccountTimelineItem {
+  id: string
+  title: string
+  description: string
+  timeLabel: string
+  icon: string
+  iconColor: 'primary' | 'success' | 'neutral'
+  tone: 'default' | 'primary'
+}
+
+export const accountTimeline: AccountTimelineItem[] = [
+  {
+    id: 'tl-follow-ccpc',
+    title: '你关注了竞赛',
+    description: 'CCPC 竞赛',
+    timeLabel: '10:24',
+    icon: 'i-lucide-heart',
+    iconColor: 'primary',
+    tone: 'default'
+  },
+  {
+    id: 'tl-app-accepted',
+    title: '你的申请已通过',
+    description: '2024 高校算法精英大赛',
+    timeLabel: '昨天',
+    icon: 'i-lucide-badge-check',
+    iconColor: 'success',
+    tone: 'default'
+  },
+  {
+    id: 'tl-team-update',
+    title: '团队“AI探索者小队”有了新进展',
+    description: '提交了项目计划书',
+    timeLabel: '05-20',
+    icon: 'i-lucide-users',
+    iconColor: 'neutral',
+    tone: 'default'
+  },
+  {
+    id: 'tl-qa-reply',
+    title: '收到新的咨询回复',
+    description: '关于大创项目申报的撰写规范咨询',
+    timeLabel: '05-19',
+    icon: 'i-lucide-message-circle',
+    iconColor: 'neutral',
+    tone: 'default'
   }
 ]
