@@ -117,6 +117,13 @@ export interface HomepageImage {
   position?: string
 }
 
+/** 带媒体资产 id 的图片引用（编辑器/上传用，映射后端 `*_asset_id`）。 */
+export interface MediaImage {
+  id: string | null
+  src: string | null
+  alt: string
+}
+
 /** 校园轮播（PageMap 首页-校园轮播；§15.1 content_homepage_banner） */
 export interface CarouselSlide {
   id: string

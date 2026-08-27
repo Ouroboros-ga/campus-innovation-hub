@@ -10,11 +10,15 @@ import {
   type RecruitEditorDraft
 } from '../lib/orgManagement'
 import type { OrganizationPosition, RecruitmentDetail } from '../types'
+import ContentEditorShell from '@/shared/components/editor/ContentEditorShell.vue'
+import FormSection from '@/shared/components/form/FormSection.vue'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
+import RichContent from '@/shared/components/reader/RichContent.vue'
 
 /**
  * 招新编辑器（FE-080 / PageMap §新建/编辑招新）。
  * 基本字段 + 岗位编辑器（添加/删除）；校验靠近字段；保存后持久化到内存 store。
+ * 正文所见即所得 + 实时预览（桌面双栏 / 移动 编辑↔预览）。
  */
 const props = defineProps<{
   open: boolean
@@ -131,7 +135,7 @@ function save() {
 <template>
   <UModal
     :open="props.open"
-    :ui="{ content: 'max-w-2xl' }"
+    :ui="{ content: 'max-w-5xl' }"
     @update:open="close"
   >
     <template #header>
@@ -142,146 +146,172 @@ function save() {
 
     <template #content>
       <form
-        class="space-y-4"
+        class="space-y-6"
         novalidate
         @submit.prevent="save"
       >
-        <UFormField
-          label="标题"
-          name="title"
-          required
-          :error="errors.title"
-        >
-          <UInput
-            v-model="title"
-            placeholder="如：人工智能协会 2026 秋季招新"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField
-          label="介绍"
-          name="introMd"
-          required
-          :error="errors.introMd"
-        >
-          <MarkdownEditor
-            v-model="introMd"
-            :height="260"
-          />
-        </UFormField>
-
-        <div class="grid gap-4 sm:grid-cols-2">
-          <UFormField
-            label="开始时间"
-            name="applyStartAt"
-            required
-            :error="errors.applyStartAt"
-          >
-            <UInput
-              v-model="applyStartAt"
-              type="datetime-local"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField
-            label="截止时间"
-            name="applyEndAt"
-            required
-            :error="errors.applyEndAt"
-          >
-            <UInput
-              v-model="applyEndAt"
-              type="datetime-local"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-
-        <div class="grid gap-4 sm:grid-cols-2">
-          <UFormField label="面向年级（最低）">
-            <UInputNumber
-              v-model="targetGradeMin"
-              :min="1"
-              :max="4"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField label="面向年级（最高）">
-            <UInputNumber
-              v-model="targetGradeMax"
-              :min="1"
-              :max="4"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-
-        <UFormField label="其他说明">
-          <UTextarea
-            v-model="notesMd"
-            :rows="2"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField
-          label="招募岗位"
-          name="positions"
-          required
-          :error="errors.positions"
-        >
-          <div class="space-y-3">
-            <div
-              v-for="(position, index) in positions"
-              :key="index"
-              class="rounded-surface border border-default p-3"
+        <ContentEditorShell preview-title="招新预览">
+          <template #form>
+            <FormSection
+              title="基本信息"
+              description="标题、时间与面向年级"
             >
-              <div class="flex items-start gap-2">
-                <div class="grid flex-1 gap-2 sm:grid-cols-2">
+              <UFormField
+                label="标题"
+                name="title"
+                required
+                :error="errors.title"
+              >
+                <UInput
+                  v-model="title"
+                  placeholder="如：人工智能协会 2026 秋季招新"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField
+                  label="开始时间"
+                  name="applyStartAt"
+                  required
+                  :error="errors.applyStartAt"
+                >
                   <UInput
-                    v-model="position.name"
-                    placeholder="岗位名称"
+                    v-model="applyStartAt"
+                    type="datetime-local"
+                    class="w-full"
                   />
+                </UFormField>
+                <UFormField
+                  label="截止时间"
+                  name="applyEndAt"
+                  required
+                  :error="errors.applyEndAt"
+                >
+                  <UInput
+                    v-model="applyEndAt"
+                    type="datetime-local"
+                    class="w-full"
+                  />
+                </UFormField>
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField label="面向年级（最低）">
                   <UInputNumber
-                    v-model="position.headcount"
+                    v-model="targetGradeMin"
                     :min="1"
-                    placeholder="招募人数"
+                    :max="4"
+                    class="w-full"
                   />
-                </div>
-                <UButton
-                  type="button"
-                  size="sm"
-                  color="neutral"
-                  variant="ghost"
-                  icon="i-lucide-trash-2"
-                  aria-label="删除岗位"
-                  @click="removePosition(index)"
-                />
+                </UFormField>
+                <UFormField label="面向年级（最高）">
+                  <UInputNumber
+                    v-model="targetGradeMax"
+                    :min="1"
+                    :max="4"
+                    class="w-full"
+                  />
+                </UFormField>
               </div>
-              <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                <UInput
-                  v-model="position.description"
-                  placeholder="岗位说明"
-                />
-                <UInput
-                  v-model="position.requirements"
-                  placeholder="要求"
-                />
-              </div>
-            </div>
-            <UButton
-              type="button"
-              size="sm"
-              color="neutral"
-              variant="outline"
-              icon="i-lucide-plus"
-              @click="addPosition"
+            </FormSection>
+
+            <FormSection
+              title="招新介绍"
+              description="使用 Markdown 编辑，实时预览渲染效果"
             >
-              添加岗位
-            </UButton>
-          </div>
-        </UFormField>
+              <UFormField
+                label="介绍"
+                name="introMd"
+                required
+                :error="errors.introMd"
+              >
+                <MarkdownEditor
+                  v-model="introMd"
+                  :height="260"
+                />
+              </UFormField>
+            </FormSection>
+
+            <FormSection
+              title="岗位与说明"
+              description="招募岗位列表与补充说明"
+            >
+              <UFormField
+                label="招募岗位"
+                name="positions"
+                required
+                :error="errors.positions"
+              >
+                <div class="space-y-3">
+                  <div
+                    v-for="(position, index) in positions"
+                    :key="index"
+                    class="rounded-surface border border-default p-3"
+                  >
+                    <div class="flex items-start gap-2">
+                      <div class="grid flex-1 gap-2 sm:grid-cols-2">
+                        <UInput
+                          v-model="position.name"
+                          placeholder="岗位名称"
+                        />
+                        <UInputNumber
+                          v-model="position.headcount"
+                          :min="1"
+                          placeholder="招募人数"
+                        />
+                      </div>
+                      <UButton
+                        type="button"
+                        size="sm"
+                        color="neutral"
+                        variant="ghost"
+                        icon="i-lucide-trash-2"
+                        aria-label="删除岗位"
+                        @click="removePosition(index)"
+                      />
+                    </div>
+                    <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                      <UInput
+                        v-model="position.description"
+                        placeholder="岗位说明"
+                      />
+                      <UInput
+                        v-model="position.requirements"
+                        placeholder="要求"
+                      />
+                    </div>
+                  </div>
+                  <UButton
+                    type="button"
+                    size="sm"
+                    color="neutral"
+                    variant="outline"
+                    icon="i-lucide-plus"
+                    @click="addPosition"
+                  >
+                    添加岗位
+                  </UButton>
+                </div>
+              </UFormField>
+
+              <UFormField label="其他说明">
+                <UTextarea
+                  v-model="notesMd"
+                  :rows="2"
+                  class="w-full"
+                />
+              </UFormField>
+            </FormSection>
+          </template>
+
+          <template #preview>
+            <h3 class="text-lg font-semibold text-highlighted">
+              {{ title || '招新标题' }}
+            </h3>
+            <RichContent :content="introMd" />
+          </template>
+        </ContentEditorShell>
       </form>
     </template>
 

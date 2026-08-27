@@ -2,7 +2,7 @@
 
 > 产品：人工智能学院科创与就业服务平台  
 > 仓库：`campus-innovation-hub`  
-> 文档版本：0.4  
+> 文档版本：0.5  
 > 产品里程碑：V0.1  
 > 状态：Frontend Foundation Ready  
 > Locale：简体中文（zh-CN），V0.1 唯一产品语言  
@@ -195,19 +195,17 @@ V0.1 不追求：
 
 ---
 
-## 学生
+## 学生身份
 
 定义：
 
 ```text
-已登录
-+
-无平台运营权限
+accounts_user.identity_type = STUDENT
 ```
 
-学生是所有正常登录用户的基础身份。
+学生是 V0.1 主要服务对象。
 
-可以：
+学生账号可以通过学生注册流程创建，完成认证后可以：
 
 - 编辑个人资料
 - 关注竞赛
@@ -221,6 +219,58 @@ V0.1 不追求：
 - 查看自己的咨询
 - 查看消息
 - 在“社团组织”页查看自己的组织身份
+
+学生身份本身不等于平台运营权限。
+
+---
+
+## 教师身份
+
+定义：
+
+```text
+accounts_user.identity_type = TEACHER
+```
+
+教师是平台中的正式账号身份，但：
+
+> **TEACHER 只说明“这个用户是教师”，不自动获得平台运营、组织管理或超级管理员权限。**
+
+V0.1 教师账号不走学生自助注册页。
+
+创建方式：
+
+```text
+SUPERADMIN 通过 Django Admin 创建
+或
+经受控的教师账号导入 / management command 创建
+```
+
+教师账号基础信息可以包括：
+
+```text
+工号
+姓名（系统真实姓名）
+公开姓名
+学院 / 部门
+职称
+头像
+公开邮箱（可选）
+办公地点（可选）
+研究方向（可选）
+```
+
+教师登录仍使用统一登录页，不开发独立“教师登录页”。
+
+教师可以：
+
+- 浏览全部公开内容
+- 使用全站搜索
+- 查看通知与个人资料
+- 使用自己被授予的组织指导老师身份
+- 在被授予 OPERATOR 时进入平台运营中心
+
+V0.1 面向学生的参与型操作，如组队申请、组织招新申请和学生活动报名，默认仅对 STUDENT 开放；如果未来存在教师报名或教师组队需求，应单独评审业务字段后再开放，不能只放宽前端按钮。
 
 ---
 
@@ -238,8 +288,9 @@ V0.1 中：
 
 主要用途：
 
-- 个人资料展示所属组织
-- 为后续组织功能预留关系模型
+- 展示所属组织
+- 表达真实组织关系
+- 为后续组织能力预留关系模型
 
 例如：
 
@@ -247,7 +298,7 @@ V0.1 中：
 人工智能协会 · 技术部成员
 ```
 
-其平台能力与普通学生基本一致。
+其平台能力取决于用户本身的 `identity_type` 与 `platform_role`。
 
 ---
 
@@ -259,17 +310,19 @@ V0.1 中：
 OrganizationMembership.role = LEADER
 ```
 
+`LEADER` 表示对应组织的学生负责人 / 日常负责人。
+
 权限作用范围仅限对应组织。
 
 例如：
 
 ```text
 张三
+identity_type = STUDENT
+
 AI协会 -> LEADER
 机器人协会 -> 无身份
 ```
-
-张三可以管理 AI 协会相关内容，但不能管理机器人协会。
 
 V0.1 可以：
 
@@ -280,7 +333,13 @@ V0.1 可以：
 - 查看自己组织的招新申请
 - 接受 / 拒绝申请
 
-负责人从“社团组织 -> 我的组织 -> 进入管理”进入指定组织的工作台，不在学生端一级导航或个人中心中放置全局组织管理入口。
+负责人从：
+
+```text
+社团组织 -> 我的组织 -> 进入管理
+```
+
+进入指定组织工作台。
 
 V0.1 不可以：
 
@@ -293,6 +352,59 @@ V0.1 不可以：
 - 创建复杂内部部门
 
 ---
+
+## 组织指导老师
+
+定义：
+
+```text
+OrganizationMembership.role = ADVISOR
+```
+
+并且：
+
+```text
+对应 User.identity_type 必须为 TEACHER
+```
+
+`ADVISOR` 是**组织范围角色**，不是全平台角色。
+
+例如：
+
+```text
+李老师
+identity_type = TEACHER
+
+AI协会 -> ADVISOR
+机器人协会 -> 无身份
+```
+
+V0.1 中，`ADVISOR` 与 `LEADER` 在“当前组织”的管理能力保持基本一致：
+
+- 编辑当前组织公开资料
+- 发布 / 编辑 / 结束当前组织招新
+- 查看当前组织招新申请
+- 接受 / 拒绝当前组织申请
+
+这样 V0.1 不额外引入“学生负责人一审、指导老师二审”等复杂审批流。
+
+`ADVISOR` 不自动拥有：
+
+- OPERATOR
+- SUPERADMIN
+- 其他组织管理权限
+- 用户管理权限
+- 平台级竞赛 / 活动管理权限
+
+指导老师身份由 SUPERADMIN 分配 / 撤销。
+
+组织招新申请通过后只产生：
+
+```text
+MEMBER
+```
+
+不会自动产生 `LEADER` 或 `ADVISOR`.
 
 ## 平台运营人员
 
@@ -353,54 +465,152 @@ SUPERADMIN 的内部工作入口是 Django Admin `/admin/`，而不是额外开�
 
 # 权限模型
 
-平台级角色：
+平台权限采用三个互相独立的维度：
+
+## 用户身份（Identity）
 
 ```text
-STUDENT
-OPERATOR
-SUPERADMIN
+identity_type
+├─ STUDENT
+└─ TEACHER
 ```
 
-组织级身份：
+回答：
+
+> 这个账号代表学生还是教师？
+
+身份本身不等于管理权限。
+
+---
+
+## 平台权限（Platform Permission）
+
+数据库保存：
 
 ```text
-MEMBER
-LEADER
+platform_role
+├─ USER
+└─ OPERATOR
 ```
 
-展示职位：
+系统最高权限：
 
 ```text
-title
+is_superuser = true
+-> SUPERADMIN
 ```
+
+回答：
+
+> 这个用户在全平台能做什么？
+
+`OPERATOR` 负责日常公共内容运营。
+
+`SUPERADMIN` 负责系统级用户、角色与组织配置。
+
+---
+
+## 组织范围角色（Organization Scope）
+
+```text
+OrganizationMembership.role
+├─ MEMBER
+├─ LEADER
+└─ ADVISOR
+```
+
+含义：
+
+```text
+MEMBER   普通组织成员
+LEADER   组织学生负责人 / 日常负责人
+ADVISOR  组织指导老师（必须是 TEACHER）
+```
+
+`LEADER` 与 `ADVISOR` 都是资源范围权限，必须绑定具体 `organization_id`。
+
+---
+
+## 展示职位
+
+```text
+OrganizationMembership.title
+```
+
+只用于展示，不参与授权判断。
 
 例如：
 
 ```text
-organization = 科创与就业部
+用户 A
+identity_type = STUDENT
+platform_role = USER
+
+AI协会
 role = LEADER
-title = 部长
+title = 会长
 ```
 
-权限判断必须包含资源范围。
+```text
+用户 B
+identity_type = TEACHER
+platform_role = USER
+
+AI协会
+role = ADVISOR
+title = 指导老师
+```
+
+```text
+用户 C
+identity_type = TEACHER
+platform_role = OPERATOR
+
+AI协会
+role = ADVISOR
+title = 指导老师
+```
+
+用户 C 同时拥有：
+
+```text
+平台运营权限
++
+AI协会指导老师权限
+```
+
+两种权限互不替代。
+
+---
+
+## 权限判断
 
 正确：
 
 ```text
-该用户是否是当前 organization 的 LEADER？
+该用户是否是当前 organization 的 LEADER 或 ADVISOR？
 ```
 
 错误：
 
 ```text
-该用户是不是某个组织的 LEADER？
+这个用户是不是在某个组织当过负责人 / 指导老师？
 ```
+
+后端必须按当前资源的 `organization_id` 检查。
 
 后台权限永远由服务端验证。
 
 前端隐藏按钮只负责用户体验，不构成安全授权。
 
----
+现实职位不自动映射系统高权限：
+
+```text
+部长 != SUPERADMIN
+会长 != SUPERADMIN
+指导老师 != SUPERADMIN
+教师 != OPERATOR
+```
 
 # V0.1 核心导航
 
@@ -855,7 +1065,7 @@ Banner（可选）
 当前招新
 ```
 
-负责人看到：
+当前用户在该组织为 `LEADER` 或 `ADVISOR` 时看到：
 
 ```text
 管理组织
@@ -916,7 +1126,7 @@ Banner（可选）
 
 # 组织管理 V0.1
 
-组织负责人管理中心只做：
+组织 `LEADER / ADVISOR` 共用同一组织管理中心，V0.1 只做：
 
 ```text
 组织资料
@@ -1444,6 +1654,8 @@ V0.1 必须覆盖：
 
 ```text
 用户基础系统
+学生 / 教师身份
+指导老师组织身份
 首页
 全站搜索
 基础消息
@@ -1462,7 +1674,7 @@ V0.1 必须覆盖：
 组织主页
 组织招新
 招新申请
-组织负责人管理
+组织负责人 / 指导老师管理
 
 校园动态（活动与公告）
 活动详情
@@ -1552,6 +1764,61 @@ docs/backend/database-design.md
 
 为准。
 
+## 教师账号与指导老师授权
+
+V0.1 冻结：
+
+```text
+学生：
+可使用学生自助注册流程
+
+教师：
+不走学生注册页
+由 SUPERADMIN 在 Django Admin 创建 / 导入
+```
+
+统一登录入口接受：
+
+```text
+用户名 / 学号 / 工号
++
+密码
+```
+
+账号模型：
+
+```text
+identity_type = STUDENT | TEACHER
+platform_role = USER | OPERATOR
+is_superuser = true -> SUPERADMIN
+```
+
+指导老师：
+
+```text
+OrganizationMembership.role = ADVISOR
+```
+
+并且对应账号必须：
+
+```text
+identity_type = TEACHER
+```
+
+`ADVISOR` 与 `LEADER` 都只能管理对应 `organization_id`。
+
+只有 SUPERADMIN 可以直接授予 / 撤销：
+
+```text
+LEADER
+ADVISOR
+OPERATOR
+```
+
+教师身份本身不赋予任何管理权限。
+
+---
+
 ## 未登录操作
 
 公开信息保持可浏览。
@@ -1621,7 +1888,7 @@ FAQ 回答
 
 ## 招新通过后的组织身份
 
-组织负责人接受 RecruitmentApplication 后：
+当前组织的 `LEADER / ADVISOR` 接受 RecruitmentApplication 后：
 
 ```text
 申请 -> ACCEPTED
@@ -1636,6 +1903,7 @@ role = MEMBER
 
 ```text
 LEADER
+ADVISOR
 ```
 
 ---

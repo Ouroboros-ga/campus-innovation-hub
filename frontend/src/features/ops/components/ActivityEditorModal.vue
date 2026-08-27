@@ -3,18 +3,28 @@ import { computed, ref, watch } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 
 import {
-  addActivity,
-  addAnnouncement,
-  updateActivity,
   validateActivity,
   type ActivityEditorDraft
 } from '../lib/opsStore'
+import {
+  createActivity,
+  createActivityWithAnnouncement,
+  publishActivity,
+  updateActivity as apiUpdateActivity
+} from '../api/opsActivityApi'
+import { AppError } from '@/shared/http/types'
 import { activityTypeOptions } from '@/features/dynamics/lib/dynamicsFilters'
+import ContentEditorShell from '@/shared/components/editor/ContentEditorShell.vue'
+import CoverUpload from '@/shared/components/upload/CoverUpload.vue'
+import FormSection from '@/shared/components/form/FormSection.vue'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
+import RichContent from '@/shared/components/reader/RichContent.vue'
 import type { DynamicsActivity } from '@/features/dynamics/types'
-import type { ActivityType } from '@/shared/types/homepage'
+import type { ActivityType, MediaImage } from '@/shared/types/homepage'
 
-/** 活动编辑 / 发布（FE-090 /ops/activities）。 */
+/** 活动编辑 / 发布（FE-090 /ops/activities）。
+ *  结构化字段分组 + 正文所见即所得 + 实时预览（桌面双栏 / 移动 编辑↔预览），封面走媒体上传。
+ */
 const props = defineProps<{
   open: boolean
   activity?: DynamicsActivity | null
@@ -34,7 +44,9 @@ const registrationRequired = ref(false)
 const registrationEndAt = ref('')
 const capacity = ref<number | null>(null)
 const descriptionMd = ref('')
+const cover = ref<MediaImage | null>(null)
 const errors = ref<Record<string, string>>({})
+const submitting = ref(false)
 
 const isEdit = computed(() => Boolean(props.activity))
 
@@ -53,6 +65,7 @@ watch(
     registrationEndAt.value = activity?.registrationEndAt?.slice(0, 16) ?? ''
     capacity.value = activity?.capacity ?? null
     descriptionMd.value = activity?.descriptionMd ?? ''
+    cover.value = activity?.cover ? { id: null, src: activity.cover.src, alt: activity.cover.alt } : null
     errors.value = {}
   }
 )
@@ -61,7 +74,28 @@ function close() {
   emit('update:open', false)
 }
 
-function save() {
+/** 后端字段错误 key（蛇形）→ 前端 errors key（驼峰）。 */
+const FIELD_MAP: Record<string, string> = {
+  title: 'title',
+  start_at: 'startAt',
+  description_md: 'descriptionMd',
+  registration_required: 'registrationRequired',
+  registration_end_at: 'registrationEndAt',
+  capacity: 'capacity',
+  location: 'location',
+  organizer_name: 'organizerName',
+  cover_asset_id: 'cover'
+}
+
+function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const [key, value] of Object.entries(fieldErrors)) {
+    result[FIELD_MAP[key] ?? key] = value
+  }
+  return result
+}
+
+async function save() {
   const draft: ActivityEditorDraft = {
     title: title.value,
     activityType: activityType.value,
@@ -72,44 +106,64 @@ function save() {
     registrationRequired: registrationRequired.value,
     registrationEndAt: registrationEndAt.value,
     capacity: capacity.value,
-    descriptionMd: descriptionMd.value
+    descriptionMd: descriptionMd.value,
+    cover: cover.value
   }
   const formErrors = validateActivity(draft)
   errors.value = formErrors
   if (Object.keys(formErrors).length > 0) return
 
-  let created: DynamicsActivity | null = null
-  if (isEdit.value && props.activity) {
-    updateActivity(props.activity.id, draft)
-  } else {
-    created = addActivity(draft)
-  }
-
-  if (created && props.syncAnnouncement) {
-    addAnnouncement({
-      title: `${title.value.trim()} 报名开启`,
-      publisherScope: 'ACADEMY',
-      bodyMd: `「${title.value.trim()}」活动详情与报名方式见活动页。`,
-      linkedObject: { kind: 'ACTIVITY', label: title.value.trim(), to: created.detailPath },
-      externalUrl: ''
+  submitting.value = true
+  try {
+    const coverAssetId = cover.value?.id ?? null
+    if (isEdit.value && props.activity) {
+      await apiUpdateActivity(props.activity.id, draft, coverAssetId)
+    } else if (props.syncAnnouncement) {
+      await createActivityWithAnnouncement(
+        draft,
+        coverAssetId,
+        {
+          title: `${draft.title.trim()} 报名开启`,
+          publisherScope: 'ACADEMY',
+          bodyMd: `「${draft.title.trim()}」活动详情与报名方式见活动页。`,
+          externalUrl: ''
+        },
+        true
+      )
+    } else {
+      const id = await createActivity(draft, coverAssetId)
+      await publishActivity(id)
+    }
+    toast.add({
+      title: isEdit.value ? '已更新活动' : '已发布活动',
+      description: props.syncAnnouncement ? '活动与关联公告已同步发布。' : '已保存到服务器。',
+      color: 'success',
+      icon: 'i-lucide-check-circle'
     })
+    close()
+    emit('saved')
+  } catch (err) {
+    if (err instanceof AppError && err.fieldErrors) {
+      errors.value = { ...errors.value, ...mapFieldErrors(err.fieldErrors) }
+    } else {
+      const message = err instanceof AppError ? err.message : '保存失败，请稍后重试。'
+      toast.add({
+        title: '保存失败',
+        description: message,
+        color: 'error',
+        icon: 'i-lucide-alert-circle'
+      })
+    }
+  } finally {
+    submitting.value = false
   }
-
-  toast.add({
-    title: isEdit.value ? '已更新活动' : '已发布活动',
-    description: props.syncAnnouncement ? '活动与关联公告已同步发布。' : '已保存（mock）。',
-    color: 'success',
-    icon: 'i-lucide-check-circle'
-  })
-  close()
-  emit('saved')
 }
 </script>
 
 <template>
   <UModal
     :open="props.open"
-    :ui="{ content: 'max-w-2xl' }"
+    :ui="{ content: 'max-w-5xl' }"
     @update:open="close"
   >
     <template #header>
@@ -120,97 +174,148 @@ function save() {
 
     <template #content>
       <form
-        class="space-y-4"
+        class="space-y-6"
         novalidate
         @submit.prevent="save"
       >
-        <UFormField
-          label="活动名称"
-          name="title"
-          required
-          :error="errors.title"
-        >
-          <UInput
-            v-model="title"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField label="活动类型">
-          <USelect
-            v-model="activityType"
-            :items="activityTypeOptions"
-            class="w-full"
-          />
-        </UFormField>
-
-        <div class="grid gap-4 sm:grid-cols-2">
-          <UFormField
-            label="开始时间"
-            name="startAt"
-            required
-            :error="errors.startAt"
-          >
-            <UInput
-              v-model="startAt"
-              type="datetime-local"
-              class="w-full"
+        <ContentEditorShell preview-title="活动预览">
+          <template #form>
+            <CoverUpload
+              v-model="cover"
+              label="活动封面（选填）"
             />
-          </UFormField>
-          <UFormField label="结束时间">
-            <UInput
-              v-model="endAt"
-              type="datetime-local"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
 
-        <div class="grid gap-4 sm:grid-cols-2">
-          <UFormField label="地点">
-            <UInput
-              v-model="location"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField label="主办组织">
-            <UInput
-              v-model="organizerName"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
+            <FormSection
+              title="基本信息"
+              description="名称、类型与封面"
+            >
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField
+                  label="活动名称"
+                  name="title"
+                  required
+                  :error="errors.title"
+                >
+                  <UInput
+                    v-model="title"
+                    class="w-full"
+                  />
+                </UFormField>
 
-        <UFormField label="需要报名">
-          <UCheckbox
-            v-model="registrationRequired"
-            :label="registrationRequired ? '需要报名' : '无需报名'"
-          />
-        </UFormField>
+                <UFormField label="活动类型">
+                  <USelect
+                    v-model="activityType"
+                    :items="activityTypeOptions"
+                    class="w-full"
+                  />
+                </UFormField>
+              </div>
+            </FormSection>
 
-        <div class="grid gap-4 sm:grid-cols-2">
-          <UFormField label="报名截止">
-            <UInput
-              v-model="registrationEndAt"
-              type="datetime-local"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField label="人数限制（选填）">
-            <UInputNumber
-              v-model="capacity"
-              :min="1"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
+            <FormSection
+              title="时间与地点"
+              description="活动起止时间与地点"
+            >
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField
+                  label="开始时间"
+                  name="startAt"
+                  required
+                  :error="errors.startAt"
+                >
+                  <UInput
+                    v-model="startAt"
+                    type="datetime-local"
+                    class="w-full"
+                  />
+                </UFormField>
+                <UFormField label="结束时间">
+                  <UInput
+                    v-model="endAt"
+                    type="datetime-local"
+                    class="w-full"
+                  />
+                </UFormField>
+              </div>
 
-        <UFormField label="活动介绍">
-          <MarkdownEditor
-            v-model="descriptionMd"
-            :height="260"
-          />
-        </UFormField>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField label="地点">
+                  <UInput
+                    v-model="location"
+                    class="w-full"
+                  />
+                </UFormField>
+                <UFormField label="主办组织">
+                  <UInput
+                    v-model="organizerName"
+                    class="w-full"
+                  />
+                </UFormField>
+              </div>
+            </FormSection>
+
+            <FormSection
+              title="报名与人数"
+              description="报名控制与容量"
+            >
+              <UFormField label="需要报名">
+                <UCheckbox
+                  v-model="registrationRequired"
+                  :label="registrationRequired ? '需要报名' : '无需报名'"
+                />
+              </UFormField>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField label="报名截止">
+                  <UInput
+                    v-model="registrationEndAt"
+                    type="datetime-local"
+                    class="w-full"
+                  />
+                </UFormField>
+                <UFormField label="人数限制（选填）">
+                  <UInputNumber
+                    v-model="capacity"
+                    :min="1"
+                    class="w-full"
+                  />
+                </UFormField>
+              </div>
+            </FormSection>
+
+            <FormSection
+              title="活动介绍"
+              description="使用 Markdown 编辑，右侧/预览页实时查看渲染效果"
+            >
+              <UFormField
+                name="descriptionMd"
+                :error="errors.descriptionMd"
+              >
+                <MarkdownEditor
+                  v-model="descriptionMd"
+                  :height="280"
+                />
+              </UFormField>
+            </FormSection>
+          </template>
+
+          <template #preview>
+            <div
+              v-if="cover?.src"
+              class="mb-4 aspect-video overflow-hidden rounded-surface border border-default"
+            >
+              <img
+                :src="cover.src"
+                :alt="cover.alt"
+                class="h-full w-full object-cover"
+              >
+            </div>
+            <h3 class="text-lg font-semibold text-highlighted">
+              {{ title || '活动标题' }}
+            </h3>
+            <RichContent :content="descriptionMd" />
+          </template>
+        </ContentEditorShell>
       </form>
     </template>
 
@@ -227,6 +332,7 @@ function save() {
           color="primary"
           variant="solid"
           icon="i-lucide-save"
+          :loading="submitting"
           @click="save"
         >
           保存

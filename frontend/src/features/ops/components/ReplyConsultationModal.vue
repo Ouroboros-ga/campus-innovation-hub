@@ -4,9 +4,11 @@ import { useToast } from '@nuxt/ui/composables'
 
 import { replyQuestion, validateReply } from '../lib/opsStore'
 import type { ConsultQaPost } from '@/features/consultation/types'
+import ContentEditorShell from '@/shared/components/editor/ContentEditorShell.vue'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
+import RichContent from '@/shared/components/reader/RichContent.vue'
 
-/** 回复咨询（FE-090 /ops/questions）。 */
+/** 回复咨询（FE-090 /ops/questions）。回复正文所见即所得 + 实时预览。 */
 const props = defineProps<{ open: boolean; question: ConsultQaPost | null }>()
 const emit = defineEmits<{ 'update:open': [open: boolean]; saved: [] }>()
 const toast = useToast()
@@ -49,7 +51,7 @@ function save() {
 <template>
   <UModal
     :open="props.open"
-    :ui="{ content: 'max-w-lg' }"
+    :ui="{ content: 'max-w-4xl' }"
     @update:open="close"
   >
     <template #header>
@@ -59,21 +61,27 @@ function save() {
     </template>
 
     <template #content>
-      <div class="space-y-4">
-        <p class="rounded-surface border border-default bg-default p-3 text-sm text-toned">
-          {{ props.question?.question }}
-        </p>
+      <ContentEditorShell preview-title="回复预览">
+        <template #form>
+          <p class="rounded-surface border border-default bg-default p-3 text-sm text-toned">
+            {{ props.question?.question }}
+          </p>
 
-        <UFormField
-          label="回复内容"
-          :error="error"
-        >
-          <MarkdownEditor
-            v-model="answer"
-            :height="240"
-          />
-        </UFormField>
-      </div>
+          <UFormField
+            label="回复内容"
+            :error="error"
+          >
+            <MarkdownEditor
+              v-model="answer"
+              :height="240"
+            />
+          </UFormField>
+        </template>
+
+        <template #preview>
+          <RichContent :content="answer || '（尚未填写回复内容）' " />
+        </template>
+      </ContentEditorShell>
     </template>
 
     <template #footer>

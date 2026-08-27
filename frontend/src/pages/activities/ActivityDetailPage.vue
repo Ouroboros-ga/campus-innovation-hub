@@ -9,7 +9,9 @@ import {
   registrationStateLabel
 } from '@/shared/lib/domain-labels'
 
+import ActivityEditorModal from '@/features/ops/components/ActivityEditorModal.vue'
 import DynamicsDetailSection from '@/features/dynamics/components/DynamicsDetailSection.vue'
+import { useAuthStore } from '@/stores/auth'
 import {
   getActivity,
   listAnnouncements
@@ -31,6 +33,7 @@ import RichContent from '@/shared/components/reader/RichContent.vue'
  * Phone 使用 Detail Shell，仅在「可报名」时显示安全区兼容的 Sticky Mobile Action。
  */
 const route = useRoute()
+const auth = useAuthStore()
 
 const id = computed(() => String(route.params.activityId ?? ''))
 const activity = ref<DynamicsActivity | null>(null)
@@ -38,6 +41,10 @@ const loading = ref(true)
 const error = ref(false)
 const announcements = ref<DynamicsAnnouncement[]>([])
 const now = computed(() => new Date())
+
+/** 仅具备平台内容管理权限（operator / superadmin）时显示编辑入口（UX 判断，后端为权威）。 */
+const canEdit = computed(() => auth.isOperator)
+const editorOpen = ref(false)
 
 async function load() {
   loading.value = true
@@ -154,6 +161,18 @@ const relatedAnnouncements = computed(() =>
           >
             {{ registrationStateLabel[state] }}
           </UBadge>
+
+          <UButton
+            v-if="canEdit"
+            size="sm"
+            color="neutral"
+            variant="soft"
+            icon="i-lucide-pencil"
+            class="ml-auto"
+            @click="editorOpen = true"
+          >
+            编辑
+          </UButton>
         </div>
 
         <h1 class="mt-3 text-2xl font-semibold leading-snug text-highlighted">
@@ -328,5 +347,12 @@ const relatedAnnouncements = computed(() =>
         </UButton>
       </div>
     </div>
+
+    <ActivityEditorModal
+      :open="editorOpen"
+      :activity="activity"
+      @update:open="editorOpen = $event"
+      @saved="load"
+    />
   </section>
 </template>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 
 import PublishDynamicsModal from '@/features/ops/components/PublishDynamicsModal.vue'
 import ActivityEditorModal from '@/features/ops/components/ActivityEditorModal.vue'
 import AnnouncementEditorModal from '@/features/ops/components/AnnouncementEditorModal.vue'
+import { listActivities } from '@/features/ops/api/opsActivityApi'
 import {
   activityStatusOptions,
   activityTypeOptions,
@@ -21,7 +22,7 @@ import {
   publisherScopeLabel
 } from '@/features/dynamics/lib/dynamicsLabels'
 import { activityTypeLabel } from '@/shared/lib/domain-labels'
-import { opsActivities, opsAnnouncements } from '@/features/ops/lib/opsStore'
+import { opsAnnouncements } from '@/features/ops/lib/opsStore'
 import type { DynamicsActivity } from '@/features/dynamics/types'
 import { formatDateTimeCompact } from '@/shared/lib/date'
 
@@ -42,9 +43,31 @@ const editingActivity = ref<DynamicsActivity | null>(null)
 const syncAnnouncement = ref(false)
 const announcementEditorOpen = ref(false)
 
+const activities = ref<DynamicsActivity[]>([])
+const activitiesLoading = ref(false)
+const activitiesError = ref('')
+
+async function loadActivities() {
+  activitiesLoading.value = true
+  activitiesError.value = ''
+  try {
+    const result = await listActivities({
+      status: activityStatus.value === 'ALL' ? undefined : activityStatus.value,
+      activityType: activityType.value === 'ALL' ? undefined : activityType.value
+    })
+    activities.value = result.items
+  } catch {
+    activitiesError.value = '活动列表加载失败，请稍后重试。'
+  } finally {
+    activitiesLoading.value = false
+  }
+}
+
+onMounted(loadActivities)
+
 const activityRows = computed(() =>
   filterActivities(
-    opsActivities,
+    activities.value,
     { status: activityStatus.value as ActivityStatusFilter, type: activityType.value as ActivityTypeFilter },
     now.value
   )
@@ -153,8 +176,20 @@ const tabs = [
         />
       </div>
 
+      <p
+        v-if="activitiesLoading"
+        class="text-sm text-muted"
+      >
+        正在加载活动…
+      </p>
+      <p
+        v-else-if="activitiesError"
+        class="text-sm text-danger-600 dark:text-danger-400"
+      >
+        {{ activitiesError }}
+      </p>
       <ul
-        v-if="activityRows.length"
+        v-else-if="activityRows.length"
         class="space-y-3"
       >
         <li
@@ -314,6 +349,7 @@ const tabs = [
       :activity="editingActivity"
       :sync-announcement="syncAnnouncement"
       @update:open="activityEditorOpen = $event"
+      @saved="loadActivities"
     />
     <AnnouncementEditorModal
       :open="announcementEditorOpen"

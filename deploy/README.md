@@ -43,3 +43,40 @@ Internet -> Nginx :80/:443 -> Gunicorn 127.0.0.1:8000 -> PostgreSQL 内网或 lo
 - development settings 只允许 `http://localhost:<port>` 与 `http://127.0.0.1:<port>` 作为 `DJANGO_CSRF_TRUSTED_ORIGINS`。浏览器仍始终访问 Vite 的同源 `/api`，不需要 CORS。
 
 该阶段的成功标准仅是服务器 loopback `/api/health`、`/api/ready` 与本机 SSH 隧道 health 均可用。媒体公开读取、Django Admin 静态资源、Nginx Header/TLS、对象存储和任何公网入口等待单独评审。
+
+#### 4.1 仅 loopback 的内部 Nginx 校验层（可选）
+
+不改变 4.0 的 SSH 隧道开发路径。在获得域名 / TLS 证书前，如需在"生产形状"的请求链上验证静态资源、`/api` 反代、`/media` 与安全头，可部署只监听 `127.0.0.1:8080` 的 loopback Nginx：
+
+```text
+浏览器可选 -> loopback Nginx 127.0.0.1:8080 -> Gunicorn 127.0.0.1:8000
+             （serve SPA dist、/api 反代、/media、安全头；不开放公网端口）
+```
+
+- 安装 `deploy/nginx/campus-innovation-hub-loopback.conf`，不渲染、不加载生产 TLS 模板，不做 80/443 监听；
+- 安装 `deploy/nginx/proxy-headers.conf` 到 `/etc/nginx/snippets/campus-proxy-headers.conf`；
+- 前置：服务器需有 build-time Node 22+ 与 pnpm，前端生产构建产物位于 `/opt/campus-innovation-hub-dev/current/frontend/dist`；
+- 先 `nginx -t` 通过，再 `systemctl enable nginx && systemctl restart nginx`；确认 `0.0.0.0:80/443` 未监听；
+- 边界：PostgreSQL / Gunicorn 仍仅 loopback；Django Admin `/static` 与 `collectstatic`、HTTPS、对象存储与任何公网入口仍等待生产 settings 与域名。
+
+#### 4.2 临时公网 HTTP 层（无域名 / 无 TLS，需单独授权）
+
+在获得域名 / TLS 证书前，如需对外临时展示，可启用只监听 `0.0.0.0:80` 的临时层（无 443 / 无 TLS，明文 HTTP）。该层与 4.1 的 loopback 校验层、4.0 的 SSH 隧道并行存在：
+
+```text
+Internet -> 临时 Nginx 0.0.0.0:80 -> 临时 Gunicorn 127.0.0.1:8001 -> PostgreSQL 127.0.0.1:5432
+```
+
+- 临时后端使用 `deploy/systemd/campus-innovation-hub-temp.service`，绑定 `127.0.0.1:8001`，env 为 `/etc/campus-innovation-hub/temporary.env`；
+- 需要临时 settings：`config.settings.temporary`（`backend/config/settings/temporary.py`）；`DJANGO_DEBUG=false`、关闭 SSL 重定向与 Secure Cookie、允许 HTTP origin——仅供临时展示，非生产配置；
+- 外部入口使用 `deploy/nginx/campus-innovation-hub-temp.conf`（模板，渲染 `__PUBLIC_IP__`）与 `deploy/nginx/campus-admin-allow.conf`（模板，渲染 `__ADMIN_IP__`）；
+- `/admin` 仅允许 `__ADMIN_IP__` 授信来源与 loopback；`/api/ready` 仅 loopback；`limit_req` 使用 `campus_temp_*` 独立 zone 名，避免与 loopback 站点冲突；
+- **一键重放**（在仓库根目录、本机可 SSH 到服务器时运行）：
+
+```bash
+./deploy/scripts/provision-temporary-public.sh --admin-ip <ADMIN_IP> [--public-ip <IP>] [--server root@<host>]
+```
+
+该脚本会：装配临时 settings → 生成 `temporary.env`（复用 dev 密钥）→ `collectstatic` → 安装/重启 temp 单元 → 渲染并安装临时 Nginx 站点与 admin 白名单 → `nginx -t` + reload → 健康检查。可安全重复执行（幂等）。
+
+- 边界：明文 HTTP，无 TLS；仅限临时展示，一旦灌入真实数据应即刻下线。生产公开暴露仍须域名 + TLS + production settings（见 §2、§3）。

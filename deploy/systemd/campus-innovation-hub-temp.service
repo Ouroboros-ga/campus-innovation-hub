@@ -1,0 +1,32 @@
+# 临时公网 HTTP 后端（无域名 / 无 TLS）。仅供无域名窗口期的临时展示。
+# 由 deploy/scripts/provision-temporary-public.sh 安装并托管。
+# 说明：gunicorn 绑定 127.0.0.1:8001，仅由外部 Nginx(0.0.0.0:80) 反向代理，不直接监听公网。
+[Unit]
+Description=Campus Innovation Hub TEMPORARY public HTTP backend (no TLS, loopback bind only)
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=exec
+User=campus-hub
+Group=campus-hub
+WorkingDirectory=/opt/campus-innovation-hub-dev/current/backend
+EnvironmentFile=/etc/campus-innovation-hub/temporary.env
+Environment=PYTHONUNBUFFERED=1
+RuntimeDirectory=campus-innovation-hub-temp
+RuntimeDirectoryMode=0750
+ExecStart=/opt/campus-innovation-hub-dev/current/backend/.venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8001 --workers 2 --timeout 30 --graceful-timeout 30 --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile -
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=35s
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/campus-innovation-hub-dev
+
+[Install]
+WantedBy=multi-user.target

@@ -1,5 +1,6 @@
 import ui from '@nuxt/ui/vue-plugin'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
@@ -45,7 +46,7 @@ async function mountPage(activityId: string) {
   const wrapper = mount(ActivityDetailPage, {
     attachTo: document.body,
     global: {
-      plugins: [router, ui]
+      plugins: [router, ui, createPinia()]
     }
   })
   mounted.push(wrapper)

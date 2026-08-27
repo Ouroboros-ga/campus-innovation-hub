@@ -1,11 +1,17 @@
 import ui from '@nuxt/ui/vue-plugin'
 import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import OpsShell from '@/features/ops/components/OpsShell.vue'
 import OpsOverviewPage from '@/pages/ops/OpsOverviewPage.vue'
 import OpsActivitiesPage from '@/pages/ops/OpsActivitiesPage.vue'
+import { listActivities } from '@/features/ops/api/opsActivityApi'
+import { dynamicsActivities } from '@/mocks/fixtures/dynamics'
+
+vi.mock('@/features/ops/api/opsActivityApi', () => ({
+  listActivities: vi.fn()
+}))
 
 const mounted: ReturnType<typeof mount>[] = []
 
@@ -60,7 +66,14 @@ describe('FE-090 平台运营外壳', () => {
   })
 
   it('校园动态管理：活动/公告独立 tab + 发布动态', async () => {
+    vi.mocked(listActivities).mockResolvedValue({
+      items: dynamicsActivities,
+      total: dynamicsActivities.length,
+      page: 1
+    })
+
     const wrapper = await mountComponent(OpsActivitiesPage, '/ops/activities', '/ops/activities')
+    await flushPromises()
 
     expect(wrapper.text()).toContain('发布动态')
     expect(wrapper.text()).toContain('AI 前沿技术分享会（第 4 期）')

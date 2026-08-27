@@ -542,14 +542,31 @@ AbstractUser
 
 但从项目第一条 Migration 就使用自定义 User，不要上线后再切换。
 
+`identity_type` 与 `platform_role` 是两个不同维度：
+
+```text
+identity_type:
+  STUDENT
+  TEACHER
+
+platform_role:
+  USER
+  OPERATOR
+
+is_superuser:
+  true -> SUPERADMIN
+```
+
 | 字段 | 类型 | Null | 约束 / 说明 | 隐私 |
 |---|---|---:|---|---|
 | `id` | uuid | 否 | PK | INTERNAL |
 | `username` | varchar(150) | 否 | unique | INTERNAL |
-| `student_no` | varchar(32) | 是 | unique when not null | SENSITIVE |
-| `real_name` | varchar(80) | 否 | 注册学生必填 | SENSITIVE |
-| `email` | varchar(254) | 是 | 可选 | SENSITIVE |
-| `platform_role` | varchar(20) | 否 | `STUDENT` / `OPERATOR` | INTERNAL |
+| `identity_type` | varchar(20) | 否 | STUDENT / TEACHER | INTERNAL |
+| `student_no` | varchar(32) | 是 | unique when not null；STUDENT 必填 | SENSITIVE |
+| `employee_no` | varchar(32) | 是 | unique when not null；TEACHER 必填 | SENSITIVE |
+| `real_name` | varchar(80) | 否 | | SENSITIVE |
+| `email` | varchar(254) | 是 | 账号联系邮箱，可选 | SENSITIVE |
+| `platform_role` | varchar(20) | 否 | USER / OPERATOR | INTERNAL |
 | `is_active` | bool | 否 | Django 标准字段 | INTERNAL |
 | `is_staff` | bool | 否 | Django Admin 访问，不等于 OPERATOR | INTERNAL |
 | `is_superuser` | bool | 否 | SUPERADMIN 唯一事实来源 | INTERNAL |
@@ -557,43 +574,102 @@ AbstractUser
 | `last_login` | timestamptz | 是 | Django | INTERNAL |
 | `date_joined` | timestamptz | 否 | Django | INTERNAL |
 
-### 有效平台角色
+### Check Constraints
+
+身份与机构编号必须一致：
+
+```text
+(identity_type = 'STUDENT'
+ AND student_no IS NOT NULL
+ AND employee_no IS NULL)
+
+OR
+
+(identity_type = 'TEACHER'
+ AND employee_no IS NOT NULL
+ AND student_no IS NULL)
+```
+
+禁止普通业务接口修改：
+
+```text
+identity_type
+student_no
+employee_no
+platform_role
+is_staff
+is_superuser
+```
+
+这些字段由受控后台流程维护。
+
+### 有效平台权限
 
 API 层计算：
 
 ```text
+identity = identity_type
+
 if is_superuser:
-    SUPERADMIN
+    effective_platform_permission = SUPERADMIN
 else:
-    platform_role
+    effective_platform_permission = platform_role  # USER / OPERATOR
 ```
 
-数据库不再同时存：
+不要再使用：
 
 ```text
-platform_role = SUPERADMIN
-+
-is_superuser = true
+platform_role = STUDENT
 ```
 
-避免双重事实来源。
+因为 STUDENT / TEACHER 是身份，而 USER / OPERATOR 是平台权限。
 
 ### 索引
 
 ```text
 unique(username)
 unique(student_no) WHERE student_no IS NOT NULL
+unique(employee_no) WHERE employee_no IS NOT NULL
+index(identity_type, is_active)
 index(platform_role, is_active)
 ```
 
+### 账号创建规则
+
+学生：
+
+```text
+学生注册流程
+-> identity_type = STUDENT
+-> student_no required
+```
+
+教师：
+
+```text
+V0.1 不允许在学生注册页自选 TEACHER
+SUPERADMIN 通过 Django Admin / 受控导入创建
+-> identity_type = TEACHER
+-> employee_no required
+```
+
+教师身份本身不自动获得：
+
+```text
+OPERATOR
+ADVISOR
+SUPERADMIN
+```
+
+OPERATOR 不自动拥有 Django Admin 权限。
+
 ### 规则
 
-- 学生注册必须提供 `student_no` 和 `real_name`；
-- 自助注册时 `username = student_no`，创建 `platform_role = STUDENT`、`is_active = false` 的 User，并在同一事务创建 UserProfile；
+- 学生注册必须提供 `student_no` 和 `real_name`；自助注册时 `username = student_no`，创建 `identity_type = STUDENT`、`platform_role = USER`、`is_active = false` 的 User，并在同一事务创建 UserProfile；
+- 教师账号不得使用学生自助注册页创建；仅 SUPERADMIN 通过 Django Admin / 受控导入创建 `identity_type = TEACHER` 账号；
 - `is_active = false` 表示账号不可登录，可能是待审核或被停用；公开认证错误不得区分两种内部原因；
 - 仅 Django Admin 中的 SUPERADMIN 启用待审核账号；V0.1 不建立注册审核表、学生名单校验、学校统一认证或自助密码重置；
-- 系统维护账号可以 `student_no = null`；
-- OPERATOR 不自动拥有 Django Admin 权限；
+- 系统维护账号可以 `student_no = null`、`employee_no = null`；
 - 禁用账号不删除历史业务数据。
 - 账号注销采用“用户申请 → SUPERADMIN 确认 → `is_active=false` → 最小匿名化”流程，不做 `DELETE CASCADE`：保留 User UUID 与关联业务历史，移除学号、真实姓名、账号名、密码、邮箱及 Profile 的直接身份字段；超级管理员不适用该批量流程。
 
@@ -631,17 +707,27 @@ index(blocked_until)
 
 ## 8.2 `accounts_user_profile`
 
+一张 Profile 表同时承载学生与教师的公开 / 辅助资料。
+
+身份专属字段允许为空，但 Serializer 必须按 `identity_type` 输出和校验。
+
 | 字段 | 类型 | Null | 约束 / 说明 | 隐私 |
 |---|---|---:|---|---|
 | `id` | uuid | 否 | PK | INTERNAL |
 | `user_id` | uuid | 否 | FK User, unique, PROTECT | INTERNAL |
-| `nickname` | varchar(40) | 是 | 公开显示 | PUBLIC |
+| `nickname` | varchar(40) | 是 | 学生常用公开显示名 | PUBLIC |
+| `public_name` | varchar(80) | 是 | TEACHER 正式公开姓名；成为 ADVISOR 前必填 | PUBLIC |
 | `avatar_asset_id` | uuid | 是 | FK MediaAsset, SET_NULL | PUBLIC |
-| `major` | varchar(80) | 是 | | PUBLIC |
-| `grade` | smallint | 是 | 1–4 | PUBLIC |
-| `class_name` | varchar(80) | 是 | 默认不公开 | SENSITIVE |
+| `major` | varchar(80) | 是 | STUDENT 常用 | PUBLIC |
+| `grade` | smallint | 是 | STUDENT；1–4 | PUBLIC |
+| `class_name` | varchar(80) | 是 | STUDENT；默认不公开 | SENSITIVE |
+| `department` | varchar(120) | 是 | TEACHER；学院 / 部门 | PUBLIC |
+| `academic_title` | varchar(80) | 是 | TEACHER；如教授 / 副教授 / 讲师 | PUBLIC |
+| `public_email` | varchar(254) | 是 | TEACHER 主动公开的邮箱 | PUBLIC |
+| `office_location` | varchar(160) | 是 | TEACHER 可选 | PUBLIC |
 | `bio` | varchar(500) | 是 | | PUBLIC |
-| `skills_json` | jsonb | 否 | string[]，默认 `[]` | PUBLIC |
+| `skills_json` | jsonb | 否 | STUDENT string[]，默认 `[]` | PUBLIC |
+| `research_interests_json` | jsonb | 否 | TEACHER string[]，默认 `[]` | PUBLIC |
 | `created_at` | timestamptz | 否 | | INTERNAL |
 | `updated_at` | timestamptz | 否 | | INTERNAL |
 
@@ -659,15 +745,44 @@ grade IS NULL OR grade BETWEEN 1 AND 4
 ["Python", "Vue", "数据分析"]
 ```
 
-V0.1 不建立 SkillTag 表。
+`research_interests_json`：
 
-Serializer 必须校验：
+```json
+["机器学习", "自然语言处理"]
+```
+
+V0.1 不建立 SkillTag / ResearchInterestTag 表。
+
+Serializer 必须校验两个数组：
 
 - 必须是数组；
 - 每项是字符串；
 - 单项 <= 40 字符；
 - 最多 20 项；
 - 去重后保存。
+
+### 身份字段输出
+
+STUDENT 优先使用：
+
+```text
+nickname
+major
+grade
+class_name
+skills_json
+```
+
+TEACHER 优先使用：
+
+```text
+public_name
+department
+academic_title
+public_email
+office_location
+research_interests_json
+```
 
 ---
 
@@ -765,13 +880,26 @@ avif（浏览器 / 处理链支持时）
 | `description_md` | text | 是 | <= 10000 chars |
 | `logo_asset_id` | uuid | 是 | SET_NULL |
 | `banner_asset_id` | uuid | 是 | SET_NULL |
-| `advisor_name` | varchar(100) | 是 | |
 | `public_contact` | varchar(200) | 是 | 仅正式公开联系方式 |
 | `is_active` | bool | 否 | default true |
 | `created_by_id` | uuid | 是 | SET_NULL |
 | `updated_by_id` | uuid | 是 | SET_NULL |
 | `created_at` | timestamptz | 否 | |
 | `updated_at` | timestamptz | 否 | |
+
+指导老师不再存：
+
+```text
+advisor_name
+```
+
+指导老师必须从：
+
+```text
+OrganizationMembership.role = ADVISOR
+```
+
+查询得到，避免“账号关系”和“文本姓名”形成双重事实来源。
 
 ### organization_type
 
@@ -792,7 +920,7 @@ index(organization_type, is_active)
 
 ### 删除
 
-不允许负责人删除组织。
+不允许组织负责人 / 指导老师删除组织。
 
 停用：
 
@@ -817,8 +945,8 @@ is_active = false
 | `id` | uuid | 否 | PK |
 | `organization_id` | uuid | 否 | FK Organization, PROTECT |
 | `user_id` | uuid | 否 | FK User, PROTECT |
-| `role` | varchar(20) | 否 | MEMBER / LEADER |
-| `title` | varchar(80) | 是 | 如“部长”“会长”“技术部干事” |
+| `role` | varchar(20) | 否 | MEMBER / LEADER / ADVISOR |
+| `title` | varchar(80) | 是 | 如“部长”“会长”“技术部干事”“指导老师” |
 | `is_active` | bool | 否 | |
 | `joined_at` | timestamptz | 否 | |
 | `left_at` | timestamptz | 是 | |
@@ -853,28 +981,79 @@ index(user_id, is_active)
 index(organization_id, role, is_active)
 ```
 
-### 权限
-
-V0.1：
+### 角色
 
 ```text
 MEMBER
+普通组织成员
+
 LEADER
+组织学生负责人 / 日常负责人
+
+ADVISOR
+组织指导老师
 ```
 
-只有：
+### ADVISOR 身份约束
+
+数据库普通 CheckConstraint 无法直接跨表检查 User.identity_type。
+
+因此必须由：
 
 ```text
-SUPERADMIN
+Service
+Django Admin validation
+Serializer validation
+Test
 ```
 
-可以直接授予 `LEADER`。
+共同保证：
 
-招聘申请通过只产生：
+```text
+role = ADVISOR
+=> user.identity_type = TEACHER
+=> user.profile.public_name IS NOT NULL
+```
+
+### 组织管理权限
+
+V0.1 定义：
+
+```text
+ORG_MANAGER(org)
+=
+active Membership
+AND role IN (LEADER, ADVISOR)
+AND membership.organization_id = current organization_id
+```
+
+`LEADER` 与 `ADVISOR` 对当前组织拥有相同的基础管理能力：
+
+- 编辑组织资料
+- 管理招新
+- 查看申请
+- 接受 / 拒绝申请
+
+不做 LEADER -> ADVISOR 二级审批链。
+
+### 授权
+
+只有 SUPERADMIN 可以直接授予 / 撤销：
+
+```text
+LEADER
+ADVISOR
+```
+
+招新申请通过只产生：
 
 ```text
 MEMBER
 ```
+
+不会产生 `LEADER` 或 `ADVISOR`。
+
+OPERATOR 不自动拥有任何组织管理身份。
 
 ---
 
@@ -1989,6 +2168,7 @@ V0.1 不使用 WebSocket。
 ```text
 授予 / 撤销 OPERATOR
 授予 / 撤销 LEADER
+授予 / 撤销 ADVISOR
 停用用户
 创建 / 停用组织
 发布 / 归档竞赛
@@ -2182,13 +2362,22 @@ ARCHIVED
 ## 用户
 
 ```text
-username       1–150
-student_no     2–32
-real_name      1–80
-nickname       <= 40
-bio            <= 500
-skills         <= 20 items
+username            1–150
+student_no          2–32（STUDENT）
+employee_no         2–32（TEACHER）
+real_name           1–80
+nickname            <= 40
+bio                 <= 500
+skills              <= 20 items
+research_interests  <= 20 items
+public_name         <= 80（ADVISOR 必填）
+department          <= 120
+academic_title      <= 80
+public_email        <= 254
+office_location     <= 160
 ```
+
+`student_no / employee_no` 与 `identity_type` 的必填关系见 §8.1。
 
 ## Competition
 

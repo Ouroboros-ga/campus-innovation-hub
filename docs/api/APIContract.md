@@ -112,35 +112,47 @@ HttpOnly secure session cookie
 - 所有 inactive 账号登录统一返回 `403 ACCOUNT_UNAVAILABLE`，不暴露待审核、停用或其他内部原因；
 - 禁止在 localStorage / sessionStorage / Pinia 持久化认证密钥。
 
-## 1.3 权限模型与标注
+## 1.3 身份、平台权限与组织权限
 
-权限来源（与 database-design.md §8.1、AGENTS.md 角色模型一致）：
+权限来源（与 database-design.md §8 / §10 一致）：
 
 ```text
-有效平台角色:
-  is_superuser=true                -> SUPERADMIN
-  else platform_role               -> STUDENT / OPERATOR
+用户身份:
+  identity_type = STUDENT | TEACHER
 
-组织作用域身份（严格限定 organization_id）:
-  Membership.role                 -> LEADER / MEMBER
+平台权限:
+  is_superuser = true -> SUPERADMIN
+  else platform_role  -> USER | OPERATOR
+
+组织作用域:
+  Membership.role -> MEMBER | LEADER | ADVISOR
 ```
 
-本文件端点标注使用以下标签：
+端点标注：
 
 ```text
-PUBLIC        游客可访问
-LOGIN         任意已登录用户
-OPERATOR      平台运营人员
-SUPERADMIN    超级管理员（is_superuser）
-LEADER(org)   指定组织的负责人
-MEMBER(org)   指定组织的成员
+PUBLIC            游客可访问
+LOGIN             任意已登录用户
+STUDENT           identity_type = STUDENT
+TEACHER           identity_type = TEACHER
+OPERATOR          platform_role = OPERATOR
+SUPERADMIN        is_superuser = true
+MEMBER(org)       当前组织有效 MEMBER
+LEADER(org)       当前组织有效 LEADER
+ADVISOR(org)      当前组织有效 ADVISOR，且 identity_type = TEACHER
+ORG_MANAGER(org)  当前组织 LEADER 或 ADVISOR
 ```
 
 规则：
 
+- 身份和权限可以叠加，但不能互相替代；
+- `TEACHER` 不自动获得 `OPERATOR`；
+- `OPERATOR` 不自动获得任何组织 `LEADER / ADVISOR`；
+- `ADVISOR(org)` 必须严格匹配当前 `organization_id`；
+- `ADVISOR` 只允许 TEACHER；
+- `SUPERADMIN` 通过 Django `is_superuser` 判断；
 - 前端隐藏按钮不是权限；后端必须对每个受保护端点验证权限；
-- OPERATOR 不自动拥有组织 LEADER 权限；
-- 无权限访问返回 `403`；涉及资源存在性隐藏时返回 `404`（如 PRIVATE 咨询）。
+- 无权限访问返回 `403`；涉及资源存在性隐藏时返回 `404`。
 
 ## 1.4 日期与时间
 
@@ -380,7 +392,7 @@ POST   /api/notifications/read-all                  全部已读
 POST   /api/media/upload                            图片上传
 ```
 
-## 2.4 组织管理域（LEADER(org) / SUPERADMIN）
+## 2.4 组织管理域（ORG_MANAGER(org) / SUPERADMIN）
 
 ```text
 GET    /api/manage/organizations/{orgId}/profile                 组织资料读取
@@ -519,17 +531,46 @@ POST /api/auth/register
 权限：PUBLIC
 ```
 
-Request body：
+V0.1 仅允许注册：
+
+```text
+identity_type = STUDENT
+```
+
+Request：
 
 ```json
 {
-  "student_no": "20240001",
+  "student_no": "20260001",
   "real_name": "张三",
-  "password": "***"
+  "password": "***",
+  "password_confirm": "***",
+  "major": "人工智能",
+  "grade": 1,
+  "class_name": "人工智能2601"
 }
 ```
 
-后端在一个事务内创建 `accounts.User` 与 `accounts.UserProfile`：`username` 固定等于 `student_no`，`platform_role=STUDENT`，`is_active=false`。注册成功不创建 Session。
+后端不得接受客户端提交：
+
+```text
+identity_type = TEACHER
+platform_role = OPERATOR
+is_staff
+is_superuser
+```
+
+教师账号不通过该端点创建。
+
+教师由 SUPERADMIN 使用 Django Admin 或受控导入 / management command 创建：
+
+```text
+identity_type = TEACHER
+employee_no required
+platform_role default USER
+```
+
+注册成功后的激活策略按项目当前认证配置执行；无论采用直接启用还是管理员审核，都不得允许用户自行把 STUDENT 升级为 TEACHER。
 
 Response `201`：
 
@@ -551,13 +592,35 @@ POST /api/auth/login
 权限：PUBLIC
 ```
 
-Request body：
+统一登录页允许用户输入：
+
+```text
+用户名 / 学号 / 工号
+```
+
+Request：
 
 ```json
 {
-  "username": "20240001",
+  "username": "20260001",
   "password": "***"
 }
+```
+
+教师示例：
+
+```json
+{
+  "username": "T20260018",
+  "password": "***"
+}
+```
+
+账号创建时建议默认：
+
+```text
+STUDENT username = student_no
+TEACHER username = employee_no
 ```
 
 Response `200`：登录成功，Set-Cookie session。Body 返回 `GET /api/auth/me` 结构。
@@ -582,40 +645,93 @@ GET /api/auth/me
 权限：LOGIN（未登录返回 401）
 ```
 
-Response `200`：
+STUDENT Response 示例：
 
 ```json
 {
   "user": {
     "id": "uuid",
-    "username": "20240001",
-    "student_no": "20240001",
+    "username": "20260001",
+    "identity_type": "STUDENT",
+    "student_no": "20260001",
+    "employee_no": null,
     "real_name": "张三",
-    "platform_role": "STUDENT",
+    "platform_role": "USER",
     "is_superuser": false,
     "profile": {
       "nickname": "阿三",
-      "avatar": null,
+      "avatar": { "id": "uuid", "url": "https://..." },
       "major": "人工智能",
-      "grade": 2,
+      "grade": 1,
       "bio": "",
       "skills": ["Python", "Vue"]
     }
   },
   "permissions": {
-    "platform_role": "STUDENT",
+    "identity_type": "STUDENT",
+    "platform_role": "USER",
+    "is_superuser": false,
     "organization_memberships": [
       {
         "organization_id": "uuid",
         "role": "LEADER",
-        "title": "部长"
+        "title": "会长",
+        "can_manage": true
       }
     ]
   }
 }
 ```
 
-字段映射：`accounts_user` + `accounts_user_profile` + `organizations_membership`（active）。`real_name` / `student_no` 为 SENSITIVE，仅本人可见。
+TEACHER Response 示例：
+
+```json
+{
+  "user": {
+    "id": "uuid",
+    "username": "T20260018",
+    "identity_type": "TEACHER",
+    "student_no": null,
+    "employee_no": "T20260018",
+    "real_name": "李明",
+    "platform_role": "USER",
+    "is_superuser": false,
+    "profile": {
+      "avatar": { "id": "uuid", "url": "https://..." },
+      "public_name": "李明",
+      "department": "人工智能学院",
+      "academic_title": "副教授",
+      "public_email": "liming@ai.edu.cn",
+      "office_location": "科教楼 3-218",
+      "bio": "……",
+      "research_interests": ["机器学习", "自然语言处理"]
+    }
+  },
+  "permissions": {
+    "identity_type": "TEACHER",
+    "platform_role": "USER",
+    "is_superuser": false,
+    "organization_memberships": [
+      {
+        "organization_id": "uuid",
+        "role": "ADVISOR",
+        "title": "指导老师",
+        "can_manage": true
+      }
+    ]
+  }
+}
+```
+
+字段映射：
+
+```text
+accounts_user
+accounts_user_profile
+organizations_membership(active)
+```
+
+`real_name`、`student_no`、`employee_no` 为 SENSITIVE，仅本人 / 必要管理员可见。
 
 ## 3.2 个人中心（Me）
 
@@ -638,7 +754,9 @@ PATCH /api/me/profile
 权限：LOGIN
 ```
 
-PATCH 可更新（仅 PUBLIC / INTERNAL 字段）：
+Response 根据 `identity_type` 返回对应字段。
+
+STUDENT 可更新：
 
 ```json
 {
@@ -651,22 +769,48 @@ PATCH 可更新（仅 PUBLIC / INTERNAL 字段）：
 }
 ```
 
-约束（database-design.md §20）：
+TEACHER 可更新（`public_name` 在成为 ADVISOR 前必须填写）：
+
+```json
+{
+  "avatar_asset_id": "uuid",
+  "public_name": "李明",
+  "department": "人工智能学院",
+  "academic_title": "副教授",
+  "public_email": "liming@ai.edu.cn",
+  "office_location": "科教楼 3-218",
+  "bio": "一句话简介",
+  "research_interests": ["机器学习", "自然语言处理"]
+}
+```
+
+不可通过本端点修改：
+
+```text
+identity_type
+real_name
+student_no
+employee_no
+platform_role
+is_staff
+is_superuser
+```
+
+约束见 database-design.md §8 / §20：
 
 ```text
 nickname <= 40
 bio <= 500
-skills 数组，每项 <= 40 字符，最多 20 项，去重
+skills / research_interests 数组，每项 <= 40 字符，最多 20 项，去重
 grade 1–4 或 null
 avatar_asset_id 必须是当前用户上传、仍为 ACTIVE 的 IMAGE MediaAsset，或 null（清除头像）
 ```
-
-不可通过本端点修改：真实姓名、学号、班级（SENSITIVE，由管理员 / 后续流程处理，V0.1 只读）。
 
 GET 与 PATCH 的 `Profile` response 固定为：
 
 ```json
 {
+  "identity_type": "STUDENT",
   "real_name": "张三",
   "student_no": "20260001",
   "class_name": "人工智能 2301",
@@ -679,7 +823,24 @@ GET 与 PATCH 的 `Profile` response 固定为：
 }
 ```
 
-`real_name`、`student_no` 和 `class_name` 仅本人可读；`avatar` 为 `MediaRef | null`。PATCH 后返回更新后的完整 `Profile`，但不接受上述三项只读字段。
+TEACHER 的 `Profile` 额外返回：
+
+```json
+{
+  "identity_type": "TEACHER",
+  "real_name": "李明",
+  "employee_no": "T20260018",
+  "public_name": "李明",
+  "department": "人工智能学院",
+  "academic_title": "副教授",
+  "public_email": "liming@ai.edu.cn",
+  "office_location": "科教楼 3-218",
+  "bio": "……",
+  "research_interests": ["机器学习", "自然语言处理"]
+}
+```
+
+`real_name`、`student_no`、`employee_no` 和 `class_name` 仅本人可读；`avatar` 为 `MediaRef | null`。PATCH 后返回更新后的完整 `Profile`，但不接受上述只读字段。
 
 ### 我的关注
 
@@ -1111,7 +1272,43 @@ GET /api/organizations/{id}
 权限：PUBLIC
 ```
 
-详情字段（database-design.md §10.1 公开字段）+ `current_recruitments`（OPEN 优先，限 2-4 条）+ `recent_activities`（未来未取消，限 3 条）+ `advisor_name`、`public_contact`。负责人视角额外返回 `is_leader`（LOGIN 时）。
+详情字段（database-design.md §10.1 公开字段）+ `current_recruitments`（OPEN 优先，限 2-4 条）+ `recent_activities`（未来未取消，限 3 条）+ `public_contact`。
+
+指导老师来自有效 `OrganizationMembership(role=ADVISOR)`，不再读取 `advisor_name`。
+
+公开响应增加：
+
+```json
+{
+  "leaders": [
+    {
+      "id": "uuid",
+      "display_name": "张三",
+      "avatar": { "id": "uuid", "url": "https://..." },
+      "title": "会长"
+    }
+  ],
+  "advisors": [
+    {
+      "id": "uuid",
+      "display_name": "李明",
+      "avatar": { "id": "uuid", "url": "https://..." },
+      "title": "指导老师",
+      "department": "人工智能学院",
+      "academic_title": "副教授",
+      "public_email": "liming@ai.edu.cn",
+      "office_location": "科教楼 3-218",
+      "research_interests": ["机器学习", "自然语言处理"]
+    }
+  ],
+  "current_user_organization_role": "MEMBER | LEADER | ADVISOR | null",
+  "can_manage": false
+}
+```
+
+`can_manage = true` 仅限当前组织有效 `LEADER / ADVISOR` 或 SUPERADMIN。
+
+`advisors[].display_name` 来自教师 Profile 的 `public_name`，不得直接把 SENSITIVE 的 `real_name` 暴露到公开组织接口。
 
 ### 组织招新列表
 
@@ -1582,15 +1779,31 @@ PATCH  /api/ops/banners/{id}          编辑
 
 公告创建/编辑还接受 `external_url`（可空）。`publisher_scope` 仅为 `ACADEMY`、`UNIVERSITY` 或 `PLATFORM`；若运营人员选择“活动并同步公告”，改用上一节组合发布端点，而不是先在客户端创建活动再补写公告。
 
-## 3.13 Manage（组织管理，LEADER）
+## 3.13 Manage（组织管理，LEADER / ADVISOR）
 
 所有 `/api/manage/organizations/{orgId}/…` 端点：
 
 ```text
-权限：LEADER(org) 或 SUPERADMIN
+权限：ORG_MANAGER(org) 或 SUPERADMIN
 ```
 
-权限校验规则：当前用户必须是该 `orgId` 的有效 LEADER，或 SUPERADMIN；否则 `403`。
+其中：
+
+```text
+ORG_MANAGER(org)
+=
+active membership
+AND role IN (LEADER, ADVISOR)
+AND organization_id = orgId
+```
+
+`ADVISOR` 还必须满足：
+
+```text
+user.identity_type = TEACHER
+```
+
+`LEADER` 与 `ADVISOR` 对当前组织权限一致；OPERATOR 不因为平台运营权限自动获得组织管理能力。否则 `403`。
 
 ### 组织资料
 
@@ -1599,8 +1812,10 @@ GET  /api/manage/organizations/{orgId}/profile
 PATCH /api/manage/organizations/{orgId}/profile
 ```
 
-可编辑：`short_intro`、`description_md`、`logo_asset_id`、`banner_asset_id`、`advisor_name`、`public_contact`。
-不可编辑（V0.1）：`name`、`organization_type`、停用、删除（SUPERADMIN 专属）。
+可编辑：`short_intro`、`description_md`、`logo_asset_id`、`banner_asset_id`、`public_contact`。
+不可编辑（V0.1）：`name`、`organization_type`、LEADER / ADVISOR 授权、停用、删除（SUPERADMIN 专属）。
+
+指导老师不是 `advisor_name` 文本字段，因此不存在通过 PATCH profile 手工修改指导老师姓名的行为。指导老师授权 / 撤销只通过 SUPERADMIN 的 Django Admin / 受控后台流程完成。
 
 ### 招新管理
 

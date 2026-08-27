@@ -31,6 +31,8 @@ export interface CompetitionEditorDraft {
   registrationStartAt: string
   registrationEndAt: string
   officialUrl: string
+  /** 封面图（`cover_asset_id` 前端态；无则空）。 */
+  cover?: HomepageImage | null
 }
 
 const blankCover: HomepageImage = { alt: '', src: null }
@@ -57,7 +59,7 @@ export function addCompetition(draft: CompetitionEditorDraft): CompetitionSummar
     eventStartAt: null,
     eventEndAt: null,
     officialUrl: draft.officialUrl.trim() || null,
-    cover: blankCover,
+    cover: draft.cover ?? blankCover,
     detailPath: `/competitions/${id}`
   }
   opsCompetitions.push(competition)
@@ -75,6 +77,7 @@ export function updateCompetition(id: string, draft: CompetitionEditorDraft): vo
   existing.registrationStartAt = draft.registrationStartAt || null
   existing.registrationEndAt = draft.registrationEndAt || null
   existing.officialUrl = draft.officialUrl.trim() || null
+  existing.cover = draft.cover ?? blankCover
 }
 
 export function validateCompetition(draft: CompetitionEditorDraft): Record<string, string> {
@@ -100,6 +103,8 @@ export interface ActivityEditorDraft {
   registrationEndAt: string
   capacity: number | null
   descriptionMd: string
+  /** 封面图（`cover_asset_id` 前端态；无则空）。 */
+  cover?: HomepageImage | null
 }
 
 /** 管理用响应式活动列表。 */
@@ -128,7 +133,7 @@ export function addActivity(draft: ActivityEditorDraft): DynamicsActivity {
     speaker: null,
     descriptionMd: draft.descriptionMd.trim() || null,
     isFeatured: false,
-    cover: blankCover,
+    cover: draft.cover ?? blankCover,
     detailPath: `/activities/${id}`
   }
   opsActivities.push(activity)
@@ -148,6 +153,7 @@ export function updateActivity(id: string, draft: ActivityEditorDraft): void {
   existing.registrationEndAt = draft.registrationEndAt || null
   existing.capacity = draft.capacity
   existing.descriptionMd = draft.descriptionMd.trim() || null
+  existing.cover = draft.cover ?? blankCover
 }
 
 export function validateActivity(draft: ActivityEditorDraft): Record<string, string> {

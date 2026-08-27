@@ -9,9 +9,14 @@ import {
 } from '../lib/opsStore'
 import { announcementScopeOptions } from '@/features/dynamics/lib/dynamicsFilters'
 import type { AnnouncementLinkedKind, AnnouncementPublisherScope } from '@/features/dynamics/types'
+import ContentEditorShell from '@/shared/components/editor/ContentEditorShell.vue'
+import FormSection from '@/shared/components/form/FormSection.vue'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
+import RichContent from '@/shared/components/reader/RichContent.vue'
 
-/** 公告编辑 / 发布（FE-090 /ops/activities，公告独立表单字段）。 */
+/** 公告编辑 / 发布（FE-090 /ops/activities，公告独立表单字段）。
+ *  正文所见即所得 + 实时预览（桌面双栏 / 移动 编辑↔预览）。
+ */
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ 'update:open': [open: boolean]; saved: [] }>()
 const toast = useToast()
@@ -82,7 +87,7 @@ function save() {
 <template>
   <UModal
     :open="props.open"
-    :ui="{ content: 'max-w-2xl' }"
+    :ui="{ content: 'max-w-4xl' }"
     @update:open="close"
   >
     <template #header>
@@ -93,78 +98,106 @@ function save() {
 
     <template #content>
       <form
-        class="space-y-4"
+        class="space-y-6"
         novalidate
         @submit.prevent="save"
       >
-        <UFormField
-          label="公告标题"
-          name="title"
-          required
-          :error="errors.title"
-        >
-          <UInput
-            v-model="title"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField label="发布来源">
-          <USelect
-            v-model="publisherScope"
-            :items="announcementScopeOptions"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField
-          label="正文（Markdown）"
-          name="bodyMd"
-          required
-          :error="errors.bodyMd"
-        >
-          <MarkdownEditor
-            v-model="bodyMd"
-            :height="280"
-          />
-        </UFormField>
-
-        <UFormField label="关联对象（选填）">
-          <div class="space-y-2">
-            <UCheckbox
-              v-model="hasLinked"
-              label="关联核心业务对象"
-            />
-            <div
-              v-if="hasLinked"
-              class="grid gap-2 sm:grid-cols-3"
+        <ContentEditorShell preview-title="公告预览">
+          <template #form>
+            <FormSection
+              title="发布信息"
+              description="标题与发布来源"
             >
-              <USelect
-                v-model="linkedKind"
-                :items="linkedKindOptions"
-                class="w-full"
-              />
-              <UInput
-                v-model="linkedLabel"
-                placeholder="对象名称"
-                class="w-full"
-              />
-              <UInput
-                v-model="linkedPath"
-                placeholder="对象路径"
-                class="w-full"
-              />
-            </div>
-          </div>
-        </UFormField>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField
+                  label="公告标题"
+                  name="title"
+                  required
+                  :error="errors.title"
+                >
+                  <UInput
+                    v-model="title"
+                    class="w-full"
+                  />
+                </UFormField>
 
-        <UFormField label="站外原文链接（选填）">
-          <UInput
-            v-model="externalUrl"
-            placeholder="https://example.com"
-            class="w-full"
-          />
-        </UFormField>
+                <UFormField label="发布来源">
+                  <USelect
+                    v-model="publisherScope"
+                    :items="announcementScopeOptions"
+                    class="w-full"
+                  />
+                </UFormField>
+              </div>
+            </FormSection>
+
+            <FormSection
+              title="正文"
+              description="使用 Markdown 编辑，实时预览渲染效果"
+            >
+              <UFormField
+                label="正文（Markdown）"
+                name="bodyMd"
+                required
+                :error="errors.bodyMd"
+              >
+                <MarkdownEditor
+                  v-model="bodyMd"
+                  :height="280"
+                />
+              </UFormField>
+            </FormSection>
+
+            <FormSection
+              title="关联与链接"
+              description="关联核心业务对象或站外原文（选填）"
+            >
+              <UFormField label="关联对象（选填）">
+                <div class="space-y-2">
+                  <UCheckbox
+                    v-model="hasLinked"
+                    label="关联核心业务对象"
+                  />
+                  <div
+                    v-if="hasLinked"
+                    class="grid gap-2 sm:grid-cols-3"
+                  >
+                    <USelect
+                      v-model="linkedKind"
+                      :items="linkedKindOptions"
+                      class="w-full"
+                    />
+                    <UInput
+                      v-model="linkedLabel"
+                      placeholder="对象名称"
+                      class="w-full"
+                    />
+                    <UInput
+                      v-model="linkedPath"
+                      placeholder="对象路径"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+              </UFormField>
+
+              <UFormField label="站外原文链接（选填）">
+                <UInput
+                  v-model="externalUrl"
+                  placeholder="https://example.com"
+                  class="w-full"
+                />
+              </UFormField>
+            </FormSection>
+          </template>
+
+          <template #preview>
+            <h3 class="text-lg font-semibold text-highlighted">
+              {{ title || '公告标题' }}
+            </h3>
+            <RichContent :content="bodyMd" />
+          </template>
+        </ContentEditorShell>
       </form>
     </template>
 
