@@ -18,6 +18,7 @@ useAuthStore().init()
   <UApp
     :locale="zh_cn"
     :scroll-body="{ padding: 0, margin: 0 }"
+    :toaster="{ position: 'top-right', expand: false }"
   >
     <RouterView />
   </UApp>

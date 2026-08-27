@@ -127,7 +127,11 @@ def get_activity_for_registration(object_id: str) -> Activity:
 
 
 def get_current_profile(user: object) -> UserProfile:
-    return UserProfile.objects.select_related("avatar_asset").get(user=user)
+    try:
+        return UserProfile.objects.select_related("avatar_asset").get(user=user)
+    except UserProfile.DoesNotExist:
+        # 兼容历史数据：部分早期账号（operator/superuser）未创建 profile，自动补建空资料
+        return UserProfile.objects.create(user=user)
 
 
 def active_organization_memberships(user: object):

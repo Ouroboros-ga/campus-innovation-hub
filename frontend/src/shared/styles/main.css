@@ -66,3 +66,22 @@ body {
     transition-duration: 0.01ms;
   }
 }
+
+/* 将 li 内的提示框固定到右上角（document.querySelector("li") 对应场景） */
+li > .prompt,
+li > [role="tooltip"],
+li > [data-prompt],
+li [data-reka-popper-content-wrapper] {
+  position: fixed !important;
+  inset: 16px 16px auto auto !important;
+  z-index: 9999 !important;
+}
+
+/* Nuxt UI Toaster 视口强制右上角，避免被 CSP 或布局影响 */
+[data-reka-toast-viewport] {
+  position: fixed !important;
+  top: 16px !important;
+  right: 16px !important;
+  left: auto !important;
+  bottom: auto !important;
+}
