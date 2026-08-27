@@ -23,6 +23,7 @@ class Command(BaseCommand):
         user_model = get_user_model()
 
         # 超管：is_superuser + is_staff（Admin 唯一来源）
+        # 为满足 identity 约束（0005 版不含 is_superuser 豁免），给超管补合规身份：视为教师 + 工号（仅开发用）
         superadmin = user_model.objects.filter(username=SUPERADMIN_USERNAME).first()
         if superadmin is None:
             superadmin = user_model.objects.create_superuser(
@@ -30,13 +31,31 @@ class Command(BaseCommand):
                 real_name="超级管理员",
                 password=SUPERADMIN_PASSWORD,
             )
+            superadmin.identity_type = User.IdentityType.TEACHER
+            superadmin.employee_no = "ADM0001"
+            superadmin.student_no = None
+            superadmin.save(update_fields=["identity_type", "employee_no", "student_no"])
             self.stdout.write(f"已创建超管 {SUPERADMIN_USERNAME}")
         else:
             superadmin.is_superuser = True
             superadmin.is_staff = True
             superadmin.is_active = True
+            superadmin.identity_type = User.IdentityType.TEACHER
+            if not superadmin.employee_no:
+                superadmin.employee_no = "ADM0001"
+            superadmin.student_no = None
             superadmin.set_password(SUPERADMIN_PASSWORD)
-            superadmin.save(update_fields=["is_superuser", "is_staff", "is_active", "password", "updated_at"])
+            superadmin.save(
+                update_fields=[
+                    "is_superuser",
+                    "is_staff",
+                    "is_active",
+                    "identity_type",
+                    "employee_no",
+                    "student_no",
+                    "password",
+                ]
+            )
             self.stdout.write(f"超管 {SUPERADMIN_USERNAME} 已存在，已重置密码并确保管理员位")
 
         # 运营：platform_role=OPERATOR，可访问运营 API（非 /admin）
@@ -65,9 +84,9 @@ class Command(BaseCommand):
                 operator.student_no = "OP20260001"
             operator.employee_no = None
             operator.set_password(OPERATOR_PASSWORD)
-            operator.save(update_fields=["is_active", "identity_type", "student_no", "employee_no", "password", "updated_at"])
+            operator.save(update_fields=["is_active", "identity_type", "student_no", "employee_no", "password"])
         operator.platform_role = User.PlatformRole.OPERATOR
-        operator.save(update_fields=["platform_role", "updated_at"])
+        operator.save(update_fields=["platform_role"])
 
         self.stdout.write(self.style.SUCCESS("开发账号已就绪："))
         self.stdout.write(f"  超管  用户名 {SUPERADMIN_USERNAME}  密码 {SUPERADMIN_PASSWORD}")
