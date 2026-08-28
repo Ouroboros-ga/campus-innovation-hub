@@ -133,8 +133,7 @@ function onReset() {
 
 function onPublishSelect(type: 'ACTIVITY' | 'ANNOUNCEMENT' | 'BOTH') {
   if (type === 'ANNOUNCEMENT') {
-    editingAnnouncement.value = null
-    announcementEditorOpen.value = true
+    router.push({ name: 'ops-announcement-new' })
   } else {
     editingActivity.value = null
     syncAnnouncement.value = type === 'BOTH'
@@ -142,7 +141,7 @@ function onPublishSelect(type: 'ACTIVITY' | 'ANNOUNCEMENT' | 'BOTH') {
   }
 }
 function editActivity(a: DynamicsActivity) { editingActivity.value = a; syncAnnouncement.value = false; activityEditorOpen.value = true }
-function editAnnouncement(a: DynamicsAnnouncement) { editingAnnouncement.value = a; announcementEditorOpen.value = true }
+function editAnnouncement(a: DynamicsAnnouncement) { router.push({ name: 'ops-announcement-edit', params: { id: a.id } }) }
 const toast = useToast()
 async function onExport(a: DynamicsActivity) {
   try { await exportActivityRegistrations(a.id); toast.add({ title: '已开始下载', color: 'success' }) } catch (e) { toast.add({ title: e instanceof Error ? e.message : '导出失败', color: 'error' }) }

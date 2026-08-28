@@ -22,26 +22,6 @@ const drawerOpen = ref(false)
       <div class="flex-1 overflow-y-auto px-2 py-3">
         <OpsNav />
       </div>
-      <div class="border-t border-default p-3">
-        <div class="flex items-center gap-2 rounded-lg bg-muted px-2 py-2">
-          <UAvatar
-            size="sm"
-            alt="张同学"
-          />
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-highlighted">
-              张同学
-            </p>
-            <p class="text-xs text-muted">
-              平台运营
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-chevron-down"
-            class="size-4 text-muted"
-          />
-        </div>
-      </div>
     </aside>
 
     <!-- 主区 -->

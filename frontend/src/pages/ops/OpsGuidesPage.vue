@@ -1,19 +1,17 @@
 ﻿<script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-import GuideEditorModal from '@/features/ops/components/GuideEditorModal.vue'
 import { listGuides, type OpsGuide } from '@/features/ops/api/opsGuideApi'
 import { guideCategoryLabel } from '@/shared/lib/domain-labels'
 import { formatCompactDate } from '@/shared/lib/date'
 
 /** 指南管理（FE-090 /ops/guides）。 */
 
+const router = useRouter()
 const guides = ref<OpsGuide[]>([])
 const loading = ref(false)
 const error = ref('')
-
-const editorOpen = ref(false)
-const editing = ref<OpsGuide | null>(null)
 
 async function loadGuides() {
   loading.value = true
@@ -31,13 +29,11 @@ async function loadGuides() {
 onMounted(loadGuides)
 
 function openCreate() {
-  editing.value = null
-  editorOpen.value = true
+  router.push({ name: 'ops-guide-new' })
 }
 
 function openEdit(guide: OpsGuide) {
-  editing.value = guide
-  editorOpen.value = true
+  router.push({ name: 'ops-guide-edit', params: { id: guide.id } })
 }
 </script>
 
@@ -144,12 +140,6 @@ function openEdit(guide: OpsGuide) {
       </template>
     </UEmpty>
 
-    <GuideEditorModal
-      :open="editorOpen"
-      :guide="editing"
-      @update:open="editorOpen = $event"
-      @saved="loadGuides"
-    />
   </div>
 </template>
 

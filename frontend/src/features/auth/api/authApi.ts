@@ -34,19 +34,19 @@ const CSRF_COOKIE_NAME = 'csrftoken'
  * 交给共享 HTTP 客户端，供后续写请求发送。
  */
 export async function initCsrf(): Promise<void> {
-  await http.get('/auth/csrf')
+  await http.get('/auth/csrf', { skipAuthRedirect: true })
   const token = getCookie(CSRF_COOKIE_NAME)
   if (token) setCsrfToken(token)
 }
 
 /** 注册并提交审核（PUBLIC）。 */
 export async function register(payload: RegisterPayload): Promise<RegisterResult> {
-  return http.post<RegisterResult>('/auth/register', payload)
+  return http.post<RegisterResult>('/auth/register', payload, { skipAuthRedirect: true })
 }
 
 /** 登录（PUBLIC），成功后后端 Set-Cookie session。 */
 export async function login(payload: LoginPayload): Promise<AuthMeResult> {
-  const result = await http.post<AuthMeResult>('/auth/login', payload)
+  const result = await http.post<AuthMeResult>('/auth/login', payload, { skipAuthRedirect: true })
   const token = getCookie(CSRF_COOKIE_NAME)
   if (token) setCsrfToken(token)
   return result
@@ -57,7 +57,7 @@ export async function logout(): Promise<void> {
   const token = getCookie(CSRF_COOKIE_NAME)
   if (token) setCsrfToken(token)
   try {
-    await http.post('/auth/logout')
+    await http.post('/auth/logout', undefined, { skipAuthRedirect: true })
   } finally {
     const newToken = getCookie(CSRF_COOKIE_NAME)
     if (newToken) setCsrfToken(newToken)
@@ -68,7 +68,7 @@ export async function logout(): Promise<void> {
 /** 当前用户与权限上下文（LOGIN）；未登录返回 null，其余错误抛出。 */
 export async function fetchCurrentUser(): Promise<AuthMeResult | null> {
   try {
-    return await http.get<AuthMeResult>('/auth/me')
+    return await http.get<AuthMeResult>('/auth/me', { skipAuthRedirect: true })
   } catch (error) {
     if (error instanceof AppError && error.status === 401) return null
     throw error

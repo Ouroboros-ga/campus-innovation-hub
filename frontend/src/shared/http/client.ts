@@ -198,7 +198,7 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    if (response.status === 401) handleAuthRequired()
+    if (response.status === 401 && !options.skipAuthRedirect) handleAuthRequired()
     throw normalizeError(response.status, await readBody(response))
   }
 

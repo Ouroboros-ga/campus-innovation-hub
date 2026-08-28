@@ -59,4 +59,6 @@ export interface RequestOptions {
   query?: Record<string, string | number | boolean | undefined>
   body?: unknown
   headers?: HeadersInit
+  /** 401 时是否跳过全局登录重定向（用于 fail-open 的会话探测等）。 */
+  skipAuthRedirect?: boolean
 }

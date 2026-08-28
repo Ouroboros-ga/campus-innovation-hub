@@ -16,7 +16,7 @@ export interface NotificationListParams {
 
 type NotificationListDto = Paginated<NotificationItem>
 
-/** 通知列表（LOGIN，分页）。 */
+/** 通知列表（LOGIN，分页）。匿名时 fail-open 回退 mock，不触发全局登录重定向。 */
 export async function listNotifications(params: NotificationListParams = {}): Promise<{
   items: NotificationItem[]
   total: number
@@ -27,14 +27,17 @@ export async function listNotifications(params: NotificationListParams = {}): Pr
       type: params.type,
       page: params.page,
       page_size: params.pageSize
-    }
+    },
+    skipAuthRedirect: true
   })
   return { items: response.results, total: response.count }
 }
 
-/** 未读数（LOGIN）。 */
+/** 未读数（LOGIN）。匿名时 fail-open，回退 mock，不触发全局登录重定向。 */
 export async function getUnreadCount(): Promise<number> {
-  const response = await http.get<{ count: number }>('/notifications/unread-count')
+  const response = await http.get<{ count: number }>('/notifications/unread-count', {
+    skipAuthRedirect: true
+  })
   return response.count
 }
 

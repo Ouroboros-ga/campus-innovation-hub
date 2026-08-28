@@ -349,6 +349,42 @@ export const routes: RouteRecordRaw[] = [
         ]
       },
       {
+        path: 'ops/announcements/new',
+        name: 'ops-announcement-new',
+        component: () => import('@/pages/ops/AnnouncementEditorPage.vue'),
+        meta: { title: '新建公告', auth: 'operator' }
+      },
+      {
+        path: 'ops/announcements/:id/edit',
+        name: 'ops-announcement-edit',
+        component: () => import('@/pages/ops/AnnouncementEditorPage.vue'),
+        meta: { title: '编辑公告', auth: 'operator' }
+      },
+      {
+        path: 'ops/guides/new',
+        name: 'ops-guide-new',
+        component: () => import('@/pages/ops/GuideEditorPage.vue'),
+        meta: { title: '新建指南', auth: 'operator' }
+      },
+      {
+        path: 'ops/guides/:id/edit',
+        name: 'ops-guide-edit',
+        component: () => import('@/pages/ops/GuideEditorPage.vue'),
+        meta: { title: '编辑指南', auth: 'operator' }
+      },
+      {
+        path: 'ops/faq/new',
+        name: 'ops-faq-new',
+        component: () => import('@/pages/ops/FaqEditorPage.vue'),
+        meta: { title: '新建 FAQ', auth: 'operator' }
+      },
+      {
+        path: 'ops/faq/:id/edit',
+        name: 'ops-faq-edit',
+        component: () => import('@/pages/ops/FaqEditorPage.vue'),
+        meta: { title: '编辑 FAQ', auth: 'operator' }
+      },
+      {
         path: 'login',
         name: 'login',
         component: () =>

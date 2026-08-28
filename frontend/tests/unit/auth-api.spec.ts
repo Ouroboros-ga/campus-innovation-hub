@@ -59,7 +59,7 @@ describe('FE-105 认证 API 适配器', () => {
 
     await initCsrf()
 
-    expect(http.get).toHaveBeenCalledWith('/auth/csrf')
+    expect(http.get).toHaveBeenCalledWith('/auth/csrf', { skipAuthRedirect: true })
     expect(getCsrfToken()).toBe('abc123')
   })
 
@@ -71,11 +71,15 @@ describe('FE-105 认证 API 适配器', () => {
 
     await register({ student_no: '20240001', real_name: '张三', password: 'secret' })
 
-    expect(http.post).toHaveBeenCalledWith('/auth/register', {
-      student_no: '20240001',
-      real_name: '张三',
-      password: 'secret'
-    })
+    expect(http.post).toHaveBeenCalledWith(
+      '/auth/register',
+      {
+        student_no: '20240001',
+        real_name: '张三',
+        password: 'secret'
+      },
+      { skipAuthRedirect: true }
+    )
   })
 
   it('login 发送登录负载并返回当前用户', async () => {
@@ -83,10 +87,14 @@ describe('FE-105 认证 API 适配器', () => {
 
     const result = await login({ username: '20240001', password: 'secret' })
 
-    expect(http.post).toHaveBeenCalledWith('/auth/login', {
-      username: '20240001',
-      password: 'secret'
-    })
+    expect(http.post).toHaveBeenCalledWith(
+      '/auth/login',
+      {
+        username: '20240001',
+        password: 'secret'
+      },
+      { skipAuthRedirect: true }
+    )
     expect(result).toEqual(meResult)
   })
 
@@ -96,7 +104,7 @@ describe('FE-105 认证 API 适配器', () => {
 
     await logout()
 
-    expect(http.post).toHaveBeenCalledWith('/auth/logout')
+    expect(http.post).toHaveBeenCalledWith('/auth/logout', undefined, { skipAuthRedirect: true })
     expect(getCsrfToken()).toBeNull()
   })
 
@@ -115,7 +123,7 @@ describe('FE-105 认证 API 适配器', () => {
 
     const result = await fetchCurrentUser()
 
-    expect(http.get).toHaveBeenCalledWith('/auth/me')
+    expect(http.get).toHaveBeenCalledWith('/auth/me', { skipAuthRedirect: true })
     expect(result).toEqual(meResult)
   })
 })
