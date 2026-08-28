@@ -39,7 +39,7 @@ export const routes: RouteRecordRaw[] = [
         component: () =>
           import('@/pages/organizations/OrganizationListPage.vue'),
         meta: {
-          mobileShell: 'tab',
+          mobileShell: 'detail',
           title: '社团与组织',
           mobileHeaderTitle: '社团与组织'
         }
@@ -189,6 +189,7 @@ export const routes: RouteRecordRaw[] = [
       {
         path: 'qa/submit',
         name: 'qa-submit',
+        alias: 'qa/ask',
         component: () =>
           import('@/pages/qa/ConsultationSubmitPage.vue'),
         meta: { mobileShell: 'detail', title: '提交咨询' }
@@ -210,49 +211,49 @@ export const routes: RouteRecordRaw[] = [
         name: 'me-profile',
         component: () =>
           import('@/pages/me/AccountProfilePage.vue'),
-        meta: { mobileShell: 'detail', title: '个人资料' }
+        meta: { mobileShell: 'detail', title: '个人资料', auth: 'auth' }
       },
       {
         path: 'me/follows',
         name: 'me-follows',
         component: () =>
           import('@/pages/me/AccountFollowsPage.vue'),
-        meta: { mobileShell: 'detail', title: '我的关注' }
+        meta: { mobileShell: 'detail', title: '我的关注', auth: 'auth' }
       },
       {
         path: 'me/teams',
         name: 'me-teams',
         component: () =>
           import('@/pages/me/AccountTeamsPage.vue'),
-        meta: { mobileShell: 'detail', title: '我的组队' }
+        meta: { mobileShell: 'detail', title: '我的组队', auth: 'auth' }
       },
       {
         path: 'me/applications',
         name: 'me-applications',
         component: () =>
           import('@/pages/me/AccountApplicationsPage.vue'),
-        meta: { mobileShell: 'detail', title: '我的申请' }
+        meta: { mobileShell: 'detail', title: '我的申请', auth: 'auth' }
       },
       {
         path: 'me/activities',
         name: 'me-activities',
         component: () =>
           import('@/pages/me/AccountActivitiesPage.vue'),
-        meta: { mobileShell: 'detail', title: '我的活动' }
+        meta: { mobileShell: 'detail', title: '我的活动', auth: 'auth' }
       },
       {
         path: 'me/questions',
         name: 'me-questions',
         component: () =>
           import('@/pages/me/AccountQuestionsPage.vue'),
-        meta: { mobileShell: 'detail', title: '我的咨询' }
+        meta: { mobileShell: 'detail', title: '我的咨询', auth: 'auth' }
       },
       {
         path: 'me/settings',
         name: 'me-settings',
         component: () =>
           import('@/pages/me/AccountSettingsPage.vue'),
-        meta: { mobileShell: 'detail', title: '账号设置' }
+        meta: { mobileShell: 'detail', title: '账号设置', auth: 'auth' }
       },
       {
         path: 'ops',
@@ -352,7 +353,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'notifications',
         component: () =>
           import('@/pages/notifications/NotificationCenterPage.vue'),
-        meta: { mobileShell: 'detail', title: '通知中心' }
+        meta: { mobileShell: 'detail', title: '通知中心', auth: 'auth' }
       },
       {
         path: 'register',
@@ -360,6 +361,13 @@ export const routes: RouteRecordRaw[] = [
         component: () =>
           import('@/pages/auth/RegisterPage.vue'),
         meta: { mobileShell: 'form', title: '注册' }
+      },
+      {
+        path: ':pathMatch(.*)*',
+        name: 'not-found',
+        component: () =>
+          import('@/pages/NotFoundPage.vue'),
+        meta: { mobileShell: 'detail', title: '页面未找到' }
       }
     ]
   }

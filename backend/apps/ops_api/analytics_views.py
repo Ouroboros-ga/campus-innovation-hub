@@ -12,6 +12,7 @@ from django.utils import timezone
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from apps.accounts.models import User
 from apps.activities.models import Activity
 from apps.competitions.models import Competition
 from apps.consultations.models import Consultation
@@ -79,12 +80,27 @@ class AnalyticsTrendsView(OperatorAPIView):
             "team_posts": TeamPost,
             "recruitments": Recruitment,
             "consultations": Consultation,
+            "users": User,
         }
 
         series: dict[str, list[dict[str, object]]] = {}
         totals: dict[str, int] = {}
         for key, model in models_map.items():
-            mapping = _daily_counts(model, start_date, end_date)
+            if key == "users":
+                # User 用 date_joined 而非 created_at
+                tz = ZoneInfo("Asia/Shanghai")
+                start_dt = timezone.make_aware(datetime.combine(start_date, time.min), tz)
+                end_dt = timezone.make_aware(datetime.combine(end_date, time.max), tz)
+                rows = (
+                    model.objects.filter(date_joined__gte=start_dt, date_joined__lte=end_dt)
+                    .annotate(day=TruncDate("date_joined", tzinfo=tz))
+                    .values("day")
+                    .annotate(count=Count("id"))
+                    .order_by("day")
+                )
+                mapping = {str(r["day"]): r["count"] for r in rows if r["day"] is not None}
+            else:
+                mapping = _daily_counts(model, start_date, end_date)
             points = [{"date": d, "count": int(mapping.get(d, 0))} for d in date_strs]
             series[key] = points
             totals[key] = sum(p["count"] for p in points)  # type: ignore[arg-type]

@@ -10,7 +10,11 @@ import RegistrationTipsPanel from '@/features/competitions/components/Registrati
 import RelatedItemsCard from '@/features/competitions/components/RelatedItemsCard.vue'
 import TeamRecruitmentPreview from '@/features/competitions/components/TeamRecruitmentPreview.vue'
 import MobileActionBar from '@/shared/components/app/MobileActionBar.vue'
+import InlineEditable from '@/features/visual/components/InlineEditable.vue'
 import type { CompetitionDetail } from '@/features/competitions/types'
+import { competitionCategoryLabel, competitionLevelLabel, participationModeLabel } from '@/shared/lib/domain-labels'
+import { http } from '@/shared/http/client'
+import { useToast } from '@nuxt/ui/composables'
 
 /**
  * 竞赛详情纯展示视图（Pure Public View）。
@@ -34,6 +38,54 @@ const emit = defineEmits<{
 }>()
 
 const followed = ref(false)
+const toast = useToast()
+
+// 固定选项卡（标题/分类/级别）经 InlineEditable select 暴露，预留 token 不自由选字体
+// const categoryOptions 已在 InlineEditable select 中按需注入，保留 import 供后续
+void competitionCategoryLabel; void competitionLevelLabel; void participationModeLabel
+
+async function onInlineSave(value: string | unknown, field: string) {
+  if (!props.editorMode || !props.detail?.id) return
+  // 校验已发布不可直接改
+  const state = (props.detail as unknown as Record<string, unknown>).publicationState ?? (props.detail as unknown as Record<string, unknown>).publication_state
+  if (state && state !== 'DRAFT') {
+    toast.add({ title: '已发布内容不可直接修改', description: '请通过运营列表的编辑弹窗保存草稿后发布', color: 'warning', icon: 'i-lucide-alert-circle' })
+    return
+  }
+  try {
+    const payload: Record<string, unknown> = {}
+    // 特殊字段映射：保持蛇形
+    const fieldMap: Record<string, string> = {
+      description_md: 'description_md',
+      suitable_for_md: 'suitable_for_md',
+      preparation_advice_md: 'preparation_advice_md',
+      name: 'name',
+      category: 'category',
+      level: 'level',
+      participation_mode: 'participation_mode',
+      cover: 'cover_asset_id',
+      official_url: 'official_url',
+      registration_url: 'registration_url'
+    }
+    const apiField = fieldMap[field] ?? field
+    if (field === 'cover') {
+      const img = value as { id?: string | null } | null
+      payload[apiField] = (img as { id?: string })?.id ?? null
+    } else {
+      payload[apiField] = typeof value === 'string' ? value : value
+    }
+    await http.patch(`/ops/competitions/${props.detail.id}`, payload)
+    toast.add({ title: '已保存', description: `${field} 已更新，学生端实时可见需发布`, color: 'success', icon: 'i-lucide-check' })
+    // 本地乐观更新
+    const d = props.detail as unknown as Record<string, unknown>
+    if (field === 'description_md') d.intro = value
+    if (field === 'suitable_for_md') d.whoShouldJoin = value
+    if (field === 'name') d.name = value
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '保存失败'
+    toast.add({ title: '保存失败', description: msg, color: 'error', icon: 'i-lucide-alert-circle' })
+  }
+}
 
 const registerAction = computed(() => {
   const current = props.detail
@@ -79,12 +131,7 @@ function onFieldClick(field: string, section: string) {
     <div class="mt-8 hidden lg:block">
       <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div class="min-w-0 space-y-8">
-          <div
-            data-editor-section="intro"
-            data-editor-field="description_md"
-            :class="editorMode ? 'cursor-pointer rounded-md ring-1 ring-transparent hover:ring-primary-300' : ''"
-            @click="onFieldClick('description_md', 'intro')"
-          >
+          <InlineEditable :editable="editorMode" label="赛事介绍" field="description_md" type="markdown" :modelValue="detail.intro" @save="onInlineSave">
             <CompetitionSectionCard
               icon="i-lucide-book-open"
               title="赛事介绍"
@@ -93,14 +140,9 @@ function onFieldClick(field: string, section: string) {
                 {{ detail.intro }}
               </p>
             </CompetitionSectionCard>
-          </div>
+          </InlineEditable>
 
-          <div
-            data-editor-section="who"
-            data-editor-field="suitable_for_md"
-            :class="editorMode ? 'cursor-pointer rounded-md ring-1 ring-transparent hover:ring-primary-300' : ''"
-            @click="onFieldClick('suitable_for_md', 'intro')"
-          >
+          <InlineEditable :editable="editorMode" label="适合谁参加" field="suitable_for_md" type="markdown" :modelValue="detail.whoShouldJoin" @save="onInlineSave">
             <CompetitionSectionCard
               icon="i-lucide-users"
               title="适合谁参加"
@@ -109,7 +151,7 @@ function onFieldClick(field: string, section: string) {
                 {{ detail.whoShouldJoin }}
               </p>
             </CompetitionSectionCard>
-          </div>
+          </InlineEditable>
 
           <div
             data-editor-section="requirement"
@@ -169,12 +211,7 @@ function onFieldClick(field: string, section: string) {
             </CompetitionSectionCard>
           </div>
 
-          <div
-            data-editor-section="tips"
-            data-editor-field="preparation_advice_md"
-            :class="editorMode ? 'cursor-pointer rounded-md ring-1 ring-transparent hover:ring-primary-300' : ''"
-            @click="onFieldClick('preparation_advice_md', 'tips')"
-          >
+          <InlineEditable :editable="editorMode" label="报名提示" field="preparation_advice_md" type="markdown" :modelValue="(detail.registrationTips?.[0] ?? '')" @save="onInlineSave">
             <CompetitionSectionCard
               icon="i-lucide-circle-help"
               title="报名方式与提示"
@@ -184,7 +221,7 @@ function onFieldClick(field: string, section: string) {
                 :guide-path="detail.guidePath"
               />
             </CompetitionSectionCard>
-          </div>
+          </InlineEditable>
 
           <div
             data-editor-section="links"
