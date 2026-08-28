@@ -594,7 +594,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
             </div>
           </div>
         </div>
-        <p class="border-t border-default bg-muted/20 px-4 py-2 text-xs text-muted">提示：Banner 按排序从左到右轮播展示，建议尺寸 1920x600px，支持 JPG/PNG 格式。</p>
+        <p class="border-t border-default bg-muted/20 px-4 py-2 text-xs text-muted">提示：标题/副标题/标签为叠加层，无需嵌入图片；海报请保持纯净无文字，建议 1920x600px JPG/PNG，轮播按排序从左到右。</p>
       </template>
     </div>
 
@@ -741,7 +741,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
     <UModal v-model:open="editOpen" title="编辑 Banner" :ui="{ content: 'sm:max-w-[640px]' }">
       <template #body>
         <div class="space-y-4">
-          <!-- 局部预览（支持拖入） -->
+          <!-- 局部预览（支持拖入）— 标题/副标题/标签为叠加层，不嵌入图片 -->
           <div
             class="rounded-lg border-2 border-dashed overflow-hidden bg-neutral-900 aspect-video relative flex flex-col justify-end p-4 transition-colors"
             :class="dragOverEdit ? 'border-primary-500' : 'border-default'"
@@ -750,11 +750,14 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
             @drop.prevent="handleDropEdit"
           >
             <div v-if="dragOverEdit" class="absolute inset-0 z-10 grid place-items-center bg-primary-500/20 text-sm font-medium text-white">松开以上传图片</div>
-            <div v-else-if="form.image_asset_id" class="absolute inset-0 bg-muted flex items-center justify-center text-xs text-muted">图片已就绪，保存后生效</div>
+            <div v-else-if="form.image_asset_id" class="absolute inset-0 bg-muted flex items-center justify-center text-xs text-muted">图片已就绪，保存后生效（标题/标签为叠加文字）</div>
+            <!-- scrim 保证文字可读，与首页 HomeCarousel 一致 -->
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" aria-hidden="true" />
             <span v-if="form.category_label" class="relative w-fit rounded bg-white/90 px-2 py-0.5 text-xs font-semibold">{{ form.category_label }}</span>
             <h3 class="relative mt-2 text-lg font-bold text-white">{{ form.title || '标题' }}</h3>
             <p v-if="form.subtitle" class="relative text-sm text-white/80">{{ form.subtitle }}</p>
           </div>
+          <p class="text-xs text-muted">标题/副标题/标签以叠加形式显示，请保持海报图片纯净无文字嵌入。</p>
           <div class="grid grid-cols-2 gap-4">
             <UFormField label="标题" :error="fieldErrors.title" required><UInput v-model="form.title" maxlength="80" /></UFormField>
             <UFormField label="排序"><UInput v-model.number="form.sort_order" type="number" :min="0" /></UFormField>
@@ -763,7 +766,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
             <UFormField label="副标题"><UInput v-model="form.subtitle" maxlength="160" /></UFormField>
             <UFormField label="分类标签"><UInput v-model="form.category_label" maxlength="30" placeholder="校园推荐/竞赛推荐" /></UFormField>
           </div>
-          <UFormField label="更换图片" hint="留空不改，支持点击上传或拖动图片至下方区域"><div
+          <UFormField label="更换图片" hint="留空不改；海报请保持纯净无文字嵌入，标题为叠加层"><div
             class="flex items-center gap-2 rounded-lg border-2 border-dashed p-2 transition-colors"
             :class="dragOverEdit ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30' : 'border-default bg-muted/20'"
             @dragover.prevent="dragOverEdit = true"
@@ -805,7 +808,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
             <UFormField label="副标题"><UInput v-model="createForm.subtitle" maxlength="160" /></UFormField>
             <UFormField label="分类标签"><UInput v-model="createForm.category_label" maxlength="30" /></UFormField>
           </div>
-          <UFormField label="图片" :error="createFieldErrors.image_asset_id" required hint="支持点击选择或拖动图片至下方区域">
+          <UFormField label="图片" :error="createFieldErrors.image_asset_id" required hint="标题/标签为叠加层，海报请保持纯净无文字嵌入；支持点击选择或拖动">
             <div
               class="flex items-center gap-2 rounded-lg border-2 border-dashed p-2 transition-colors"
               :class="dragOverCreate ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30' : 'border-default bg-muted/20'"
