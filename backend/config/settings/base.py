@@ -86,6 +86,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "apps.core.middleware.AuditContextMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -157,7 +158,10 @@ CACHES = {
 }
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": ["apps.core.authentication.ApiSessionAuthentication"],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "apps.core.authentication.AgentTokenAuthentication",
+        "apps.core.authentication.ApiSessionAuthentication",
+    ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "UNAUTHENTICATED_USER": None,
     "EXCEPTION_HANDLER": "apps.core.errors.api_exception_handler",

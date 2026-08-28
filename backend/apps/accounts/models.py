@@ -192,3 +192,85 @@ class UserProfile(models.Model):
                 errors["avatar_asset"] = "头像必须引用可用的图片 MediaAsset。"
         if errors:
             raise ValidationError(errors)
+
+
+class AgentCredential(models.Model):
+    """受控运营机器凭证（campus-auto-ops）。"""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=80)
+    token_id = models.CharField(max_length=20, unique=True)
+    secret_hash = models.CharField(max_length=64)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="agent_credentials"
+    )
+    scopes = models.JSONField(default=list, blank=True)
+    allowed_cidrs = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_agent_credentials",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["token_id"], name="agent_cred_token_id_idx"),
+            models.Index(fields=["user", "is_active"], name="agent_cred_user_active_idx"),
+        ]
+
+    # 允许的细粒度 scope 白名单（V0.1）
+    VALID_SCOPES = {
+        "homepage:read",
+        "homepage:write",
+        "banner:read",
+        "banner:write",
+        "content:read",
+        "content:write",
+        "content:publish",
+        "competition:read",
+        "competition:write",
+        "competition:publish",
+        "activity:read",
+        "activity:write",
+        "activity:publish",
+        "consultation:read",
+        "consultation:reply",
+        "media:upload",
+    }
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        if not self.token_id or len(self.token_id) < 8:
+            errors["token_id"] = "token_id 至少 8 字符。"
+        if not self.secret_hash or len(self.secret_hash) != 64:
+            errors["secret_hash"] = "secret_hash 必须为 64 位 SHA256。"
+        if not isinstance(self.scopes, list):
+            errors["scopes"] = "scopes 必须是字符串数组。"
+        elif any(scope not in self.VALID_SCOPES for scope in self.scopes):
+            errors["scopes"] = f"scopes 包含非法值，仅允许 {sorted(self.VALID_SCOPES)}。"
+        elif len(set(self.scopes)) != len(self.scopes):
+            errors["scopes"] = "scopes 不能重复。"
+        if not isinstance(self.allowed_cidrs, list):
+            errors["allowed_cidrs"] = "allowed_cidrs 必须是字符串数组。"
+        else:
+            import ipaddress
+
+            for cidr in self.allowed_cidrs:
+                if not isinstance(cidr, str) or not cidr.strip():
+                    errors["allowed_cidrs"] = "allowed_cidrs 项必须是非空字符串。"
+                    break
+                try:
+                    ipaddress.ip_network(cidr, strict=False)
+                except ValueError:
+                    errors["allowed_cidrs"] = f"allowed_cidrs 项 {cidr} 不是合法 CIDR。"
+                    break
+        if errors:
+            raise ValidationError(errors)

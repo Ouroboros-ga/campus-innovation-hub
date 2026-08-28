@@ -15,9 +15,21 @@ class AuditLog(UUIDCreatedModel):
     target_id = models.UUIDField(null=True, blank=True)
     target_repr = models.CharField(max_length=200, null=True, blank=True)
     changes_json = models.JSONField(default=dict)
+    agent_credential = models.ForeignKey(
+        "accounts.AgentCredential",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="audit_logs",
+    )
+    request_id = models.CharField(max_length=64, null=True, blank=True)
+    source_ip = models.CharField(max_length=64, null=True, blank=True)
+    agent_id = models.CharField(max_length=80, null=True, blank=True)
 
     class Meta:
         indexes = [
             models.Index(fields=["actor", "created_at"], name="audit_actor_created_idx"),
             models.Index(fields=["target_type", "target_id", "created_at"], name="audit_target_created_idx"),
+            models.Index(fields=["agent_credential", "created_at"], name="audit_agent_created_idx"),
+            models.Index(fields=["request_id"], name="audit_request_id_idx"),
         ]

@@ -47,10 +47,31 @@ def record_audit(
     target: object | None,
     changes: dict[str, Any],
 ) -> AuditLog:
-    """记录最小必要变化；target 无 FK 保证历史证据独立保存。"""
+    """记录最小必要变化；target 无 FK 保证历史证据独立保存。
+
+    若当前请求处于 Agent 上下文，自动从 ContextVar 填充 agent_credential/request_id/source_ip/agent_id，
+    无需调用方显式传递，实现对现有几十处调用的零侵入。
+    """
 
     _assert_changes_are_safe(changes)
     target_id = getattr(target, "id", None)
+    # 自动注入审计上下文
+    agent_credential_id = None
+    request_id = None
+    source_ip = None
+    agent_id = None
+    try:
+        from apps.core.audit_context import get_audit_context
+
+        ctx = get_audit_context()
+        if ctx is not None:
+            agent_credential_id = ctx.agent_credential_id
+            request_id = ctx.request_id
+            source_ip = ctx.source_ip
+            agent_id = ctx.agent_id
+    except Exception:
+        # 审计上下文获取失败不阻塞主业务
+        pass
     return AuditLog.objects.create(
         actor=actor,
         action=action,
@@ -58,4 +79,8 @@ def record_audit(
         target_id=target_id,
         target_repr=str(target)[:200] if target is not None else None,
         changes_json=changes,
+        agent_credential_id=agent_credential_id,
+        request_id=request_id,
+        source_ip=source_ip,
+        agent_id=agent_id,
     )

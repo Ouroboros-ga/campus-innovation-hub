@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from apps.accounts.models import User, UserProfile
+from apps.accounts.models import AgentCredential, User, UserProfile
 from apps.accounts.services import anonymize_deactivated_user, activate_pending_user, set_platform_role, set_user_active
 from apps.core.admin import AuditedAdminMixin
 
@@ -82,3 +82,27 @@ class UserProfileAdmin(AuditedAdminMixin, admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+@admin.register(AgentCredential)
+class AgentCredentialAdmin(AuditedAdminMixin, admin.ModelAdmin):
+    list_display = ["name", "token_id", "user", "is_active", "expires_at", "last_used_at", "created_at"]
+    list_filter = ["is_active"]
+    search_fields = ["name", "token_id", "user__username"]
+    readonly_fields = ["token_id", "secret_hash", "last_used_at", "created_at", "updated_at"]
+    raw_id_fields = ["user", "created_by"]
+    actions = ["revoke_credentials"]
+
+    def has_add_permission(self, request):
+        # 仅 SUPERADMIN 通过命令创建，Admin 列表只读/撤销
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return bool(request.user and request.user.is_authenticated and request.user.is_superuser)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @admin.action(description="撤销所选 Agent 凭证")
+    def revoke_credentials(self, request, queryset):
+        queryset.update(is_active=False)

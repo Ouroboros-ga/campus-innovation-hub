@@ -11,6 +11,9 @@ from apps.ops_api.serializers import HomepageCurationSerializer
 class HomepageCurationView(OperatorAPIView):
     """GET 返回当前精选配置，PATCH 批量覆盖四类精选排序。"""
 
+    agent_access = True
+    agent_scopes = {"GET": {"homepage:read"}, "PATCH": {"homepage:write"}}
+
     def get(self, request: Request) -> Response:
         return Response(get_homepage_curation())
 

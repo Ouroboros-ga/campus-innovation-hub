@@ -244,6 +244,9 @@ class FaqFeaturedView(OperatorAPIView):
 
 
 class BannerCollectionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"banner:read"}, "POST": {"banner:write"}}
+
     def get(self, request: Request) -> Response:
         validate_query_keys(request, {"active", "page", "page_size"})
         active = parse_optional_bool(request, "active")
@@ -260,6 +263,9 @@ class BannerCollectionView(OperatorAPIView):
 
 
 class BannerDetailView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"banner:read"}, "PATCH": {"banner:write"}}
+
     def _get(self, object_id: str) -> HomepageBanner:
         return _get_or_404(HomepageBanner, object_id, "Banner", queryset=HomepageBanner.objects.select_related("image_asset"))
 
