@@ -11,6 +11,7 @@ from apps.competitions.services import (
     cancel_competition,
     create_competition,
     create_timeline_event,
+    delete_competition,
     delete_timeline_event,
     publish_competition,
     set_competition_featured,
@@ -88,7 +89,7 @@ class CompetitionCollectionView(OperatorAPIView):
 
 class CompetitionDetailView(OperatorAPIView):
     agent_access = True
-    agent_scopes = {"GET": {"competition:read"}, "PATCH": {"competition:write"}}
+    agent_scopes = {"GET": {"competition:read"}, "PATCH": {"competition:write"}, "DELETE": {"competition:write"}}
 
     def get(self, request: Request, object_id: str) -> Response:
         return Response(serialize_competition_management(_competition_or_404(object_id), request))
@@ -99,6 +100,11 @@ class CompetitionDetailView(OperatorAPIView):
         serializer.is_valid(raise_exception=True)
         updated = update_competition(actor=request.user, competition=competition, payload=serializer.validated_data)
         return Response(serialize_competition_management(_competition_or_404(str(updated.id)), request))
+
+    def delete(self, request: Request, object_id: str) -> Response:
+        require_empty_body(request)
+        delete_competition(actor=request.user, competition=_competition_or_404(object_id))
+        return Response(status=204)
 
 
 class _CompetitionActionView(OperatorAPIView):

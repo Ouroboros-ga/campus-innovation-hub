@@ -3,7 +3,7 @@ import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import CompetitionEditorModal from '@/features/ops/components/CompetitionEditorModal.vue'
-import { importCompetitions, listCompetitions, type OpsCompetition } from '@/features/ops/api/opsCompetitionApi'
+import { archiveCompetition, deleteCompetition, importCompetitions, listCompetitions, type OpsCompetition } from '@/features/ops/api/opsCompetitionApi'
 import { getCompetitionHealth, getRecentDrafts, getWorkbenchStats } from '@/features/ops/api/opsOverviewApi'
 import { useToast } from '@nuxt/ui/composables'
 import type { CompetitionHealth, WorkbenchStats } from '@/features/ops/api/opsOverviewApi'
@@ -142,6 +142,26 @@ function openEdit(item: OpsCompetition) {
   editorOpen.value = true
 }
 const toast = useToast()
+async function onArchive(item: OpsCompetition) {
+  if (!confirm(`确认归档「${item.name}」？归档后不再对学生可见。`)) return
+  try {
+    await archiveCompetition(item.id)
+    toast.add({ title: '已归档', color: 'success' })
+    await load()
+  } catch (err) {
+    toast.add({ title: err instanceof Error ? err.message : '归档失败', color: 'error' })
+  }
+}
+async function onDelete(item: OpsCompetition) {
+  if (!confirm(`确认删除草稿「${item.name}」？此操作不可恢复。`)) return
+  try {
+    await deleteCompetition(item.id)
+    toast.add({ title: '已删除', color: 'success' })
+    await load()
+  } catch (err) {
+    toast.add({ title: err instanceof Error ? err.message : '删除失败', color: 'error' })
+  }
+}
 function onImportFileChange(e: Event) {
   const input = e.target as HTMLInputElement
   importFile.value = input.files?.[0] ?? null
@@ -262,26 +282,36 @@ async function onImport() {
     </div>
 
     <div class="grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)_260px]">
-      <!-- 左视图 -->
+      <!-- 左视图（可点筛选） -->
       <div class="rounded-lg border border-default bg-default p-3">
         <p class="text-xs font-semibold text-muted">
           内容视图
         </p>
         <ul class="mt-2 space-y-1 text-sm">
-          <li class="flex items-center justify-between rounded-md bg-primary-50 px-2 py-1.5 font-medium text-primary-700 dark:bg-primary-950">
-            <span>全部内容</span><span class="text-xs">{{ total }}</span>
+          <li>
+            <button class="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors" :class="status==='ALL' && featured==='ALL' ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950' : 'text-muted hover:bg-muted hover:text-highlighted'" @click="status='ALL'; featured='ALL'; onFilterChange()">
+              <span>全部内容</span><span class="text-xs">{{ total }}</span>
+            </button>
           </li>
-          <li class="flex justify-between px-2 py-1.5 text-muted">
-            <span>我的草稿</span><span>{{ workbench?.overview.draft ?? '-' }}</span>
+          <li>
+            <button class="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors" :class="status==='DRAFT' ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950' : 'text-muted hover:bg-muted hover:text-highlighted'" @click="status='DRAFT'; onFilterChange()">
+              <span>我的草稿</span><span>{{ workbench?.overview.draft ?? '-' }}</span>
+            </button>
           </li>
-          <li class="flex justify-between px-2 py-1.5 text-muted">
-            <span>待发布</span><span>{{ workbench?.overview.draft ?? '-' }}</span>
+          <li>
+            <button class="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors" :class="status==='DRAFT' ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950' : 'text-muted hover:bg-muted hover:text-highlighted'" @click="status='DRAFT'; onFilterChange()">
+              <span>待发布</span><span>{{ workbench?.overview.draft ?? '-' }}</span>
+            </button>
           </li>
-          <li class="flex justify-between px-2 py-1.5 text-muted">
-            <span>已推荐</span><span>{{ health?.featured ?? 0 }}</span>
+          <li>
+            <button class="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors" :class="featured==='FEATURED' ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950' : 'text-muted hover:bg-muted hover:text-highlighted'" @click="featured='FEATURED'; status='ALL'; onFilterChange()">
+              <span>已推荐</span><span>{{ health?.featured ?? 0 }}</span>
+            </button>
           </li>
-          <li class="flex justify-between px-2 py-1.5 text-muted">
-            <span>已归档</span><span>{{ workbench?.overview.archived ?? '-' }}</span>
+          <li>
+            <button class="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left transition-colors" :class="status==='ARCHIVED' ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950' : 'text-muted hover:bg-muted hover:text-highlighted'" @click="status='ARCHIVED'; onFilterChange()">
+              <span>已归档</span><span>{{ workbench?.overview.archived ?? '-' }}</span>
+            </button>
           </li>
         </ul>
         <UTooltip text="敬请期待">
@@ -399,7 +429,7 @@ async function onImport() {
               </UBadge>
               <span class="text-xs text-muted">{{ formatCompactDate(item.registrationEndAt) }}</span>
             </div>
-            <div class="flex shrink-0 gap-1">
+            <div class="flex shrink-0 items-center gap-1">
               <UButton
                 size="xs"
                 color="neutral"
@@ -416,6 +446,15 @@ async function onImport() {
               >
                 预览
               </UButton>
+              <UDropdownMenu
+                :items="[
+                  ...(item.publicationState==='DRAFT' ? [{ label: '删除草稿', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => onDelete(item) }] : []),
+                  ...(item.publicationState==='PUBLISHED' || item.publicationState==='CANCELLED' ? [{ label: '归档', icon: 'i-lucide-archive', onSelect: () => onArchive(item) }] : []),
+                  ...(item.publicationState==='ARCHIVED' ? [{ label: '已归档', icon: 'i-lucide-archive', disabled: true }] : [])
+                ]"
+              >
+                <UButton size="xs" color="neutral" variant="ghost" icon="i-lucide-ellipsis" aria-label="更多操作" />
+              </UDropdownMenu>
             </div>
           </li>
           <li

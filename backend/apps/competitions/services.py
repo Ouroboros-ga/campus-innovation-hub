@@ -110,6 +110,18 @@ def archive_competition(*, actor: User, competition: Competition) -> Competition
 
 
 @transaction.atomic
+def delete_competition(*, actor: User, competition: Competition) -> None:
+    """仅草稿可物理删除，避免误删已发布历史。"""
+
+    _require_operator(actor)
+    locked = Competition.objects.select_for_update().get(pk=competition.pk)
+    if locked.publication_state != Competition.PublicationState.DRAFT:
+        raise InvalidState("仅草稿可删除，已发布请归档。")
+    record_audit(actor=actor, action="COMPETITION_DELETED", target=locked, changes={"name": locked.name})
+    locked.delete()
+
+
+@transaction.atomic
 def set_competition_featured(*, actor: User, competition: Competition, payload: dict[str, Any]) -> Competition:
     _require_operator(actor)
     locked = Competition.objects.select_for_update().get(pk=competition.pk)

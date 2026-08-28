@@ -184,6 +184,16 @@ export async function publishCompetition(id: string): Promise<void> {
   await http.post(`/ops/competitions/${id}/publish`)
 }
 
+/** 归档竞赛（PUBLISHED/CANCELLED → ARCHIVED）。 */
+export async function archiveCompetition(id: string): Promise<void> {
+  await http.post(`/ops/competitions/${id}/archive`)
+}
+
+/** 删除草稿竞赛（仅 DRAFT）。 */
+export async function deleteCompetition(id: string): Promise<void> {
+  await http.delete(`/ops/competitions/${id}`)
+}
+
 /** 批量导入竞赛（.xlsx）。 */
 export async function importCompetitions(file: File): Promise<{ success: number; failed: number; errors: Array<{ row: number; message: string }> }> {
   const form = new FormData()
