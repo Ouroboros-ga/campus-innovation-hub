@@ -1,42 +1,24 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useToast } from '@nuxt/ui/composables'
 
-import PublishDynamicsModal from '@/features/ops/components/PublishDynamicsModal.vue'
 import ActivityEditorModal from '@/features/ops/components/ActivityEditorModal.vue'
 import AnnouncementEditorModal from '@/features/ops/components/AnnouncementEditorModal.vue'
+import PublishDynamicsModal from '@/features/ops/components/PublishDynamicsModal.vue'
 import { listActivities } from '@/features/ops/api/opsActivityApi'
 import { listAnnouncements } from '@/features/ops/api/opsAnnouncementApi'
-import {
-  activityStatusOptions,
-  activityTypeOptions,
-  announcementScopeOptions,
-  deriveActivityRegistrationState,
-  filterActivities,
-  filterAnnouncements,
-  type ActivityStatusFilter,
-  type ActivityTypeFilter,
-  type AnnouncementScopeFilter
-} from '@/features/dynamics/lib/dynamicsFilters'
-import {
-  announcementLinkedKindLabel,
-  publisherScopeLabel
-} from '@/features/dynamics/lib/dynamicsLabels'
-import { activityTypeLabel } from '@/shared/lib/domain-labels'
+import { getDynamicsStats } from '@/features/ops/api/opsOverviewApi'
+import type { DynamicsStats } from '@/features/ops/api/opsOverviewApi'
 import type { DynamicsActivity, DynamicsAnnouncement } from '@/features/dynamics/types'
-import { formatDateTimeCompact } from '@/shared/lib/date'
+import { formatCompactDate } from '@/shared/lib/date'
 
-/** 校园动态管理（FE-090 /ops/activities）。
- *  活动与公告保留独立表 / 字段；「发布动态」明确选择 活动/公告/同步发布。 */
-const toast = useToast()
+const tab = ref<'all' | 'activities' | 'announcements'>('all')
+const stats = ref<DynamicsStats | null>(null)
 
-const tab = ref<'activities' | 'announcements'>('activities')
-const activityStatus = ref('ALL')
-const activityType = ref('ALL')
-const announcementScope = ref('ALL')
+const activities = ref<DynamicsActivity[]>([])
+const announcements = ref<DynamicsAnnouncement[]>([])
+const loading = ref(true)
 
-const now = computed(() => new Date())
-
+const query = ref('')
 const publishOpen = ref(false)
 const activityEditorOpen = ref(false)
 const editingActivity = ref<DynamicsActivity | null>(null)
@@ -44,80 +26,30 @@ const syncAnnouncement = ref(false)
 const announcementEditorOpen = ref(false)
 const editingAnnouncement = ref<DynamicsAnnouncement | null>(null)
 
-const activities = ref<DynamicsActivity[]>([])
-const activitiesLoading = ref(false)
-const activitiesError = ref('')
-const announcements = ref<DynamicsAnnouncement[]>([])
-const announcementsLoading = ref(false)
-const announcementsError = ref('')
-
-async function loadActivities() {
-  activitiesLoading.value = true
-  activitiesError.value = ''
+async function load() {
+  loading.value = true
   try {
-    const result = await listActivities({
-      status: activityStatus.value === 'ALL' ? undefined : activityStatus.value,
-      activityType: activityType.value === 'ALL' ? undefined : activityType.value
-    })
-    activities.value = result.items
+    const [s, a, b] = await Promise.all([getDynamicsStats(), listActivities({}), listAnnouncements({})])
+    stats.value = s
+    activities.value = a.items
+    announcements.value = b.items
   } catch {
-    activitiesError.value = '活动列表加载失败，请稍后重试。'
+    // empty
   } finally {
-    activitiesLoading.value = false
+    loading.value = false
   }
 }
 
-async function loadAnnouncements() {
-  announcementsLoading.value = true
-  announcementsError.value = ''
-  try {
-    const result = await listAnnouncements({
-      publisherScope: announcementScope.value === 'ALL' ? undefined : announcementScope.value
-    })
-    announcements.value = result.items
-  } catch {
-    announcementsError.value = '公告列表加载失败，请稍后重试。'
-  } finally {
-    announcementsLoading.value = false
-  }
-}
+onMounted(load)
 
-onMounted(() => {
-  loadActivities()
-  loadAnnouncements()
+const filteredActivities = computed(() => {
+  if (!query.value) return activities.value
+  return activities.value.filter(i => i.title.includes(query.value))
 })
-
-const activityRows = computed(() =>
-  filterActivities(
-    activities.value,
-    { status: activityStatus.value as ActivityStatusFilter, type: activityType.value as ActivityTypeFilter },
-    now.value
-  )
-)
-const announcementRows = computed(() =>
-  filterAnnouncements(announcements.value, { scope: announcementScope.value as AnnouncementScopeFilter })
-)
-
-const registerBadge: Record<string, 'success' | 'info' | 'warning' | 'neutral'> = {
-  OPEN: 'success',
-  UPCOMING: 'info',
-  CLOSED: 'neutral',
-  NOT_REQUIRED: 'neutral',
-  FULL: 'warning',
-  NOT_AVAILABLE: 'neutral'
-}
-
-function registrationLabel(state: ReturnType<typeof deriveActivityRegistrationState>) {
-  const map: Record<string, string> = {
-    OPEN: '报名中',
-    UPCOMING: '即将开始',
-    CLOSED: '报名已结束',
-    NOT_REQUIRED: '无需报名',
-    FULL: '已满',
-    NOT_AVAILABLE: '不可报名'
-  }
-  return map[state] ?? '未知'
-}
+const filteredAnnouncements = computed(() => {
+  if (!query.value) return announcements.value
+  return announcements.value.filter(i => i.title.includes(query.value))
+})
 
 function onPublishSelect(type: 'ACTIVITY' | 'ANNOUNCEMENT' | 'BOTH') {
   if (type === 'ANNOUNCEMENT') {
@@ -129,273 +61,149 @@ function onPublishSelect(type: 'ACTIVITY' | 'ANNOUNCEMENT' | 'BOTH') {
     activityEditorOpen.value = true
   }
 }
-
-function editActivity(activity: DynamicsActivity) {
-  editingActivity.value = activity
-  syncAnnouncement.value = false
-  activityEditorOpen.value = true
-}
-
-function editAnnouncement(announcement: DynamicsAnnouncement) {
-  editingAnnouncement.value = announcement
-  announcementEditorOpen.value = true
-}
-
-function notify(title: string) {
-  toast.add({
-    title,
-    description: '演示环境（mock）。',
-    color: 'neutral',
-    icon: 'i-lucide-info'
-  })
-}
-
-const tabs = [
-  { value: 'activities', label: '活动' },
-  { value: 'announcements', label: '公告' }
-] as const
+function editActivity(a: DynamicsActivity) { editingActivity.value = a; syncAnnouncement.value = false; activityEditorOpen.value = true }
+function editAnnouncement(a: DynamicsAnnouncement) { editingAnnouncement.value = a; announcementEditorOpen.value = true }
 </script>
 
 <template>
   <div class="space-y-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div
-        role="group"
-        aria-label="动态类型"
-        class="flex gap-2"
-      >
-        <UButton
-          v-for="item in tabs"
-          :key="item.value"
-          size="sm"
-          color="neutral"
-          :variant="tab === item.value ? 'solid' : 'outline'"
-          :aria-pressed="tab === item.value"
-          @click="tab = item.value"
-        >
-          {{ item.label }}
-        </UButton>
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-semibold text-highlighted">校园动态管理</h2>
+        <p class="text-sm text-muted">统一管理平台的活动与公告内容，支持发布、编辑与状态管理</p>
       </div>
-      <UButton
-        color="primary"
-        variant="solid"
-        size="sm"
-        icon="i-lucide-plus"
-        @click="publishOpen = true"
-      >
-        发布动态
-      </UButton>
+      <UButton color="primary" icon="i-lucide-plus" @click="publishOpen = true">新建内容</UButton>
     </div>
 
-    <!-- 活动 tab -->
-    <template v-if="tab === 'activities'">
-      <div class="flex flex-wrap gap-2">
-        <USelect
-          v-model="activityStatus"
-          :items="activityStatusOptions"
-          placeholder="全部状态"
-          class="w-40"
-        />
-        <USelect
-          v-model="activityType"
-          :items="activityTypeOptions"
-          placeholder="全部类型"
-          class="w-44"
-        />
+    <!-- 顶部 tabs -->
+    <div class="flex gap-2 border-b border-default">
+      <button v-for="t in [{v:'all',l:'全部内容'},{v:'activities',l:'活动'},{v:'announcements',l:'公告'}]" :key="t.v" class="px-3 py-2 text-sm" :class="tab===t.v ? 'border-b-2 border-primary-600 font-medium text-primary-600' : 'text-muted'" @click="tab=t.v as any">{{ t.l }}</button>
+    </div>
+
+    <!-- 搜索 + 筛选 -->
+    <div class="flex flex-wrap gap-2">
+      <UInput v-model="query" placeholder="搜索标题或关键词" icon="i-lucide-search" size="sm" class="w-64" />
+      <USelect :items="[{label:'全部类型',value:'all'}]" model-value="all" size="sm" class="w-28" />
+      <USelect :items="[{label:'全部状态',value:'all'}]" model-value="all" size="sm" class="w-28" />
+      <USelect :items="[{label:'全部分类',value:'all'}]" model-value="all" size="sm" class="w-28" />
+      <UButton color="neutral" variant="ghost" size="sm" icon="i-lucide-rotate-ccw" @click="load">重置</UButton>
+      <UButton color="neutral" variant="outline" size="sm" icon="i-lucide-download">导出</UButton>
+    </div>
+
+    <!-- 统计 5 块 -->
+    <div class="grid gap-3 sm:grid-cols-5">
+      <div class="rounded-lg border border-default bg-default p-3">
+        <p class="text-xs text-muted">全部内容</p>
+        <p class="mt-1 text-xl font-bold text-highlighted">{{ stats?.total ?? '-' }}<span class="text-xs font-normal"> 篇</span></p>
       </div>
+      <div class="rounded-lg border border-default bg-default p-3">
+        <p class="text-xs text-muted">已发布</p>
+        <p class="mt-1 text-xl font-bold text-highlighted">{{ stats?.published ?? '-' }}<span class="text-xs font-normal"> 篇</span></p>
+      </div>
+      <div class="rounded-lg border border-default bg-default p-3">
+        <p class="text-xs text-muted">草稿中</p>
+        <p class="mt-1 text-xl font-bold text-highlighted">{{ stats?.draft ?? '-' }}<span class="text-xs font-normal"> 篇</span></p>
+      </div>
+      <div class="rounded-lg border border-default bg-default p-3">
+        <p class="text-xs text-muted">审核中</p>
+        <p class="mt-1 text-xl font-bold text-highlighted">—</p>
+      </div>
+      <div class="rounded-lg border border-default bg-default p-3">
+        <p class="text-xs text-muted">已下线</p>
+        <p class="mt-1 text-xl font-bold text-highlighted">{{ stats?.archived ?? 0 }}<span class="text-xs font-normal"> 篇</span></p>
+      </div>
+    </div>
 
-      <p
-        v-if="activitiesLoading"
-        class="text-sm text-muted"
-      >
-        正在加载活动…
-      </p>
-      <p
-        v-else-if="activitiesError"
-        class="text-sm text-danger-600 dark:text-danger-400"
-      >
-        {{ activitiesError }}
-      </p>
-      <ul
-        v-else-if="activityRows.length"
-        class="space-y-3"
-      >
-        <li
-          v-for="activity in activityRows"
-          :key="activity.id"
-          class="rounded-surface border border-default bg-default p-4"
-        >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-highlighted">
-                {{ activity.title }}
-              </p>
-              <p class="mt-1 text-xs text-muted">
-                {{ activityTypeLabel[activity.activityType] }} ·
-                {{ formatDateTimeCompact(activity.startAt) }} · {{ activity.location }}
-              </p>
-            </div>
-            <UBadge
-              size="sm"
-              variant="soft"
-              :color="registerBadge[deriveActivityRegistrationState(activity, now)]"
-            >
-              {{ registrationLabel(deriveActivityRegistrationState(activity, now)) }}
-            </UBadge>
-          </div>
-
-          <div class="mt-3 flex flex-wrap gap-2">
-            <UButton
-              :to="activity.detailPath"
-              size="sm"
-              color="neutral"
-              variant="soft"
-            >
-              查看
-            </UButton>
-            <UButton
-              size="sm"
-              color="neutral"
-              variant="ghost"
-              icon="i-lucide-pencil"
-              @click="editActivity(activity)"
-            >
-              编辑
-            </UButton>
-            <UButton
-              size="sm"
-              color="neutral"
-              variant="ghost"
-              icon="i-lucide-check"
-              @click="notify('结束活动')"
-            >
-              结束
-            </UButton>
-          </div>
-        </li>
-      </ul>
-      <p
-        v-else
-        class="text-sm text-muted"
-      >
-        暂无符合条件的活动。
-      </p>
-    </template>
-
-    <!-- 公告 tab -->
+    <div v-if="loading" class="py-10 text-center text-sm text-muted">正在加载…</div>
     <template v-else>
-      <div class="flex flex-wrap gap-2">
-        <USelect
-          v-model="announcementScope"
-          :items="announcementScopeOptions"
-          placeholder="全部来源"
-          class="w-40"
-        />
+      <!-- 活动或全部时显示活动 -->
+      <div v-if="tab==='all' || tab==='activities'" class="rounded-lg border border-default bg-default">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-muted/50 text-xs text-muted">
+              <tr>
+                <th class="px-3 py-2 text-left font-normal"><UCheckbox /></th>
+                <th class="px-3 py-2 text-left font-normal">标题</th>
+                <th class="px-3 py-2 text-left font-normal">类型</th>
+                <th class="px-3 py-2 text-left font-normal">分类</th>
+                <th class="px-3 py-2 text-left font-normal">发布状态</th>
+                <th class="px-3 py-2 text-left font-normal">发布时间</th>
+                <th class="px-3 py-2 text-left font-normal">操作</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-default">
+              <tr v-for="a in filteredActivities" :key="a.id" class="hover:bg-muted/30">
+                <td class="px-3 py-2"><UCheckbox /></td>
+                <td class="px-3 py-2">
+                  <div class="flex gap-2">
+                    <img v-if="a.cover?.src" :src="a.cover.src" class="size-10 rounded object-cover" alt="" />
+                    <div v-else class="grid size-10 place-items-center rounded bg-muted text-xs">无图</div>
+                    <div class="min-w-0">
+                      <p class="truncate font-medium text-highlighted">{{ a.title }}</p>
+                      <p class="truncate text-xs text-muted">{{ a.location }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-2"><UBadge size="xs" color="success" variant="soft">活动</UBadge></td>
+                <td class="px-3 py-2 text-xs text-muted">{{ a.activityType }}</td>
+                <td class="px-3 py-2"><UBadge size="xs" color="success" variant="soft">已发布</UBadge></td>
+                <td class="px-3 py-2 text-xs text-muted">{{ formatCompactDate(a.startAt) }}</td>
+                <td class="px-3 py-2">
+                  <div class="flex gap-1">
+                    <UButton size="xs" variant="ghost" color="neutral" @click="editActivity(a)">编辑</UButton>
+                    <UButton size="xs" variant="ghost" color="neutral" :to="a.detailPath">预览</UButton>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <p
-        v-if="announcementsLoading"
-        class="text-sm text-muted"
-      >
-        正在加载公告…
-      </p>
-      <p
-        v-else-if="announcementsError"
-        class="text-sm text-danger-600 dark:text-danger-400"
-      >
-        {{ announcementsError }}
-      </p>
-      <ul
-        v-else-if="announcementRows.length"
-        class="space-y-3"
-      >
-        <li
-          v-for="announcement in announcementRows"
-          :key="announcement.id"
-          class="rounded-surface border border-default bg-default p-4"
-        >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-highlighted">
-                {{ announcement.title }}
-              </p>
-              <p class="mt-1 text-xs text-muted">
-                {{ publisherScopeLabel[announcement.publisherScope] }}
-                <template v-if="announcement.linkedObject">
-                  · 关联 {{ announcementLinkedKindLabel[announcement.linkedObject.kind] }}
-                </template>
-                <template v-if="announcement.externalUrl">
-                  · 站外原文
-                </template>
-                · {{ formatDateTimeCompact(announcement.publishedAt) }}
-              </p>
-            </div>
-            <UBadge
-              v-if="announcement.externalUrl"
-              size="sm"
-              variant="soft"
-              color="info"
-              icon="i-lucide-external-link"
-            >
-              有原文
-            </UBadge>
-          </div>
-
-          <div class="mt-3 flex flex-wrap gap-2">
-            <UButton
-              :to="announcement.detailPath"
-              size="sm"
-              color="neutral"
-              variant="soft"
-            >
-              查看
-            </UButton>
-            <UButton
-              size="sm"
-              color="neutral"
-              variant="ghost"
-              icon="i-lucide-pencil"
-              @click="editAnnouncement(announcement)"
-            >
-              编辑
-            </UButton>
-            <UButton
-              size="sm"
-              color="neutral"
-              variant="ghost"
-              icon="i-lucide-archive"
-              @click="notify('归档公告')"
-            >
-              归档
-            </UButton>
-          </div>
-        </li>
-      </ul>
-      <p
-        v-else
-        class="text-sm text-muted"
-      >
-        暂无符合条件的公告。
-      </p>
+      <!-- 公告 -->
+      <div v-if="tab==='all' || tab==='announcements'" class="rounded-lg border border-default bg-default">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-muted/50 text-xs text-muted">
+              <tr>
+                <th class="px-3 py-2 text-left font-normal"><UCheckbox /></th>
+                <th class="px-3 py-2 text-left font-normal">标题</th>
+                <th class="px-3 py-2 text-left font-normal">类型</th>
+                <th class="px-3 py-2 text-left font-normal">发布状态</th>
+                <th class="px-3 py-2 text-left font-normal">发布时间</th>
+                <th class="px-3 py-2 text-left font-normal">操作</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-default">
+              <tr v-for="a in filteredAnnouncements" :key="a.id" class="hover:bg-muted/30">
+                <td class="px-3 py-2"><UCheckbox /></td>
+                <td class="px-3 py-2">
+                  <div class="flex gap-2">
+                    <div class="grid size-10 place-items-center rounded bg-muted"><UIcon name="i-lucide-megaphone" class="size-5 text-muted" /></div>
+                    <div class="min-w-0">
+                      <p class="truncate font-medium text-highlighted">{{ a.title }}</p>
+                      <p class="truncate text-xs text-muted">{{ a.publisherScope }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-3 py-2"><UBadge size="xs" color="info" variant="soft">公告</UBadge></td>
+                <td class="px-3 py-2"><UBadge size="xs" color="warning" variant="soft">草稿</UBadge></td>
+                <td class="px-3 py-2 text-xs text-muted">{{ formatCompactDate(a.publishedAt) }}</td>
+                <td class="px-3 py-2">
+                  <div class="flex gap-1">
+                    <UButton size="xs" variant="ghost" color="neutral" @click="editAnnouncement(a)">编辑</UButton>
+                    <UButton size="xs" variant="ghost" color="neutral" :to="a.detailPath">预览</UButton>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </template>
 
-    <PublishDynamicsModal
-      :open="publishOpen"
-      @update:open="publishOpen = $event"
-      @select="onPublishSelect"
-    />
-    <ActivityEditorModal
-      :open="activityEditorOpen"
-      :activity="editingActivity"
-      :sync-announcement="syncAnnouncement"
-      @update:open="activityEditorOpen = $event"
-      @saved="loadActivities"
-    />
-    <AnnouncementEditorModal
-      :open="announcementEditorOpen"
-      :announcement="editingAnnouncement"
-      @update:open="announcementEditorOpen = $event"
-      @saved="loadAnnouncements"
-    />
+    <PublishDynamicsModal :open="publishOpen" @update:open="publishOpen=$event" @select="onPublishSelect" />
+    <ActivityEditorModal :open="activityEditorOpen" :activity="editingActivity" :sync-announcement="syncAnnouncement" @update:open="activityEditorOpen=$event" @saved="load" />
+    <AnnouncementEditorModal :open="announcementEditorOpen" :announcement="editingAnnouncement" @update:open="announcementEditorOpen=$event" @saved="load" />
   </div>
 </template>

@@ -308,23 +308,55 @@ function phaseColor(
                   :key="advisor.membershipId || advisor.userId"
                   class="flex gap-3"
                 >
-                  <span class="grid size-9 shrink-0 place-items-center rounded-full bg-primary-50 text-primary-600 dark:bg-primary-900/30" aria-hidden="true">
-                    <UIcon name="i-lucide-graduation-cap" class="size-4" />
+                  <span
+                    class="grid size-9 shrink-0 place-items-center rounded-full bg-primary-50 text-primary-600 dark:bg-primary-900/30"
+                    aria-hidden="true"
+                  >
+                    <UIcon
+                      name="i-lucide-graduation-cap"
+                      class="size-4"
+                    />
                   </span>
                   <div class="min-w-0">
                     <p class="text-sm font-medium text-highlighted">
                       {{ advisor.displayName ?? advisor.publicName ?? '—' }}
-                      <span v-if="advisor.academicTitle" class="ml-1 font-normal text-muted">{{ advisor.academicTitle }}</span>
+                      <span
+                        v-if="advisor.academicTitle"
+                        class="ml-1 font-normal text-muted"
+                      >{{ advisor.academicTitle }}</span>
                     </p>
-                    <p v-if="advisor.department" class="text-xs text-muted">{{ advisor.department }}</p>
-                    <p v-if="advisor.publicEmail" class="text-xs text-toned">{{ advisor.publicEmail }}</p>
-                    <p v-if="advisor.officeLocation" class="text-xs text-toned">{{ advisor.officeLocation }}</p>
-                    <p v-if="advisor.researchInterests.length" class="mt-1 text-xs text-toned">研究方向：{{ advisor.researchInterests.join('、') }}</p>
+                    <p
+                      v-if="advisor.department"
+                      class="text-xs text-muted"
+                    >
+                      {{ advisor.department }}
+                    </p>
+                    <p
+                      v-if="advisor.publicEmail"
+                      class="text-xs text-toned"
+                    >
+                      {{ advisor.publicEmail }}
+                    </p>
+                    <p
+                      v-if="advisor.officeLocation"
+                      class="text-xs text-toned"
+                    >
+                      {{ advisor.officeLocation }}
+                    </p>
+                    <p
+                      v-if="advisor.researchInterests.length"
+                      class="mt-1 text-xs text-toned"
+                    >
+                      研究方向：{{ advisor.researchInterests.join('、') }}
+                    </p>
                   </div>
                 </li>
               </ul>
             </template>
-            <p v-else class="text-muted">
+            <p
+              v-else
+              class="text-muted"
+            >
               暂无
             </p>
           </OrganizationInfoCard>

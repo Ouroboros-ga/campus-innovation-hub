@@ -148,8 +148,19 @@ async function save() {
     <p class="mt-1 text-sm text-muted">
       {{ isTeacher ? '教师' : '学生' }} · 系统字段与公开字段。实名信息仅用于平台内部。
     </p>
-    <p v-if="loading" class="mt-4 text-sm text-muted">正在加载资料…</p>
-    <p v-if="error" class="mt-2 text-sm text-danger-600 dark:text-danger-400" role="alert">{{ error }}</p>
+    <p
+      v-if="loading"
+      class="mt-4 text-sm text-muted"
+    >
+      正在加载资料…
+    </p>
+    <p
+      v-if="error"
+      class="mt-2 text-sm text-danger-600 dark:text-danger-400"
+      role="alert"
+    >
+      {{ error }}
+    </p>
 
     <form
       class="mt-6 space-y-4"
@@ -159,57 +170,107 @@ async function save() {
       <template v-if="isTeacher">
         <div class="grid gap-4 sm:grid-cols-2">
           <UFormField label="公开姓名">
-            <UInput v-model="publicName" class="w-full" placeholder="如：王丽华" />
+            <UInput
+              v-model="publicName"
+              class="w-full"
+              placeholder="如：王丽华"
+            />
           </UFormField>
           <UFormField label="姓名（系统）">
-            <UInput v-model="realName" class="w-full" disabled />
+            <UInput
+              v-model="realName"
+              class="w-full"
+              disabled
+            />
           </UFormField>
         </div>
         <div class="grid gap-4 sm:grid-cols-2">
           <UFormField label="学院 / 部门">
-            <UInput v-model="department" class="w-full" />
+            <UInput
+              v-model="department"
+              class="w-full"
+            />
           </UFormField>
           <UFormField label="职称">
-            <UInput v-model="academicTitle" class="w-full" placeholder="如：教授" />
+            <UInput
+              v-model="academicTitle"
+              class="w-full"
+              placeholder="如：教授"
+            />
           </UFormField>
         </div>
         <div class="grid gap-4 sm:grid-cols-2">
           <UFormField label="公开邮箱">
-            <UInput v-model="publicEmail" class="w-full" />
+            <UInput
+              v-model="publicEmail"
+              class="w-full"
+            />
           </UFormField>
           <UFormField label="办公地点">
-            <UInput v-model="officeLocation" class="w-full" />
+            <UInput
+              v-model="officeLocation"
+              class="w-full"
+            />
           </UFormField>
         </div>
         <UFormField label="研究方向">
-          <UInput v-model="researchText" placeholder="多个用逗号分隔" class="w-full" />
+          <UInput
+            v-model="researchText"
+            placeholder="多个用逗号分隔"
+            class="w-full"
+          />
         </UFormField>
         <UFormField label="公开简介">
-          <UTextarea v-model="bio" :rows="3" class="w-full" />
+          <UTextarea
+            v-model="bio"
+            :rows="3"
+            class="w-full"
+          />
         </UFormField>
       </template>
       <template v-else>
         <div class="grid gap-4 sm:grid-cols-2">
           <UFormField label="昵称">
-            <UInput v-model="nickname" class="w-full" />
+            <UInput
+              v-model="nickname"
+              class="w-full"
+            />
           </UFormField>
           <UFormField label="姓名">
-            <UInput v-model="realName" class="w-full" disabled />
+            <UInput
+              v-model="realName"
+              class="w-full"
+              disabled
+            />
           </UFormField>
         </div>
         <div class="grid gap-4 sm:grid-cols-2">
           <UFormField label="专业">
-            <UInput v-model="major" class="w-full" />
+            <UInput
+              v-model="major"
+              class="w-full"
+            />
           </UFormField>
           <UFormField label="年级">
-            <UInput v-model="grade" class="w-full" />
+            <UInput
+              v-model="grade"
+              class="w-full"
+            />
           </UFormField>
         </div>
         <UFormField label="公开简介">
-          <UTextarea v-model="bio" :rows="3" class="w-full" />
+          <UTextarea
+            v-model="bio"
+            :rows="3"
+            class="w-full"
+          />
         </UFormField>
         <UFormField label="技能标签">
-          <UInput v-model="skillsText" placeholder="多个用逗号分隔，如：Python, 算法" class="w-full" />
+          <UInput
+            v-model="skillsText"
+            placeholder="多个用逗号分隔，如：Python, 算法"
+            class="w-full"
+          />
         </UFormField>
       </template>
 

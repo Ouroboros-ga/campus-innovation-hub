@@ -13,7 +13,7 @@ class AccountAlreadyExists(Exception):
     """注册标识触发唯一性约束时抛出。"""
 
 
-def register_pending_user(*, student_no: str, real_name: str, password: str) -> User:
+def register_pending_user(*, student_no: str, real_name: str, password: str, major: str | None = None, grade: int | None = None, class_name: str | None = None) -> User:
     try:
         with transaction.atomic():
             user = User(
@@ -27,7 +27,12 @@ def register_pending_user(*, student_no: str, real_name: str, password: str) -> 
             )
             user.set_password(password)
             user.save()
-            UserProfile.objects.create(user=user)
+            UserProfile.objects.create(
+                user=user,
+                major=major or None,
+                grade=grade,
+                class_name=class_name or None,
+            )
             return user
     except IntegrityError as error:
         raise AccountAlreadyExists from error

@@ -79,6 +79,8 @@ export interface OpsCompetition extends CompetitionSummary {
   collegeOrganized: boolean
   /** 发布生命周期状态。 */
   publicationState: PublicationState
+  isFeatured: boolean
+  featuredOrder: number
 }
 
 // ---------------------------------------------------------------------------
@@ -122,7 +124,9 @@ function toOpsCompetition(dto: CompetitionMgmtDto): OpsCompetition {
     detailPath: `/competitions/${dto.id}`,
     descriptionMd: dto.description_md ?? '',
     collegeOrganized: dto.college_organized ?? false,
-    publicationState: (dto.publication_state ?? 'DRAFT') as PublicationState
+    publicationState: (dto.publication_state ?? 'DRAFT') as PublicationState,
+    isFeatured: dto.is_featured ?? false,
+    featuredOrder: dto.featured_order ?? 0
   }
 }
 

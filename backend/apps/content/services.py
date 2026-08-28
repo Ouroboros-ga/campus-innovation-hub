@@ -46,6 +46,8 @@ def create_announcement(*, actor: User, payload: dict[str, Any]) -> Announcement
 def update_announcement(*, actor: User, announcement: Announcement, payload: dict[str, Any]) -> Announcement:
     _require_operator(actor)
     locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
+    if locked.publication_state != Announcement.PublicationState.DRAFT:
+        raise InvalidState("已发布内容不可直接修改，请通过草稿编辑后发布。")
     values = _announcement_values(payload)
     for field, value in values.items():
         setattr(locked, field, value)
@@ -118,6 +120,8 @@ def create_guide(*, actor: User, payload: dict[str, Any]) -> GuideArticle:
 def update_guide(*, actor: User, guide: GuideArticle, payload: dict[str, Any]) -> GuideArticle:
     _require_operator(actor)
     locked = GuideArticle.objects.select_for_update().get(pk=guide.pk)
+    if locked.publication_state != GuideArticle.PublicationState.DRAFT:
+        raise InvalidState("已发布内容不可直接修改，请通过草稿编辑后发布。")
     values, competition_ids = _guide_values(payload)
     for field, value in values.items():
         setattr(locked, field, value)
@@ -185,6 +189,8 @@ def create_faq(*, actor: User, payload: dict[str, Any]) -> FaqItem:
 def update_faq(*, actor: User, faq: FaqItem, payload: dict[str, Any]) -> FaqItem:
     _require_operator(actor)
     locked = FaqItem.objects.select_for_update().get(pk=faq.pk)
+    if locked.publication_state != FaqItem.PublicationState.DRAFT:
+        raise InvalidState("已发布内容不可直接修改，请通过草稿编辑后发布。")
     for field, value in payload.items():
         setattr(locked, field, value)
     locked.updated_by = actor

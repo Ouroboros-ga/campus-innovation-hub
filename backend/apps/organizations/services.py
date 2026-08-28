@@ -160,8 +160,8 @@ def update_recruitment(*, actor: User, organization: Organization, recruitment: 
     locked = Recruitment.objects.select_for_update().filter(pk=recruitment.id, organization_id=organization.id).first()
     if locked is None:
         raise NotFound("招新不存在。")
-    if locked.publication_state in {Recruitment.PublicationState.CANCELLED, Recruitment.PublicationState.ARCHIVED}:
-        raise InvalidState("当前招新不能编辑。")
+    if locked.publication_state != Recruitment.PublicationState.DRAFT:
+        raise InvalidState("已发布内容不可直接修改，请通过草稿编辑后发布。")
 
     values = dict(payload)
     positions = values.pop("positions", None)

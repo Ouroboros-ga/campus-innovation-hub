@@ -25,6 +25,9 @@ export function registerRouterGuards(router: Router): void {
 
     await auth.ensureSession()
 
+    // 连不上服务器 → 不重定向，让页面自行展示报错（auth.status === 'error'）
+    if (auth.status === 'error') return true
+
     if (!auth.isAuthenticated) {
       return { name: 'login', query: { redirect: to.fullPath } }
     }

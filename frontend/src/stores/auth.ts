@@ -16,8 +16,8 @@ import type {
   RegisterResult
 } from '@/features/auth/types'
 
-/** 会话状态。 */
-export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'anonymous'
+/** 会话状态。anonymous=未登录，error=连不上服务器。 */
+export type AuthStatus = 'idle' | 'loading' | 'authenticated' | 'anonymous' | 'error'
 
 /** 应用启动时只初始化一次会话；多次调用复用同一 Promise。 */
 let initPromise: Promise<void> | null = null
@@ -32,6 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
   const status = ref<AuthStatus>('idle')
   const user = ref<AuthUser | null>(null)
   const permissions = ref<AuthPermissions | null>(null)
+  const lastError = ref<string | null>(null)
 
   const isAuthenticated = computed(
     () => status.value === 'authenticated' && user.value !== null
@@ -45,7 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
     () => permissions.value?.organization_memberships ?? []
   )
 
-  /** 初始化 CSRF 并尽力恢复会话（未登录 401 → anonymous）。 */
+  /** 初始化 CSRF 并尽力恢复会话（未登录 401 → anonymous，网络错误 → error）。 */
   async function init(): Promise<void> {
     if (initPromise) return initPromise
     initPromise = (async () => {
@@ -60,12 +61,25 @@ export const useAuthStore = defineStore('auth', () => {
           user.value = me.user
           permissions.value = me.permissions
           status.value = 'authenticated'
+          lastError.value = null
         } else {
           status.value = 'anonymous'
+          lastError.value = null
         }
-      } catch {
-        // 非 401 错误 fail-open，按未登录处理，避免阻断导航。
-        status.value = 'anonymous'
+      } catch (e: unknown) {
+        const err = e as { status?: number; message?: string }
+        // 网络/服务不可用 → error，连不上服务器数据就报错
+        if (err && typeof err.status === 'number' && err.status === 0) {
+          status.value = 'error'
+          lastError.value = err.message ?? '无法连接服务器'
+        } else if (err && err.status && err.status >= 500) {
+          status.value = 'error'
+          lastError.value = err.message ?? '服务器异常'
+        } else {
+          // 401 等按未登录处理
+          status.value = 'anonymous'
+          lastError.value = null
+        }
       }
     })()
     return initPromise
@@ -111,6 +125,7 @@ export const useAuthStore = defineStore('auth', () => {
     status.value = 'idle'
     user.value = null
     permissions.value = null
+    lastError.value = null
     initPromise = null
   }
 
@@ -118,6 +133,7 @@ export const useAuthStore = defineStore('auth', () => {
     status,
     user,
     permissions,
+    lastError,
     isAuthenticated,
     platformRole,
     isSuperadmin,

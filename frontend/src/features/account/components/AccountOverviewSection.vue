@@ -14,7 +14,11 @@ withDefaults(
   <section class="flex flex-col overflow-hidden rounded-card border border-default bg-default">
     <header class="flex items-center justify-between gap-2 border-b border-default px-4 py-3">
       <h2 class="inline-flex items-center gap-1.5 text-sm font-semibold text-highlighted">
-        <UIcon :name="icon" class="size-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+        <UIcon
+          :name="icon"
+          class="size-4 text-primary-600 dark:text-primary-400"
+          aria-hidden="true"
+        />
         {{ title }}
       </h2>
       <RouterLink
@@ -23,7 +27,11 @@ withDefaults(
         class="inline-flex items-center gap-0.5 text-xs text-muted hover:text-primary-600 dark:hover:text-primary-400"
       >
         {{ actionLabel }}
-        <UIcon name="i-lucide-chevron-right" class="size-3.5" aria-hidden="true" />
+        <UIcon
+          name="i-lucide-chevron-right"
+          class="size-3.5"
+          aria-hidden="true"
+        />
       </RouterLink>
     </header>
     <div class="flex-1 p-3 sm:p-4">

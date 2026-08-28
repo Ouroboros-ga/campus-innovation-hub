@@ -95,7 +95,7 @@ function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, str
   return result
 }
 
-async function save() {
+async function save(publish = false) {
   const draft: ActivityEditorDraft = {
     title: title.value,
     activityType: activityType.value,
@@ -116,10 +116,11 @@ async function save() {
   submitting.value = true
   try {
     const coverAssetId = cover.value?.id ?? null
+    let targetId: string | null = props.activity?.id ?? null
     if (isEdit.value && props.activity) {
       await apiUpdateActivity(props.activity.id, draft, coverAssetId)
     } else if (props.syncAnnouncement) {
-      await createActivityWithAnnouncement(
+      const res = await createActivityWithAnnouncement(
         draft,
         coverAssetId,
         {
@@ -128,18 +129,33 @@ async function save() {
           bodyMd: `「${draft.title.trim()}」活动详情与报名方式见活动页。`,
           externalUrl: ''
         },
-        true
+        false
       )
+      targetId = (res as unknown as { activity: { id: string } })?.activity?.id ?? null
+      if (publish && targetId) await publishActivity(targetId)
+      toast.add({
+        title: publish ? '已发布' : '已创建草稿',
+        description: publish ? '活动与公告已发布。' : '活动与关联公告已保存为草稿，需发布后可见。',
+        color: 'success',
+        icon: 'i-lucide-check-circle'
+      })
+      close()
+      emit('saved')
+      return
     } else {
-      const id = await createActivity(draft, coverAssetId)
-      await publishActivity(id)
+      targetId = await createActivity(draft, coverAssetId)
     }
-    toast.add({
-      title: isEdit.value ? '已更新活动' : '已发布活动',
-      description: props.syncAnnouncement ? '活动与关联公告已同步发布。' : '已保存到服务器。',
-      color: 'success',
-      icon: 'i-lucide-check-circle'
-    })
+    if (publish && targetId) {
+      await publishActivity(targetId)
+      toast.add({ title: '已发布', description: '活动已发布，学生可见。', color: 'success', icon: 'i-lucide-check-circle' })
+    } else {
+      toast.add({
+        title: isEdit.value ? '已保存草稿' : '已创建草稿',
+        description: '草稿已保存，需发布后才对学生可见。',
+        color: 'success',
+        icon: 'i-lucide-check-circle'
+      })
+    }
     close()
     emit('saved')
   } catch (err) {
@@ -148,7 +164,7 @@ async function save() {
     } else {
       const message = err instanceof AppError ? err.message : '保存失败，请稍后重试。'
       toast.add({
-        title: '保存失败',
+        title: publish ? '发布失败' : '保存失败',
         description: message,
         color: 'error',
         icon: 'i-lucide-alert-circle'
@@ -176,7 +192,7 @@ async function save() {
       <form
         class="space-y-6"
         novalidate
-        @submit.prevent="save"
+        @submit.prevent="() => save(false)"
       >
         <ContentEditorShell preview-title="活动预览">
           <template #form>
@@ -329,13 +345,22 @@ async function save() {
           取消
         </UButton>
         <UButton
-          color="primary"
-          variant="solid"
+          color="neutral"
+          variant="outline"
           icon="i-lucide-save"
           :loading="submitting"
-          @click="save"
+          @click="save(false)"
         >
-          保存
+          保存草稿
+        </UButton>
+        <UButton
+          color="primary"
+          variant="solid"
+          icon="i-lucide-rocket"
+          :loading="submitting"
+          @click="save(true)"
+        >
+          保存并发布
         </UButton>
       </div>
     </template>

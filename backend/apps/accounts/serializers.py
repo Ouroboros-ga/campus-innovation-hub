@@ -11,6 +11,10 @@ class RegisterSerializer(serializers.Serializer):
     student_no = serializers.CharField(min_length=2, max_length=32)
     real_name = serializers.CharField(min_length=1, max_length=80)
     password = serializers.CharField(write_only=True, trim_whitespace=False)
+    password_confirm = serializers.CharField(write_only=True, required=False, trim_whitespace=False)
+    major = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    grade = serializers.IntegerField(min_value=1, max_value=4, required=False)
+    class_name = serializers.CharField(max_length=80, required=False, allow_blank=True)
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         # 禁止通过注册接口创建教师或提升权限（database-design.md §8.1）
@@ -18,6 +22,9 @@ class RegisterSerializer(serializers.Serializer):
         unknown = forbidden & set(self.initial_data.keys())  # type: ignore[arg-type]
         if unknown:
             raise serializers.ValidationError({"non_field_errors": [f"不支持字段：{', '.join(sorted(unknown))}"]})
+        # 密码确认
+        if "password_confirm" in self.initial_data and attrs.get("password") != attrs.get("password_confirm"):
+            raise serializers.ValidationError({"password_confirm": ["两次密码不一致。"]})
         return attrs
 
     def validate_password(self, value: str) -> str:

@@ -30,7 +30,20 @@ const isMeTab = computed(() => route.name === 'me')
   <MobilePageHeader
     v-if="isPhone && isBackShell"
     :title="backTitle"
-  />
+  >
+    <template
+      v-if="route.name === 'notifications'"
+      #right
+    >
+      <UButton
+        to="/me/settings"
+        aria-label="通知设置"
+        icon="i-lucide-settings"
+        color="neutral"
+        variant="ghost"
+      />
+    </template>
+  </MobilePageHeader>
 
   <header
     v-else-if="isPhone && mobileHeaderTitle"

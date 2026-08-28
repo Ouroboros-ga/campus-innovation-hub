@@ -111,23 +111,38 @@ function teamBadgeLabel(team: { id: string; status: string }) {
 <template>
   <section class="bg-canvas py-4 sm:py-6">
     <PageContainer class="max-w-[90rem]">
-      <!-- PC 标题行（Phone 由 AppHeader 承载个人中心标题，此处隐藏避免重复） -->
-      <div class="hidden items-center justify-between md:flex">
-        <h1 class="flex items-baseline gap-3 text-2xl font-bold text-highlighted">
-          个人中心
-          <span class="text-sm font-normal text-muted">下午好，{{ display.displayName }}！</span>
-        </h1>
-        <UButton
-          to="/me/profile"
-          color="neutral"
-          variant="outline"
-          icon="i-lucide-pencil"
-          size="sm"
-          class="hidden md:inline-flex"
-        >
-          编辑个人资料
-        </UButton>
+      <div v-if="auth.status === 'loading' || auth.status === 'idle'" class="py-20 text-center text-sm text-muted">
+        正在加载…
       </div>
+      <div v-else-if="auth.status === 'error'" class="py-20 text-center">
+        <UIcon name="i-lucide-wifi-off" class="mx-auto size-10 text-muted" aria-hidden="true" />
+        <p class="mt-3 text-sm text-muted">{{ auth.lastError ?? '无法连接服务器，请检查网络后重试' }}</p>
+        <UButton class="mt-4" color="primary" variant="soft" @click="auth.init()">重试</UButton>
+      </div>
+      <div v-else-if="!auth.isAuthenticated" class="py-20 text-center">
+        <UIcon name="i-lucide-user-x" class="mx-auto size-10 text-muted" aria-hidden="true" />
+        <p class="mt-3 text-sm font-medium text-highlighted">未登录</p>
+        <p class="mt-1 text-xs text-muted">登录后查看个人中心</p>
+        <UButton class="mt-4" color="primary" to="/login?redirect=/me">去登录</UButton>
+      </div>
+      <template v-else>
+        <!-- PC 标题行（Phone 由 AppHeader 承载个人中心标题，此处隐藏避免重复） -->
+        <div class="hidden items-center justify-between md:flex">
+          <h1 class="flex items-baseline gap-3 text-2xl font-bold text-highlighted">
+            个人中心
+            <span class="text-sm font-normal text-muted">下午好，{{ display.displayName }}！</span>
+          </h1>
+          <UButton
+            to="/me/profile"
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-pencil"
+            size="sm"
+            class="hidden md:inline-flex"
+          >
+            编辑个人资料
+          </UButton>
+        </div>
 
       <!-- Hero -->
       <div class="mt-0 md:mt-4">
@@ -175,8 +190,12 @@ function teamBadgeLabel(team: { id: string; status: string }) {
                 </UBadge>
               </div>
               <p class="mt-1 text-xs text-muted">
-                <template v-if="item.positionName">团队名称：{{ item.positionName }}</template>
-                <template v-else>提交时间：{{ formatCompactDate(item.submittedAt) }}</template>
+                <template v-if="item.positionName">
+                  团队名称：{{ item.positionName }}
+                </template>
+                <template v-else>
+                  提交时间：{{ formatCompactDate(item.submittedAt) }}
+                </template>
                 <span
                   v-if="item.positionName"
                   class="ml-2"
@@ -196,7 +215,11 @@ function teamBadgeLabel(team: { id: string; status: string }) {
               class="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400"
             >
               查看全部申请记录
-              <UIcon name="i-lucide-chevron-right" class="size-3.5" aria-hidden="true" />
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-3.5"
+                aria-hidden="true"
+              />
             </RouterLink>
           </template>
         </AccountOverviewSection>
@@ -218,7 +241,10 @@ function teamBadgeLabel(team: { id: string; status: string }) {
                 class="flex items-start justify-between gap-3 text-sm"
               >
                 <span class="flex min-w-0 items-start gap-1.5">
-                  <span class="mt-2 size-1 shrink-0 rounded-full bg-primary-600 dark:bg-primary-400" aria-hidden="true" />
+                  <span
+                    class="mt-2 size-1 shrink-0 rounded-full bg-primary-600 dark:bg-primary-400"
+                    aria-hidden="true"
+                  />
                   <RouterLink
                     :to="item.detailPath"
                     class="line-clamp-1 text-toned hover:text-primary-600"
@@ -235,7 +261,11 @@ function teamBadgeLabel(team: { id: string; status: string }) {
                 class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400"
               >
                 更多竞赛动态
-                <UIcon name="i-lucide-chevron-right" class="size-3.5" aria-hidden="true" />
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  class="size-3.5"
+                  aria-hidden="true"
+                />
               </RouterLink>
             </template>
           </AccountOverviewSection>
@@ -269,7 +299,11 @@ function teamBadgeLabel(team: { id: string; status: string }) {
                 class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400"
               >
                 更多活动
-                <UIcon name="i-lucide-chevron-right" class="size-3.5" aria-hidden="true" />
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  class="size-3.5"
+                  aria-hidden="true"
+                />
               </RouterLink>
             </template>
           </AccountOverviewSection>
@@ -318,7 +352,11 @@ function teamBadgeLabel(team: { id: string; status: string }) {
               class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400"
             >
               浏览更多团队
-              <UIcon name="i-lucide-chevron-right" class="size-3.5" aria-hidden="true" />
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-3.5"
+                aria-hidden="true"
+              />
             </RouterLink>
           </template>
         </AccountOverviewSection>
@@ -337,7 +375,11 @@ function teamBadgeLabel(team: { id: string; status: string }) {
               class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400"
             >
               查看全部动态
-              <UIcon name="i-lucide-chevron-right" class="size-3.5" aria-hidden="true" />
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-3.5"
+                aria-hidden="true"
+              />
             </RouterLink>
           </template>
         </AccountOverviewSection>
@@ -358,7 +400,11 @@ function teamBadgeLabel(team: { id: string; status: string }) {
               class="inline-flex items-center gap-1 text-xs text-muted hover:text-primary-600"
             >
               查看全部
-              <UIcon name="i-lucide-chevron-right" class="size-3.5" aria-hidden="true" />
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-3.5"
+                aria-hidden="true"
+              />
             </RouterLink>
           </template>
         </AccountOverviewSection>
@@ -368,6 +414,7 @@ function teamBadgeLabel(team: { id: string; status: string }) {
       <div class="mt-4 hidden md:block">
         <AccountSettingsRow :items="settingsRowItems" />
       </div>
+      </template>
     </PageContainer>
   </section>
 </template>

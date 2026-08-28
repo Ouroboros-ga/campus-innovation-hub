@@ -2,7 +2,7 @@
 
 from django.urls import path
 
-from apps.ops_api import activity_views, competition_views, consultation_views, content_views
+from apps.ops_api import activity_views, competition_views, consultation_views, content_views, organization_views, overview_views
 
 
 urlpatterns = [
@@ -43,4 +43,10 @@ urlpatterns = [
     path("ops/consultations", consultation_views.ConsultationCollectionView.as_view(), name="ops-consultation-collection"),
     path("ops/consultations/<str:object_id>", consultation_views.ConsultationDetailView.as_view(), name="ops-consultation-detail"),
     path("ops/consultations/<str:object_id>/replies", consultation_views.ConsultationReplyView.as_view(), name="ops-consultation-reply"),
+    path("ops/organizations", organization_views.OrganizationCollectionView.as_view(), name="ops-organization-collection"),
+    path("ops/organizations/stats", organization_views.OrganizationStatsView.as_view(), name="ops-organization-stats"),
+    path("ops/overview/workbench", overview_views.WorkbenchStatsView.as_view(), name="ops-workbench-stats"),
+    path("ops/overview/competitions/health", overview_views.CompetitionHealthView.as_view(), name="ops-competition-health"),
+    path("ops/overview/dynamics/stats", overview_views.DynamicsStatsView.as_view(), name="ops-dynamics-stats"),
+    path("ops/overview/recent-drafts", overview_views.RecentAndDraftsView.as_view(), name="ops-recent-drafts"),
 ]

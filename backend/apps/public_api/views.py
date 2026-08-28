@@ -340,6 +340,29 @@ class AnnouncementDetailView(PublicReadView):
         return Response(serialize_announcement_detail(announcement, request))
 
 
+class QaPublicListView(PublicReadView):
+    def get(self, request: Request) -> Response:
+        validate_query_keys(request, {"q", "category", "page", "page_size"})
+        from apps.consultations.models import Consultation
+
+        category = parse_optional_enum(request, "category", Consultation.Category.values)
+        queryset = Consultation.objects.filter(
+            visibility=Consultation.Visibility.PUBLIC, status__in=[Consultation.Status.ANSWERED, Consultation.Status.CLOSED]
+        ).select_related("author", "author__profile").prefetch_related("replies__author")
+        queryset = filter_text(queryset, parse_optional_text(request, "q"), ("title", "body_md"))
+        if category:
+            queryset = queryset.filter(category=category)
+        queryset = queryset.order_by("-answered_at", "-updated_at", "-id")
+
+        def _serialize_public(item: Consultation) -> dict:
+            # 复用已有的 detail 序列化，公开字段已受控
+            from apps.student_api.serializers import serialize_consultation_detail
+
+            return serialize_consultation_detail(item, request)
+
+        return paginated_response(request, queryset, _serialize_public)
+
+
 def _matched_field(item: Any, fields: tuple[str, ...], query: str) -> str:
     lowered = query.lower()
     for field in fields:

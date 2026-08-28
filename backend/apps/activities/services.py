@@ -135,6 +135,8 @@ def create_activity(*, actor: User, payload: dict[str, Any]) -> Activity:
 def update_activity(*, actor: User, activity: Activity, payload: dict[str, Any]) -> Activity:
     _require_operator(actor)
     locked = Activity.objects.select_for_update().get(pk=activity.pk)
+    if locked.publication_state != Activity.PublicationState.DRAFT:
+        raise InvalidState("已发布内容不可直接修改，请通过草稿编辑后发布。")
     values = dict(payload)
     if "organizer_organization_id" in values:
         values["organizer_organization_id"] = values.pop("organizer_organization_id")

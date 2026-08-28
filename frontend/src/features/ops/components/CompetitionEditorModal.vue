@@ -105,7 +105,7 @@ function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, str
   return result
 }
 
-async function save() {
+async function save(publish = false) {
   const draft: CompetitionEditorDraft = {
     name: name.value,
     edition: edition.value,
@@ -126,18 +126,26 @@ async function save() {
   submitting.value = true
   try {
     const coverAssetId = cover.value?.id ?? null
+    let targetId: string | null = props.competition?.id ?? null
     if (isEdit.value && props.competition) {
+      if (props.competition.publicationState !== 'DRAFT') {
+        throw new AppError('已发布内容不可直接修改，请通过草稿编辑后发布。', { status: 409, code: 'INVALID_STATE' })
+      }
       await apiUpdateCompetition(props.competition.id, draft, coverAssetId)
     } else {
-      const id = await createCompetition(draft, coverAssetId)
-      await publishCompetition(id)
+      targetId = await createCompetition(draft, coverAssetId)
     }
-    toast.add({
-      title: isEdit.value ? '已更新竞赛' : '已发布竞赛',
-      description: '已保存到服务器。',
-      color: 'success',
-      icon: 'i-lucide-check-circle'
-    })
+    if (publish && targetId) {
+      await publishCompetition(targetId)
+      toast.add({ title: '已发布', description: '竞赛已发布，学生可见。', color: 'success', icon: 'i-lucide-check-circle' })
+    } else {
+      toast.add({
+        title: publish ? '已发布' : isEdit.value ? '已保存草稿' : '已创建草稿',
+        description: publish ? '已发布。' : '草稿已保存，需发布后才对学生可见。',
+        color: 'success',
+        icon: 'i-lucide-check-circle'
+      })
+    }
     close()
     emit('saved')
   } catch (err) {
@@ -146,7 +154,7 @@ async function save() {
     } else {
       const message = err instanceof AppError ? err.message : '保存失败，请稍后重试。'
       toast.add({
-        title: '保存失败',
+        title: publish ? '发布失败' : '保存失败',
         description: message,
         color: 'error',
         icon: 'i-lucide-alert-circle'
@@ -174,7 +182,7 @@ async function save() {
       <form
         class="space-y-6"
         novalidate
-        @submit.prevent="save"
+        @submit.prevent="() => save(false)"
       >
         <ContentEditorShell preview-title="竞赛预览">
           <template #form>
@@ -356,13 +364,22 @@ async function save() {
           取消
         </UButton>
         <UButton
-          color="primary"
-          variant="solid"
+          color="neutral"
+          variant="outline"
           icon="i-lucide-save"
           :loading="submitting"
-          @click="save"
+          @click="save(false)"
         >
-          保存
+          保存草稿
+        </UButton>
+        <UButton
+          color="primary"
+          variant="solid"
+          icon="i-lucide-rocket"
+          :loading="submitting"
+          @click="save(true)"
+        >
+          保存并发布
         </UButton>
       </div>
     </template>

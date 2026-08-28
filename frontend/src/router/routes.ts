@@ -290,6 +290,13 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '咨询管理' }
           },
           {
+            path: 'organizations',
+            name: 'ops-organizations',
+            component: () =>
+              import('@/pages/ops/OpsOrganizationsPage.vue'),
+            meta: { title: '社团组织管理' }
+          },
+          {
             path: 'guides',
             name: 'ops-guides',
             component: () =>
@@ -304,6 +311,13 @@ export const routes: RouteRecordRaw[] = [
         component: () =>
           import('@/pages/auth/LoginPage.vue'),
         meta: { mobileShell: 'form', title: '登录' }
+      },
+      {
+        path: 'notifications',
+        name: 'notifications',
+        component: () =>
+          import('@/pages/notifications/NotificationCenterPage.vue'),
+        meta: { mobileShell: 'detail', title: '通知中心' }
       },
       {
         path: 'register',

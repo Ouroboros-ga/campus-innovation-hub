@@ -36,7 +36,10 @@ function initial(name: string) {
         <div class="h-20 w-14 rounded-t-sm bg-primary-200 dark:bg-primary-800" />
         <div class="h-12 w-10 rounded-t-sm bg-primary-200 dark:bg-primary-800" />
       </div>
-      <div class="absolute bottom-6 right-10 h-4 w-4 rounded-full bg-primary-200 dark:bg-primary-700/50" style="clip-path: circle(50%)" />
+      <div
+        class="absolute bottom-6 right-10 h-4 w-4 rounded-full bg-primary-200 dark:bg-primary-700/50"
+        style="clip-path: circle(50%)"
+      />
     </div>
 
     <!-- 移动端 Phone：纵向卡片；桌面：横向 -->
@@ -54,7 +57,10 @@ function initial(name: string) {
             class="absolute -bottom-1 -right-1 grid size-7 place-items-center rounded-full border border-default bg-default shadow-sm"
             aria-hidden="true"
           >
-            <UIcon name="i-lucide-camera" class="size-3.5 text-muted" />
+            <UIcon
+              name="i-lucide-camera"
+              class="size-3.5 text-muted"
+            />
           </span>
         </div>
         <div class="min-w-0 flex-1 md:min-w-[22rem]">
@@ -78,7 +84,9 @@ function initial(name: string) {
           </div>
           <p class="mt-1 text-sm text-muted">
             {{ props.collegeLabel }}<span v-if="props.gradeLabel"> · {{ props.gradeLabel }}</span>
-            <template v-if="isTeacher"> · {{ props.profile.department ?? '' }}</template>
+            <template v-if="isTeacher">
+              · {{ props.profile.department ?? '' }}
+            </template>
           </p>
           <p
             v-if="props.bio"
@@ -110,7 +118,11 @@ function initial(name: string) {
       <div class="grid grid-cols-3 divide-x divide-default border-t border-default pt-4 md:ml-auto md:flex md:items-stretch md:divide-x md:border-t-0 md:pt-0">
         <div class="flex flex-col items-center px-2 py-1 text-center md:min-w-[7rem] md:px-6">
           <span class="inline-flex items-center gap-1.5 text-xs text-muted">
-            <UIcon name="i-lucide-heart" class="size-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+            <UIcon
+              name="i-lucide-heart"
+              class="size-4 text-primary-600 dark:text-primary-400"
+              aria-hidden="true"
+            />
             关注竞赛
           </span>
           <span class="mt-1 text-xl font-bold text-highlighted">{{ props.stats.follows }}</span>
@@ -118,7 +130,11 @@ function initial(name: string) {
         </div>
         <div class="flex flex-col items-center px-2 py-1 text-center md:min-w-[7rem] md:px-6">
           <span class="inline-flex items-center gap-1.5 text-xs text-muted">
-            <UIcon name="i-lucide-users" class="size-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+            <UIcon
+              name="i-lucide-users"
+              class="size-4 text-primary-600 dark:text-primary-400"
+              aria-hidden="true"
+            />
             参与组队
           </span>
           <span class="mt-1 text-xl font-bold text-highlighted">{{ props.stats.teams }}</span>
@@ -126,7 +142,11 @@ function initial(name: string) {
         </div>
         <div class="flex flex-col items-center px-2 py-1 text-center md:min-w-[7rem] md:px-6">
           <span class="inline-flex items-center gap-1.5 text-xs text-muted">
-            <UIcon name="i-lucide-briefcase" class="size-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+            <UIcon
+              name="i-lucide-briefcase"
+              class="size-4 text-primary-600 dark:text-primary-400"
+              aria-hidden="true"
+            />
             组织身份
           </span>
           <span class="mt-1 text-xl font-bold text-highlighted">{{ props.stats.orgs }}</span>

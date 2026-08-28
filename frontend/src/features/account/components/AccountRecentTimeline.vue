@@ -20,7 +20,10 @@ defineProps<{ items: AccountTimelineItem[] }>()
             : 'border-default bg-muted text-muted'"
         aria-hidden="true"
       >
-        <UIcon :name="item.icon" class="size-4" />
+        <UIcon
+          :name="item.icon"
+          class="size-4"
+        />
       </span>
       <span class="min-w-0 flex-1">
         <span class="block text-sm font-medium text-highlighted">{{ item.title }}</span>

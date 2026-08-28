@@ -41,6 +41,7 @@ describe('应用路由', () => {
       'me-settings',
       'ops',
       'login',
+      'notifications',
       'register'
     ])
   })

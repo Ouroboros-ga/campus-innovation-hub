@@ -105,7 +105,15 @@ def register(request: HttpRequest) -> JsonResponse:
         return validation_error(serializer.errors)
 
     try:
-        register_pending_user(**serializer.validated_data)
+        data = serializer.validated_data
+        register_pending_user(
+            student_no=data["student_no"],
+            real_name=data["real_name"],
+            password=data["password"],
+            major=(data.get("major") or None),
+            grade=data.get("grade"),
+            class_name=(data.get("class_name") or None),
+        )
     except AccountAlreadyExists:
         record_registration_attempt(client_ip=origin_ip)
         return api_error(

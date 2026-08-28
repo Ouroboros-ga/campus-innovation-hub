@@ -14,7 +14,11 @@ import AccountSubPage from '@/features/account/components/AccountSubPage.vue'
     <!-- 外观 -->
     <section class="mt-6 rounded-card border border-default bg-default p-4">
       <div class="flex items-center gap-2">
-        <UIcon name="i-lucide-palette" class="size-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+        <UIcon
+          name="i-lucide-palette"
+          class="size-4 text-primary-600 dark:text-primary-400"
+          aria-hidden="true"
+        />
         <h2 class="text-sm font-semibold text-highlighted">
           外观模式
         </h2>
@@ -35,7 +39,11 @@ import AccountSubPage from '@/features/account/components/AccountSubPage.vue'
       <section class="rounded-card border border-default bg-default p-4">
         <div class="flex items-start justify-between gap-3">
           <span class="flex items-center gap-2">
-            <UIcon name="i-lucide-user-round" class="size-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+            <UIcon
+              name="i-lucide-user-round"
+              class="size-4 text-primary-600 dark:text-primary-400"
+              aria-hidden="true"
+            />
             <span class="text-sm font-semibold text-highlighted">个人资料</span>
           </span>
           <UButton
@@ -55,7 +63,11 @@ import AccountSubPage from '@/features/account/components/AccountSubPage.vue'
 
       <section class="rounded-card border border-default bg-default p-4">
         <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-lock" class="size-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+          <UIcon
+            name="i-lucide-lock"
+            class="size-4 text-primary-600 dark:text-primary-400"
+            aria-hidden="true"
+          />
           <h2 class="text-sm font-semibold text-highlighted">
             账号与安全
           </h2>
@@ -71,10 +83,20 @@ import AccountSubPage from '@/features/account/components/AccountSubPage.vue'
           密码修改、登录保护等以最终认证方案为准，当前为占位展示。
         </p>
         <div class="mt-3 flex flex-wrap gap-2">
-          <UButton size="xs" color="neutral" variant="outline" disabled>
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="outline"
+            disabled
+          >
             修改密码
           </UButton>
-          <UButton size="xs" color="neutral" variant="ghost" disabled>
+          <UButton
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            disabled
+          >
             登录保护
           </UButton>
         </div>
@@ -82,7 +104,11 @@ import AccountSubPage from '@/features/account/components/AccountSubPage.vue'
 
       <section class="rounded-card border border-default bg-default p-4">
         <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-bell" class="size-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+          <UIcon
+            name="i-lucide-bell"
+            class="size-4 text-primary-600 dark:text-primary-400"
+            aria-hidden="true"
+          />
           <h2 class="text-sm font-semibold text-highlighted">
             通知设置
           </h2>
@@ -101,7 +127,11 @@ import AccountSubPage from '@/features/account/components/AccountSubPage.vue'
 
       <section class="rounded-card border border-default bg-default p-4">
         <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-shield-check" class="size-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+          <UIcon
+            name="i-lucide-shield-check"
+            class="size-4 text-primary-600 dark:text-primary-400"
+            aria-hidden="true"
+          />
           <h2 class="text-sm font-semibold text-highlighted">
             隐私设置
           </h2>
@@ -120,7 +150,11 @@ import AccountSubPage from '@/features/account/components/AccountSubPage.vue'
 
       <section class="rounded-card border border-default bg-default p-4">
         <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-link-2" class="size-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+          <UIcon
+            name="i-lucide-link-2"
+            class="size-4 text-primary-600 dark:text-primary-400"
+            aria-hidden="true"
+          />
           <h2 class="text-sm font-semibold text-highlighted">
             绑定设置
           </h2>

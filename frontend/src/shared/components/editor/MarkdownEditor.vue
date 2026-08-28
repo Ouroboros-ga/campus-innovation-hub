@@ -5,6 +5,8 @@ import 'vditor/dist/index.css'
 // 将 Vditor 自带的简体中文语言包打进本地 bundle，运行时不再从 unpkg 拉取 i18n（该 CDN 路径在部分环境 404）。
 import 'vditor/dist/js/i18n/zh_CN.js'
 
+import { useToast } from '@nuxt/ui/composables'
+
 import { uploadImage } from '@/shared/http/media'
 
 /**
@@ -31,6 +33,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
 }>()
 
+const toast = useToast()
 const el = ref<HTMLDivElement | null>(null)
 const markdownFile = ref<HTMLInputElement | null>(null)
 const imageFile = ref<HTMLInputElement | null>(null)
@@ -107,15 +110,6 @@ function insertMarkdownImage(url: string): void {
   emit('update:modelValue', editor.getValue() ?? '')
 }
 
-function insertImageAsBase64(file: File): void {
-  const reader = new FileReader()
-  reader.onload = () => {
-    const dataUrl = typeof reader.result === 'string' ? reader.result : ''
-    if (dataUrl) insertMarkdownImage(dataUrl)
-  }
-  reader.readAsDataURL(file)
-}
-
 async function onInsertImageChange(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -123,9 +117,14 @@ async function onInsertImageChange(event: Event): Promise<void> {
     try {
       const result = await uploadImage(file, 'IMAGE')
       insertMarkdownImage(result.url)
-    } catch {
-      // 上传失败（无后端 / 未登录 / 超限）回退为 base64 插入，保证图片可插入。
-      insertImageAsBase64(file)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '图片上传失败，请检查网络或文件大小后重试。'
+      toast.add({
+        title: '图片上传失败',
+        description: message,
+        color: 'error',
+        icon: 'i-lucide-alert-circle'
+      })
     }
   }
   input.value = ''

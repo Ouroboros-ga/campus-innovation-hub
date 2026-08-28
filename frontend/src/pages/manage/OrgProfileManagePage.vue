@@ -1,47 +1,81 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
 
-import { managedOrganizationDetail } from '@/features/organizations/lib/orgManagement'
+import { getManageOrgProfile, updateManageOrgProfile } from '@/features/organizations/api/orgManageApi'
 import ContentEditorShell from '@/shared/components/editor/ContentEditorShell.vue'
 import CoverUpload from '@/shared/components/upload/CoverUpload.vue'
 import FormSection from '@/shared/components/form/FormSection.vue'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 import RichContent from '@/shared/components/reader/RichContent.vue'
+import { AppError } from '@/shared/http/types'
 import type { MediaImage } from '@/shared/types/homepage'
 
 /** 组织资料管理（FE-080 / PageMap §组织资料管理）。
- *  Logo 走媒体上传，介绍为 Markdown 所见即所得，桌面双栏 / 移动 编辑↔预览实时渲染。
+ *  已接真实后端 `PATCH /manage/organizations/:id/profile`，移除 mock 保存。
  */
 const route = useRoute()
 const toast = useToast()
 
 const orgId = String(route.params.organizationId ?? '')
-const detail = computed(() => managedOrganizationDetail(orgId))
 
-const intro = ref(detail.value?.descriptionMd ?? '')
-const direction = ref(detail.value?.direction ?? '')
-const contactEmail = ref(detail.value?.contactEmail ?? '')
-const contactPhone = ref(detail.value?.contactPhone ?? '')
-const contactAddress = ref(detail.value?.contactAddress ?? '')
-const publicContact = ref(detail.value?.publicContact ?? '')
-const logo = ref<MediaImage | null>(detail.value?.logo ? { id: null, src: detail.value.logo.src, alt: detail.value.logo.alt } : null)
+const orgName = ref('')
+const intro = ref('')
+const publicContact = ref('')
+const logo = ref<MediaImage | null>(null)
+const loading = ref(true)
+const saving = ref(false)
 
-const directionTags = computed(() =>
-  direction.value
-    .split(/[,，、/]/)
-    .map(item => item.trim())
-    .filter(Boolean)
-)
+async function load() {
+  loading.value = true
+  try {
+    const profile = await getManageOrgProfile(orgId)
+    orgName.value = profile.name
+    intro.value = profile.descriptionMd ?? ''
+    publicContact.value = profile.publicContact ?? ''
+    logo.value = profile.logo ? { id: null, src: profile.logo.src, alt: profile.logo.alt } : null
+  } catch {
+    toast.add({
+      title: '加载失败',
+      description: '组织资料加载失败，请稍后重试。',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+  } finally {
+    loading.value = false
+  }
+}
 
-function save() {
-  toast.add({
-    title: '已保存',
-    description: '组织资料修改已保存（mock）。',
-    color: 'success',
-    icon: 'i-lucide-check-circle'
-  })
+watch(() => orgId, load, { immediate: true })
+
+const introPreview = computed(() => intro.value)
+
+async function save() {
+  saving.value = true
+  try {
+    await updateManageOrgProfile(orgId, {
+      description_md: intro.value || null,
+      public_contact: publicContact.value || null,
+      logo_asset_id: logo.value?.id ?? null
+    })
+    toast.add({
+      title: '已保存',
+      description: '组织资料已保存。',
+      color: 'success',
+      icon: 'i-lucide-check-circle'
+    })
+  } catch (err) {
+    const message = err instanceof AppError ? err.message : '保存失败，请稍后重试。'
+    toast.add({
+      title: '保存失败',
+      description: message,
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -72,42 +106,13 @@ function save() {
           </FormSection>
 
           <FormSection
-            title="方向与联系方式"
-            description="主要方向与公开联系方式"
+            title="公开联系方式"
+            description="对外展示的联系方式"
           >
-            <UFormField label="主要方向">
-              <UInput
-                v-model="direction"
-                placeholder="用 / 分隔多个方向"
-                class="w-full"
-              />
-            </UFormField>
-
-            <div class="grid gap-4 sm:grid-cols-2">
-              <UFormField label="公开邮箱">
-                <UInput
-                  v-model="contactEmail"
-                  class="w-full"
-                />
-              </UFormField>
-              <UFormField label="公开电话">
-                <UInput
-                  v-model="contactPhone"
-                  class="w-full"
-                />
-              </UFormField>
-            </div>
-
-            <UFormField label="公开地址">
-              <UInput
-                v-model="contactAddress"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField label="单行公开联系方式">
+            <UFormField label="公开联系方式">
               <UInput
                 v-model="publicContact"
+                placeholder="如：邮箱 / 电话 / 地址"
                 class="w-full"
               />
             </UFormField>
@@ -126,58 +131,15 @@ function save() {
             >
           </div>
           <h3 class="text-lg font-semibold text-highlighted">
-            {{ detail?.name || '组织名称' }}
+            {{ orgName || '组织名称' }}
           </h3>
-          <div
-            v-if="directionTags.length"
-            class="mt-2 flex flex-wrap gap-1.5"
+          <RichContent :content="introPreview" />
+          <p
+            v-if="publicContact"
+            class="mt-4 text-sm text-toned"
           >
-            <span
-              v-for="tag in directionTags"
-              :key="tag"
-              class="rounded-md bg-neutral-100 px-2 py-0.5 text-xs text-highlighted dark:bg-neutral-800"
-            >
-              {{ tag }}
-            </span>
-          </div>
-          <RichContent :content="intro" />
-          <dl
-            v-if="contactEmail || contactPhone || contactAddress || publicContact"
-            class="mt-4 space-y-1 text-sm"
-          >
-            <template v-if="contactEmail">
-              <dt class="sr-only">
-                公开邮箱
-              </dt>
-              <dd class="text-toned">
-                邮箱：{{ contactEmail }}
-              </dd>
-            </template>
-            <template v-if="contactPhone">
-              <dt class="sr-only">
-                公开电话
-              </dt>
-              <dd class="text-toned">
-                电话：{{ contactPhone }}
-              </dd>
-            </template>
-            <template v-if="contactAddress">
-              <dt class="sr-only">
-                公开地址
-              </dt>
-              <dd class="text-toned">
-                地址：{{ contactAddress }}
-              </dd>
-            </template>
-            <template v-if="publicContact">
-              <dt class="sr-only">
-                联系方式
-              </dt>
-              <dd class="text-toned">
-                联系：{{ publicContact }}
-              </dd>
-            </template>
-          </dl>
+            联系：{{ publicContact }}
+          </p>
         </template>
       </ContentEditorShell>
 
@@ -187,6 +149,8 @@ function save() {
           color="primary"
           variant="solid"
           icon="i-lucide-save"
+          :loading="saving"
+          :disabled="loading"
         >
           保存修改
         </UButton>
