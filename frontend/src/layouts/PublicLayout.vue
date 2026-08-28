@@ -13,6 +13,8 @@ const GlobalSearch = defineAsyncComponent(() =>
 
 const route = useRoute()
 
+const isOpsRoute = computed(() => route.path.startsWith('/ops'))
+
 /** 手机端根级 Tab Shell：仅这些路由在手机端展示底部主导航。 */
 const isTabShell = computed(() => {
   const shell = route.meta.mobileShell
@@ -40,7 +42,7 @@ const bottomSpace = computed(() => {
     class="flex min-h-dvh flex-col"
     :class="bottomSpace"
   >
-    <AppHeader />
+    <AppHeader v-if="!isOpsRoute" />
     <main class="flex-1">
       <RouterView />
     </main>

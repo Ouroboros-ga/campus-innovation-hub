@@ -2,6 +2,8 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 
+import NotificationButton from '@/shared/components/app/NotificationButton.vue'
+import UserMenu from '@/shared/components/app/UserMenu.vue'
 import OpsNav from './OpsNav.vue'
 
 /**
@@ -66,16 +68,8 @@ const drawerOpen = ref(false)
             size="sm"
             class="hidden w-64 sm:block"
           />
-          <UButton
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-bell"
-            aria-label="通知"
-          />
-          <UAvatar
-            size="sm"
-            alt="张同学"
-          />
+          <NotificationButton />
+          <UserMenu />
         </div>
       </header>
 

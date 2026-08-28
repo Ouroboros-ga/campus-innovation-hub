@@ -250,101 +250,27 @@ onMounted(async () => {
   <div class="space-y-6">
     <div>
       <h2 class="text-lg font-semibold text-highlighted">
-        系统设置
+        首页管理
       </h2>
       <p class="text-sm text-muted">
-        只读系统配置与 Banner 运营编辑（PATCH /ops/banners/:id，非 Django Admin 直写）
+        首页轮播在此编辑 — 管理首页 Banner 轮播，最多 4 条有效，按排序与时间窗口自动展示
       </p>
     </div>
 
-    <div
-      v-if="loading"
-      class="py-10 text-center text-sm text-muted"
-    >
-      正在加载…
-    </div>
-    <div
-      v-else
-      class="grid gap-4 sm:grid-cols-2"
-    >
-      <div class="rounded-lg border border-default bg-default p-4">
-        <h3 class="text-sm font-semibold text-highlighted">
-          首页推荐
-        </h3>
-        <p class="mt-2 text-sm text-toned">
-          上限 <span class="font-mono font-medium">{{ health?.featured_limit ?? 15 }}</span>，当前 <span class="font-mono">{{ health?.featured ?? '-' }}</span>
-        </p>
-        <p class="mt-1 text-xs text-muted">
-          对应 `Competition.is_featured/featured_order` 与 `database-design §12.1` 约束。
-        </p>
-      </div>
-      <div class="rounded-lg border border-default bg-default p-4">
-        <h3 class="text-sm font-semibold text-highlighted">
-          发布窗口
-        </h3>
-        <p class="mt-2 text-sm text-toned">
-          Banner 最多 4 条有效，`is_active` + 时间窗过滤
-        </p>
-        <p class="mt-1 text-xs text-muted">
-          管理路径 `ops/banners`，排序 `sort_order`。
-        </p>
-      </div>
-    </div>
-
-    <div class="rounded-lg border border-default bg-default p-4">
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-highlighted">
-          服务状态
-        </h3>
-        <UButton
-          size="xs"
-          variant="ghost"
-          color="neutral"
-          icon="i-lucide-refresh-cw"
-          :loading="systemHealthLoading"
-          @click="loadSystemHealth"
-        >
-          刷新
-        </UButton>
-      </div>
-      <div class="mt-2 grid grid-cols-2 gap-3 text-sm">
-        <div class="rounded-md bg-muted p-3">
-          <p class="text-xs text-muted">
-            API 健康
-          </p>
-          <p class="mt-1 font-mono text-sm">
-            {{ systemHealth?.api ?? '—' }}
-          </p>
-          <p class="text-xs text-muted">
-            GET /api/health
-          </p>
-        </div>
-        <div class="rounded-md bg-muted p-3">
-          <p class="text-xs text-muted">
-            就绪检查
-          </p>
-          <p class="mt-1 font-mono text-sm">
-            {{ systemHealth?.db ?? '—' }}
-          </p>
-          <p class="text-xs text-muted">
-            GET /api/ready（DB/迁移）
-          </p>
-        </div>
-      </div>
-      <p class="mt-2 text-xs text-muted">
-        详细负载（CPU/内存/响应率）走服务器 `htop / free -h / journalctl -u campus-innovation-hub-dev`，不进运营面板。
-      </p>
-    </div>
-
-    <!-- Banner PATCH 管理 -->
+    <!-- Banner 管理置顶（锚点 #banner） -->
     <div
       id="banner"
       class="rounded-lg border border-default bg-default"
     >
       <div class="flex items-center justify-between border-b border-default px-4 py-3">
-        <h3 class="text-sm font-semibold text-highlighted">
-          首页 Banner（可编辑）
-        </h3>
+        <div>
+          <h3 class="text-sm font-semibold text-highlighted">
+            首页轮播
+          </h3>
+          <p class="text-xs text-muted">
+            拖动排序，控制首页首屏轮播展示
+          </p>
+        </div>
         <div class="flex items-center gap-2">
           <UButton
             size="xs"
@@ -485,6 +411,85 @@ onMounted(async () => {
         </div>
         </div>
       </template>
+    </div>
+
+    <div
+      v-if="loading"
+      class="py-10 text-center text-sm text-muted"
+    >
+      正在加载…
+    </div>
+    <div
+      v-else
+      class="grid gap-4 sm:grid-cols-2"
+    >
+      <div class="rounded-lg border border-default bg-default p-4">
+        <h3 class="text-sm font-semibold text-highlighted">
+          首页推荐
+        </h3>
+        <p class="mt-2 text-sm text-toned">
+          上限 <span class="font-mono font-medium">{{ health?.featured_limit ?? 15 }}</span>，当前 <span class="font-mono">{{ health?.featured ?? '-' }}</span>
+        </p>
+        <p class="mt-1 text-xs text-muted">
+          控制首页“热门推荐”展示数量
+        </p>
+      </div>
+      <div class="rounded-lg border border-default bg-default p-4">
+        <h3 class="text-sm font-semibold text-highlighted">
+          发布窗口
+        </h3>
+        <p class="mt-2 text-sm text-toned">
+          轮播按启用状态与时间窗口自动过滤展示
+        </p>
+        <p class="mt-1 text-xs text-muted">
+          按排序展示，最多 4 条有效
+        </p>
+      </div>
+    </div>
+
+    <div class="rounded-lg border border-default bg-default p-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-highlighted">
+          服务状态
+        </h3>
+        <UButton
+          size="xs"
+          variant="ghost"
+          color="neutral"
+          icon="i-lucide-refresh-cw"
+          :loading="systemHealthLoading"
+          @click="loadSystemHealth"
+        >
+          刷新
+        </UButton>
+      </div>
+      <div class="mt-2 grid grid-cols-2 gap-3 text-sm">
+        <div class="rounded-md bg-muted p-3">
+          <p class="text-xs text-muted">
+            API 健康
+          </p>
+          <p class="mt-1 font-mono text-sm">
+            {{ systemHealth?.api ?? '—' }}
+          </p>
+          <p class="text-xs text-muted">
+            GET /api/health
+          </p>
+        </div>
+        <div class="rounded-md bg-muted p-3">
+          <p class="text-xs text-muted">
+            就绪检查
+          </p>
+          <p class="mt-1 font-mono text-sm">
+            {{ systemHealth?.db ?? '—' }}
+          </p>
+          <p class="text-xs text-muted">
+            GET /api/ready（DB/迁移）
+          </p>
+        </div>
+      </div>
+      <p class="mt-2 text-xs text-muted">
+        详细负载（CPU/内存/响应率）走服务器 `htop / free -h / journalctl -u campus-innovation-hub-dev`，不进运营面板。
+      </p>
     </div>
 
     <div class="rounded-lg border border-default bg-default p-4 sm:col-span-2">
