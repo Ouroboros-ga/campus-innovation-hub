@@ -62,17 +62,41 @@ async function onChange(event: Event): Promise<void> {
     input.value = ''
   }
 }
+
+async function onDrop(event: DragEvent): Promise<void> {
+  const file = event.dataTransfer?.files?.[0]
+  if (!file || !file.type.startsWith('image/')) {
+    toast.add({ title: '请拖入图片文件', color: 'error', icon: 'i-lucide-alert-circle' })
+    return
+  }
+  uploading.value = true
+  try {
+    const result = await uploadImage(file, 'IMAGE')
+    emit('update:modelValue', { id: result.id, src: result.url, alt: props.modelValue?.alt ?? '' })
+    toast.add({ title: '图片已上传', color: 'success', icon: 'i-lucide-check-circle' })
+  } catch {
+    toast.add({ title: '图片上传失败', color: 'error', icon: 'i-lucide-alert-circle' })
+  } finally {
+    uploading.value = false
+  }
+}
 </script>
 
 <template>
-  <div class="space-y-2">
-    <span class="text-sm font-medium text-highlighted">
-      {{ label }}
-    </span>
+  <div class="space-y-3">
+    <div class="flex items-center justify-between">
+      <span class="text-sm font-medium text-highlighted">
+        {{ label }}
+      </span>
+      <span class="text-xs text-muted">16:9 · JPG/PNG · ≤5MB</span>
+    </div>
 
     <div
-      class="overflow-hidden rounded-surface border border-default bg-muted/60"
+      class="group relative overflow-hidden rounded-xl border-2 border-dashed bg-gradient-to-b from-muted/40 to-muted/20 transition-all"
+      :class="uploading ? 'border-primary-300 bg-primary-50/50' : 'border-default hover:border-primary-300 hover:bg-primary-50/30'"
       style="aspect-ratio: 16 / 9"
+      @dragover.prevent
+      @drop.prevent="onDrop"
     >
       <template v-if="modelValue?.src">
         <div class="relative h-full w-full">
@@ -81,27 +105,32 @@ async function onChange(event: Event): Promise<void> {
             :alt="modelValue.alt"
             class="h-full w-full object-cover"
           >
-          <div class="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/55 p-2 backdrop-blur-sm">
-            <UButton
-              size="sm"
-              color="neutral"
-              variant="outline"
-              icon="i-lucide-upload"
-              :loading="uploading"
-              @click="pick"
-            >
-              更换
-            </UButton>
-            <UButton
-              size="sm"
-              color="neutral"
-              variant="ghost"
-              icon="i-lucide-trash-2"
-              aria-label="移除封面"
-              @click="remove"
-            >
-              移除
-            </UButton>
+          <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+          <div class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-black/60 p-3 backdrop-blur-md">
+            <span class="truncate text-xs text-white/90">已上传 · 点击更换或移除</span>
+            <div class="flex items-center gap-2">
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="solid"
+                icon="i-lucide-upload"
+                :loading="uploading"
+                @click="pick"
+              >
+                更换
+              </UButton>
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-trash-2"
+                class="text-white hover:text-white hover:bg-white/20"
+                aria-label="移除封面"
+                @click="remove"
+              >
+                移除
+              </UButton>
+            </div>
           </div>
         </div>
       </template>
@@ -109,19 +138,26 @@ async function onChange(event: Event): Promise<void> {
       <template v-else>
         <button
           type="button"
-          class="flex h-full w-full flex-col items-center justify-center gap-2 text-muted transition-colors hover:text-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          class="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center transition-colors focus-visible:outline-none"
           :disabled="uploading"
           @click="pick"
         >
-          <UIcon
-            :name="uploading ? 'i-lucide-loader-circle' : 'i-lucide-image-plus'"
-            class="size-7"
-            :class="uploading ? 'animate-spin' : ''"
-            aria-hidden="true"
-          />
-          <span class="text-sm">
-            {{ uploading ? '上传中…' : '点击上传封面（16:9）' }}
+          <span class="grid size-12 place-items-center rounded-full bg-primary-50 text-primary-600 dark:bg-primary-950">
+            <UIcon
+              :name="uploading ? 'i-lucide-loader-circle' : 'i-lucide-image-plus'"
+              class="size-6"
+              :class="uploading ? 'animate-spin' : ''"
+              aria-hidden="true"
+            />
           </span>
+          <div class="space-y-1">
+            <p class="text-sm font-medium text-highlighted">
+              {{ uploading ? '上传中…' : '拖动图片至此处，或点击上传' }}
+            </p>
+            <p class="text-xs text-muted">
+              支持拖拽 · 建议 1920×1080 · 自动裁切居中
+            </p>
+          </div>
         </button>
       </template>
     </div>

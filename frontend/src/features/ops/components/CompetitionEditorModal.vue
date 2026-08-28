@@ -213,13 +213,26 @@ async function save(publish = false) {
 <template>
   <UModal
     :open="props.open"
-    :ui="{ content: 'max-w-5xl' }"
+    :ui="{ content: 'max-w-[960px] max-h-[90vh] overflow-hidden flex flex-col', header: 'shrink-0 border-b border-default bg-gradient-to-r from-primary-50/50 to-transparent dark:from-primary-950/20' }"
     @update:open="close"
   >
     <template #header>
-      <h2 class="text-base font-semibold text-highlighted">
-        {{ isEdit ? '编辑竞赛' : '新建竞赛' }}
-      </h2>
+      <div class="flex items-start gap-3">
+        <span class="grid size-9 place-items-center rounded-xl bg-primary-600 text-white shadow-sm">
+          <UIcon :name="isEdit ? 'i-lucide-pencil' : 'i-lucide-plus'" class="size-5" aria-hidden="true" />
+        </span>
+        <div class="min-w-0 flex-1">
+          <h2 class="text-base font-semibold text-highlighted">
+            {{ isEdit ? '编辑竞赛' : '新建竞赛' }}
+          </h2>
+          <p class="mt-1 text-xs leading-relaxed text-muted">
+            {{ isEdit ? '更新竞赛信息，保存后需重新发布' : '创建后为草稿，发布后学生可见' }}
+          </p>
+        </div>
+        <UBadge v-if="isEdit" :color="props.competition?.publicationState==='PUBLISHED' ? 'success' : 'warning'" variant="soft" size="xs">
+          {{ props.competition?.publicationState==='PUBLISHED' ? '已发布' : props.competition?.publicationState==='ARCHIVED' ? '已归档' : '草稿' }}
+        </UBadge>
+      </div>
     </template>
 
     <template #content>
@@ -479,80 +492,94 @@ async function save(publish = false) {
           </template>
 
           <template #preview>
-            <div
-              v-if="cover?.src"
-              class="mb-4 aspect-video overflow-hidden rounded-surface border border-default"
-            >
-              <img
-                :src="cover.src"
-                :alt="cover.alt"
-                class="h-full w-full object-cover"
-              >
+            <div class="overflow-hidden rounded-xl border border-default bg-default shadow-sm">
+              <div class="aspect-video overflow-hidden bg-gradient-to-br from-primary-50 to-muted dark:from-primary-950/30">
+                <img
+                  v-if="cover?.src"
+                  :src="cover.src"
+                  :alt="cover.alt"
+                  class="h-full w-full object-cover"
+                >
+                <div v-else class="grid h-full w-full place-items-center p-6 text-center">
+                  <div class="space-y-2">
+                    <span class="mx-auto grid size-10 place-items-center rounded-full bg-default text-muted">
+                      <UIcon name="i-lucide-image" class="size-5" aria-hidden="true" />
+                    </span>
+                    <p class="text-xs text-muted">封面预览 · 16:9</p>
+                  </div>
+                </div>
+              </div>
+              <div class="space-y-3 p-4">
+                <div>
+                  <h3 class="text-base font-semibold leading-snug text-highlighted">
+                    {{ name || '竞赛名称' }}
+                  </h3>
+                  <p class="mt-1 text-xs text-muted">
+                    {{ [edition || '年份', competitionLevelLabel[level], competitionCategoryLabel[category]].filter(Boolean).join(' · ') }}
+                  </p>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <UBadge color="neutral" variant="soft" size="xs">
+                    {{ participationModeLabel[participationMode] }}
+                  </UBadge>
+                  <UBadge v-if="collegeOrganized" color="primary" variant="soft" size="xs">学院主办</UBadge>
+                  <UBadge v-if="registrationEndAt" color="warning" variant="soft" size="xs">报名截止 {{ registrationEndAt.slice(0,10) }}</UBadge>
+                </div>
+                <p v-if="summary" class="rounded-lg bg-muted p-3 text-sm leading-relaxed text-toned">
+                  {{ summary }}
+                </p>
+                <a
+                  v-if="officialUrl"
+                  :href="officialUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
+                >
+                  <UIcon name="i-lucide-external-link" class="size-3.5" aria-hidden="true" />
+                  查看官网
+                </a>
+                <div class="prose prose-sm max-w-none dark:prose-invert">
+                  <RichContent :content="descriptionMd || '竞赛介绍预览…'" />
+                </div>
+              </div>
             </div>
-            <h3 class="text-lg font-semibold text-highlighted">
-              {{ name || '竞赛名称' }}
-            </h3>
-            <p class="mt-1 text-sm text-muted">
-              {{ [edition, competitionLevelLabel[level], competitionCategoryLabel[category]].filter(Boolean).join(' · ') }}
-            </p>
-            <div class="mt-3 flex flex-wrap gap-1.5">
-              <span class="rounded-md bg-neutral-100 px-2 py-0.5 text-xs text-highlighted dark:bg-neutral-800">
-                {{ participationModeLabel[participationMode] }}
-              </span>
-              <span
-                v-if="registrationEndAt"
-                class="rounded-md bg-primary-50 px-2 py-0.5 text-xs text-primary-700 dark:bg-primary-950 dark:text-primary-300"
-              >
-                报名截止 {{ registrationEndAt }}
-              </span>
-            </div>
-            <a
-              v-if="officialUrl"
-              :href="officialUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="mt-4 inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
-            >
-              <UIcon
-                name="i-lucide-external-link"
-                class="size-3.5"
-                aria-hidden="true"
-              />
-              查看官网
-            </a>
-            <RichContent :content="descriptionMd" />
           </template>
         </ContentEditorShell>
       </form>
     </template>
 
     <template #footer>
-      <div class="flex w-full items-center justify-end gap-2">
-        <UButton
-          color="neutral"
-          variant="ghost"
-          @click="close"
-        >
-          取消
-        </UButton>
-        <UButton
-          color="neutral"
-          variant="outline"
-          icon="i-lucide-save"
-          :loading="submitting"
-          @click="save(false)"
-        >
-          保存草稿
-        </UButton>
-        <UButton
-          color="primary"
-          variant="solid"
-          icon="i-lucide-rocket"
-          :loading="submitting"
-          @click="save(true)"
-        >
-          保存并发布
-        </UButton>
+      <div class="flex w-full items-center justify-between gap-3 border-t border-default bg-muted/20 px-1 py-1">
+        <p class="hidden text-xs text-muted sm:block">
+          草稿仅自己可见，发布后全校可见
+        </p>
+        <div class="ml-auto flex items-center gap-2">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            @click="close"
+          >
+            取消
+          </UButton>
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-save"
+            :loading="submitting"
+            @click="save(false)"
+          >
+            保存草稿
+          </UButton>
+          <UButton
+            color="primary"
+            variant="solid"
+            icon="i-lucide-rocket"
+            :loading="submitting"
+            @click="save(true)"
+          >
+            保存并发布
+          </UButton>
+        </div>
       </div>
     </template>
   </UModal>

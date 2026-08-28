@@ -16,17 +16,22 @@ withDefaults(
 </script>
 
 <template>
-  <div class="space-y-4">
-    <header class="space-y-1">
-      <h2 class="text-base font-semibold text-highlighted">
-        {{ title }}
-      </h2>
-      <p
-        v-if="description"
-        class="text-sm text-muted"
-      >
-        {{ description }}
-      </p>
+  <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
+    <header class="mb-4 flex items-start gap-3">
+      <span class="mt-0.5 grid size-7 place-items-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950">
+        <UIcon name="i-lucide-sparkles" class="size-4" aria-hidden="true" />
+      </span>
+      <div class="min-w-0 flex-1">
+        <h2 class="text-sm font-semibold text-highlighted">
+          {{ title }}
+        </h2>
+        <p
+          v-if="description"
+          class="mt-1 text-xs leading-relaxed text-muted"
+        >
+          {{ description }}
+        </p>
+      </div>
     </header>
     <div class="space-y-4">
       <slot />
