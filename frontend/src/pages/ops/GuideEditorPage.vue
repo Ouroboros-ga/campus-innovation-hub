@@ -41,7 +41,7 @@ async function load() {
     summary.value = (dto.summary as string) ?? ''
     bodyMd.value = (dto.body_md as string) ?? ''
     isFeatured.value = Boolean(dto.is_featured)
-  } catch (e) { toast.add({ title: '加载失败', color: 'error' }) } finally { loading.value = false }
+  } catch { toast.add({ title: '加载失败', color: 'error' }) } finally { loading.value = false }
 }
 onMounted(load)
 watch(() => route.params.id, load)
@@ -56,7 +56,15 @@ function validate(): boolean {
 
 async function save(publish = false) {
   if (!validate()) return
-  const payload = { title: title.value.trim(), category: category.value, summary: summary.value.trim() || null, body_md: bodyMd.value.trim(), is_featured: isFeatured.value }
+  const payload = {
+    title: title.value.trim(),
+    category: category.value,
+    summary: summary.value.trim() || null,
+    body_md: bodyMd.value.trim(),
+    is_featured: isFeatured.value,
+    featured_order: 0,
+    competition_ids: [] as string[]
+  }
   saving.value = !publish; publishing.value = publish
   try {
     let targetId = id.value ?? null

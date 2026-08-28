@@ -474,6 +474,7 @@ def serialize_announcement(announcement: Announcement, request: Request) -> dict
         "published_at": announcement.published_at,
         "is_pinned": announcement.is_pinned,
         "publisher_scope": announcement.publisher_scope,
+        "source_name": announcement.source_name,
         "external_url": announcement.external_url,
         "linked_object": _linked_object_for(announcement),
     }

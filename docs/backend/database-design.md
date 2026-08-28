@@ -1834,7 +1834,8 @@ Service 校验 link_type 与 URL 字段匹配。
 | `is_pinned` | bool | 否 |
 | `is_home_featured` | bool | 否 | default false，首页精选开关，与 `is_pinned` 解耦 |
 | `home_featured_order` | int | 否 | default 0，`is_home_featured=true` 时首页排序，`>=0` |
-| `publisher_scope` | varchar(20) | 否 |
+| `publisher_scope` | varchar(20) | 否 | 公告正式发布主体：ACADEMY / UNIVERSITY / PLATFORM，与公开筛选一致，见下 |
+| `source_name` | varchar(160) | 是 | 信息来源展示文本，与 `publisher_scope` 正交；如“大赛官网 / 教务处”，可空，`<=160` |
 | `competition_id` | uuid | 是 |
 | `activity_id` | uuid | 是 |
 | `organization_id` | uuid | 是 |
@@ -1862,6 +1863,19 @@ PLATFORM     平台公告
 ```
 
 `publisher_scope` 表示公告的正式发布来源，不从是否存在关联对象或外链推断。它用于公开列表的来源标识与筛选；发布者用户仍由 `created_by_id` / `updated_by_id` 记录。
+
+### 信息来源 `source_name`
+
+```text
+source_name 为空：不展示来源
+source_name 非空：公开详情与预览页底部“信息来源”区展示；与 publisher_scope 正交
+  - publisher_scope = PLATFORM + source_name = 大赛官网  → 平台转载并注明来源
+  - publisher_scope = UNIVERSITY + source_name = null   → 学校官方直发，无需额外来源
+```
+
+- `source_name` 是**展示文本**，不是外链，不替代 `external_url` 的跳转语义
+- `source_name` 与 `external_url` 可独立存在：可“只有来源无链接”（来源不可点）、可“既有来源又有原文链接”（来源 + 查看原文）
+- 运营写入后，原样透出给公开 API，V0.1 不做来源可信校验，仅做长度与空值规范化
 
 ### 外链规则
 

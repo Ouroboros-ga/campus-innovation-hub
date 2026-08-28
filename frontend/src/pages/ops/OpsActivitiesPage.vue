@@ -3,7 +3,6 @@ import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import ActivityEditorModal from '@/features/ops/components/ActivityEditorModal.vue'
-import AnnouncementEditorModal from '@/features/ops/components/AnnouncementEditorModal.vue'
 import PublishDynamicsModal from '@/features/ops/components/PublishDynamicsModal.vue'
 import { exportActivityRegistrations, listActivities } from '@/features/ops/api/opsActivityApi'
 import { listAnnouncements } from '@/features/ops/api/opsAnnouncementApi'
@@ -40,8 +39,6 @@ const publishOpen = ref(false)
 const activityEditorOpen = ref(false)
 const editingActivity = ref<DynamicsActivity | null>(null)
 const syncAnnouncement = ref(false)
-const announcementEditorOpen = ref(false)
-const editingAnnouncement = ref<DynamicsAnnouncement | null>(null)
 
 function syncFromRoute() {
   const t = route.query.tab as string | undefined
@@ -655,12 +652,6 @@ const scopeOptions = [
       :activity="editingActivity"
       :sync-announcement="syncAnnouncement"
       @update:open="activityEditorOpen=$event"
-      @saved="load"
-    />
-    <AnnouncementEditorModal
-      :open="announcementEditorOpen"
-      :announcement="editingAnnouncement"
-      @update:open="announcementEditorOpen=$event"
       @saved="load"
     />
   </div>

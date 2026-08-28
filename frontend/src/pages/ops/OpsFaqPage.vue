@@ -1,12 +1,14 @@
 ﻿<script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
 
-import { createFaq, listFaqs, publishFaq, updateFaq, validateFaq, type FaqEditorDraft, type OpsFaq } from '@/features/ops/api/opsFaqApi'
+import { listFaqs, publishFaq, type OpsFaq } from '@/features/ops/api/opsFaqApi'
 import { faqCategoryLabel } from '@/shared/lib/domain-labels'
-import type { FaqCategory } from '@/shared/types/homepage'
 
+const router = useRouter()
 const toast = useToast()
+
 const faqs = ref<OpsFaq[]>([])
 const loading = ref(false)
 const error = ref('')
@@ -14,19 +16,6 @@ const q = ref('')
 const page = ref(1)
 const pageSize = 30
 const total = ref(0)
-
-const modalOpen = ref(false)
-const isEdit = ref(false)
-const editingId = ref<string | null>(null)
-const saving = ref(false)
-const fieldErrors = ref<Record<string, string>>({})
-const form = reactive<FaqEditorDraft>({
-  category: 'OTHER' as FaqCategory,
-  question: '',
-  answerMd: '',
-  sortOrder: 0,
-  isFeatured: false
-})
 
 async function load() {
   loading.value = true
@@ -45,41 +34,10 @@ async function load() {
 onMounted(load)
 
 function openCreate() {
-  isEdit.value = false
-  editingId.value = null
-  form.category = 'OTHER' as FaqCategory
-  form.question = ''
-  form.answerMd = ''
-  form.sortOrder = faqs.value.length
-  form.isFeatured = false
-  fieldErrors.value = {}
-  modalOpen.value = true
+  router.push({ name: 'ops-faq-new' })
 }
 function openEdit(f: OpsFaq) {
-  isEdit.value = true
-  editingId.value = f.id
-  form.category = f.category
-  form.question = f.question
-  form.answerMd = f.answerMd
-  form.sortOrder = f.sortOrder
-  form.isFeatured = f.isFeatured
-  fieldErrors.value = {}
-  modalOpen.value = true
-}
-async function onSave() {
-  const errs = validateFaq(form)
-  if (Object.keys(errs).length) { fieldErrors.value = errs; return }
-  saving.value = true
-  try {
-    if (isEdit.value && editingId.value) await updateFaq(editingId.value, form)
-    else await createFaq(form)
-    toast.add({ title: isEdit.value ? '已更新 FAQ' : '已创建 FAQ', color: 'success' })
-    modalOpen.value = false
-    await load()
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : '保存失败'
-    toast.add({ title: msg, color: 'error' })
-  } finally { saving.value = false }
+  router.push({ name: 'ops-faq-edit', params: { id: f.id } })
 }
 async function onPublish(f: OpsFaq) {
   try { await publishFaq(f.id); toast.add({ title: '已发布', color: 'success' }); await load() }
@@ -245,81 +203,5 @@ async function onPublish(f: OpsFaq) {
         @update:page="p=>{page=p; load()}"
       />
     </div>
-
-    <UModal
-      v-model:open="modalOpen"
-      :title="isEdit?'编辑 FAQ':'新建 FAQ'"
-      :ui="{ content: 'sm:max-w-[560px]' }"
-    >
-      <template #body>
-        <div class="space-y-3">
-          <UFormField
-            label="分类"
-            required
-          >
-            <USelect
-              v-model="form.category"
-              :items="Object.entries(faqCategoryLabel).map(([v,l])=>({label:l,value:v}))"
-            />
-          </UFormField>
-          <UFormField
-            label="问题"
-            :error="fieldErrors.question"
-            required
-          >
-            <UInput
-              v-model="form.question"
-              maxlength="300"
-              placeholder="问题 2-300"
-            />
-          </UFormField>
-          <UFormField
-            label="答案"
-            :error="fieldErrors.answerMd"
-            required
-          >
-            <UTextarea
-              v-model="form.answerMd"
-              :rows="8"
-              placeholder="支持 Markdown 20000"
-            />
-          </UFormField>
-          <div class="grid grid-cols-2 gap-4">
-            <UFormField
-              label="排序"
-              :error="fieldErrors.sortOrder"
-            >
-              <UInput
-                v-model.number="form.sortOrder"
-                type="number"
-                :min="0"
-              />
-            </UFormField>
-            <UFormField label="置顶">
-              <USwitch v-model="form.isFeatured" />
-            </UFormField>
-          </div>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton
-            variant="ghost"
-            color="neutral"
-            @click="modalOpen=false"
-          >
-            取消
-          </UButton>
-          <UButton
-            :loading="saving"
-            @click="onSave"
-          >
-            {{ isEdit?'保存':'创建' }}
-          </UButton>
-        </div>
-      </template>
-    </UModal>
   </div>
 </template>
-
-

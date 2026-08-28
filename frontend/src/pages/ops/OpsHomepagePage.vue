@@ -223,7 +223,7 @@ async function onCreateFileChange(e: Event) {
   }
 }
 
-async function handleDropEdit(e: DragEvent) {
+async function handleDropEdit(e: globalThis.DragEvent) {
   dragOverEdit.value = false
   const file = e.dataTransfer?.files?.[0]
   if (!file || !file.type.startsWith('image/')) {
@@ -242,7 +242,7 @@ async function handleDropEdit(e: DragEvent) {
   }
 }
 
-async function handleDropCreate(e: DragEvent) {
+async function handleDropCreate(e: globalThis.DragEvent) {
   dragOverCreate.value = false
   const file = e.dataTransfer?.files?.[0]
   if (!file || !file.type.startsWith('image/')) {

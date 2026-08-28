@@ -87,6 +87,7 @@ class Announcement(UUIDTimestampedModel):
     is_home_featured = models.BooleanField(default=False)
     home_featured_order = models.IntegerField(default=0)
     publisher_scope = models.CharField(max_length=20, choices=PublisherScope.choices)
+    source_name = models.CharField(max_length=160, null=True, blank=True, help_text="信息来源展示文本，如：大赛官网 / 教务处")
     competition = models.ForeignKey(
         "competitions.Competition", null=True, blank=True, on_delete=models.PROTECT, related_name="announcements"
     )

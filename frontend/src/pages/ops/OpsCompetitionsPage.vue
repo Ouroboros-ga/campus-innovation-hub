@@ -143,7 +143,7 @@ function openEdit(item: OpsCompetition) {
 }
 const toast = useToast()
 async function onArchive(item: OpsCompetition) {
-  if (!confirm(`确认归档「${item.name}」？归档后不再对学生可见。`)) return
+  if (!window.confirm(`确认归档「${item.name}」？归档后不再对学生可见。`)) return
   try {
     await archiveCompetition(item.id)
     toast.add({ title: '已归档', color: 'success' })
@@ -153,7 +153,7 @@ async function onArchive(item: OpsCompetition) {
   }
 }
 async function onDelete(item: OpsCompetition) {
-  if (!confirm(`确认删除草稿「${item.name}」？此操作不可恢复。`)) return
+  if (!window.confirm(`确认删除草稿「${item.name}」？此操作不可恢复。`)) return
   try {
     await deleteCompetition(item.id)
     toast.add({ title: '已删除', color: 'success' })

@@ -63,7 +63,7 @@ async function onChange(event: Event): Promise<void> {
   }
 }
 
-async function onDrop(event: DragEvent): Promise<void> {
+async function onDrop(event: globalThis.DragEvent): Promise<void> {
   const file = event.dataTransfer?.files?.[0]
   if (!file || !file.type.startsWith('image/')) {
     toast.add({ title: '请拖入图片文件', color: 'error', icon: 'i-lucide-alert-circle' })
