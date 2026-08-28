@@ -122,7 +122,7 @@ class OrganizationCollectionView(OperatorAPIView):
         else:
             queryset = queryset.order_by("-updated_at")
 
-        return paginated_response(request, queryset, lambda item: _serialize_organization_management(item, request), default_page_size=20)
+        return paginated_response(request, queryset, lambda item: _serialize_organization_management(item, request), default_page_size=30)
 
 
 class OrganizationStatsView(OperatorAPIView):

@@ -52,10 +52,10 @@ export const NOTIFICATION_TYPE_ICON: Record<NotificationType, string> = {
 
 /** 通知类型 -> 浅色图标底色（亮/暗共用 token 透底）。 */
 export const NOTIFICATION_TYPE_BG: Record<NotificationType, string> = {
-  COMPETITION: 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400',
-  TEAM: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400',
-  ACTIVITY: 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400',
-  ORGANIZATION: 'bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400',
-  CONSULTATION: 'bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400',
-  SYSTEM: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
+  COMPETITION: 'bg-primary-50 dark:bg-primary-950/40 text-primary dark:text-primary',
+  TEAM: 'bg-success-50 dark:bg-success-950/40 text-success dark:text-success',
+  ACTIVITY: 'bg-warning-50 dark:bg-warning-950/40 text-warning dark:text-warning',
+  ORGANIZATION: 'bg-success-50 dark:bg-success-950/40 text-success dark:text-success',
+  CONSULTATION: 'bg-primary-50 dark:bg-primary-950/40 text-primary dark:text-primary',
+  SYSTEM: 'bg-danger-50 dark:bg-danger-950/40 text-danger dark:text-danger'
 }

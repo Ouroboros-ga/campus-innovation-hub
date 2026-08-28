@@ -61,10 +61,17 @@ function onSave() {
       v-if="editable!==false"
       class="pointer-events-none absolute right-1 top-1 hidden items-center gap-1 rounded bg-primary-600 px-1.5 py-0.5 text-[10px] leading-none text-white shadow group-hover:flex"
     >
-      <UIcon name="i-lucide-pencil" class="size-3" /> {{ label }}
+      <UIcon
+        name="i-lucide-pencil"
+        class="size-3"
+      /> {{ label }}
     </span>
 
-    <UModal v-model:open="open" :title="`编辑${label}`" :ui="{ content: 'sm:max-w-[640px]' }">
+    <UModal
+      v-model:open="open"
+      :title="`编辑${label}`"
+      :ui="{ content: 'sm:max-w-[640px]' }"
+    >
       <template #body>
         <div class="space-y-3">
           <MarkdownEditor
@@ -93,8 +100,16 @@ function onSave() {
       </template>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="open=false">取消</UButton>
-          <UButton @click="onSave">保存</UButton>
+          <UButton
+            variant="ghost"
+            color="neutral"
+            @click="open=false"
+          >
+            取消
+          </UButton>
+          <UButton @click="onSave">
+            保存
+          </UButton>
         </div>
       </template>
     </UModal>

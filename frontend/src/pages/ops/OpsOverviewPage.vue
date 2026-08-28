@@ -23,10 +23,10 @@ onMounted(async () => {
 const pendingItems = computed(() => {
   if (!stats.value) return []
   return [
-    { label: '待审核申请', value: stats.value.pending.applications, icon: 'i-lucide-file-check', color: 'bg-red-50 text-red-600 dark:bg-red-950' },
-    { label: '待回复咨询', value: stats.value.pending.consultations, icon: 'i-lucide-message-square', color: 'bg-orange-50 text-orange-600 dark:bg-orange-950' },
-    { label: '内容待发布', value: stats.value.pending.pending_publish, icon: 'i-lucide-send', color: 'bg-blue-50 text-blue-600 dark:bg-blue-950' },
-    { label: '内容待完善', value: stats.value.health.missing_cover + stats.value.health.missing_official_url, icon: 'i-lucide-shield-alert', color: 'bg-purple-50 text-purple-600 dark:bg-purple-950' }
+    { label: '待审核申请', value: stats.value.pending.applications, icon: 'i-lucide-file-check', color: 'bg-danger-50 text-danger dark:bg-danger-950' },
+    { label: '待回复咨询', value: stats.value.pending.consultations, icon: 'i-lucide-message-square', color: 'bg-warning-50 text-warning dark:bg-warning-950' },
+    { label: '内容待发布', value: stats.value.pending.pending_publish, icon: 'i-lucide-send', color: 'bg-primary-50 text-primary dark:bg-primary-950' },
+    { label: '内容待完善', value: stats.value.health.missing_cover + stats.value.health.missing_official_url, icon: 'i-lucide-shield-alert', color: 'bg-success-50 text-success dark:bg-success-950' }
   ]
 })
 

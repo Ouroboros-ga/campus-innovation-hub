@@ -123,6 +123,12 @@ export interface ActivityEditorDraft {
   descriptionMd: string
   /** 封面图（`cover_asset_id` 前端态；无则空）。 */
   cover?: HomepageImage | null
+  // 3B+ 补字段：运营编辑透传（后端已支持，可选）
+  summary?: string
+  speaker?: string
+  notesMd?: string
+  isFeatured?: boolean
+  organizerOrganizationId?: string | null
 }
 
 /** 管理用响应式活动列表。 */

@@ -6,7 +6,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from django.db import transaction
+from django.utils import timezone
 
+from apps.audit.services import record_audit
 from apps.ops_api.base import OperatorAPIView, require_empty_body
 from apps.public_api.query import filter_text, paginated_response, parse_optional_enum, parse_optional_uuid, validate_query_keys
 from apps.public_api.serializers import serialize_team_post
@@ -32,7 +34,7 @@ class TeamCollectionView(OperatorAPIView):
         if status is not None:
             queryset = queryset.filter(status=status)
 
-        return paginated_response(request, queryset.order_by("-created_at"), lambda item: serialize_team_post(item, request), default_page_size=20)
+        return paginated_response(request, queryset.order_by("-created_at"), lambda item: serialize_team_post(item, request), default_page_size=30)
 
 
 class TeamDetailView(OperatorAPIView):
@@ -52,8 +54,7 @@ class TeamCloseView(OperatorAPIView):
     @transaction.atomic
     def post(self, request: Request, object_id: str) -> Response:
         from apps.public_api.query import parse_uuid
-        from apps.domain_errors import NotFound, InvalidState
-        from django.utils import timezone
+        from apps.domain_errors import InvalidState, NotFound
 
         require_empty_body(request)
         team = TeamPost.objects.select_for_update().filter(id=parse_uuid(object_id)).first()
@@ -61,7 +62,14 @@ class TeamCloseView(OperatorAPIView):
             raise NotFound("组队不存在。")
         if team.status == TeamPost.Status.CLOSED:
             raise InvalidState("组队已关闭。")
+        previous_status = team.status
         team.status = TeamPost.Status.CLOSED
         team.closed_at = timezone.now()
         team.save(update_fields=["status", "closed_at", "updated_at"])
+        record_audit(
+            actor=request.user,
+            action="TEAM_POST_CLOSED_BY_OPERATOR",
+            target=team,
+            changes={"status": {"from": previous_status, "to": TeamPost.Status.CLOSED}},
+        )
         return Response(status=204)

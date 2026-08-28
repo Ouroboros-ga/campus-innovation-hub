@@ -62,6 +62,7 @@ interface ActivityMgmtDto {
   registration_end_at?: string | null
   capacity?: number | null
   description_md?: string | null
+  notes_md?: string | null
   publication_state?: string
   is_featured?: boolean
 }
@@ -82,8 +83,10 @@ export function toActivityWriteDto(
   return {
     title: draft.title.trim(),
     activity_type: draft.activityType,
+    summary: draft.summary?.trim() || null,
     description_md: draft.descriptionMd.trim(),
     organizer_name: draft.organizerName.trim() || null,
+    speaker: draft.speaker?.trim() || null,
     location: draft.location.trim() || '待定',
     start_at: draft.startAt,
     end_at: draft.endAt || null,
@@ -91,6 +94,7 @@ export function toActivityWriteDto(
     registration_start_at: null,
     registration_end_at: required ? draft.registrationEndAt || null : null,
     capacity: required ? draft.capacity : null,
+    notes_md: draft.notesMd?.trim() || null,
     cover_asset_id: coverAssetId || null
   }
 }
@@ -111,6 +115,7 @@ function toDynamicsActivity(dto: ActivityMgmtDto): DynamicsActivity {
     capacity: dto.capacity ?? null,
     speaker: dto.speaker ?? null,
     descriptionMd: dto.description_md ?? null,
+    notesMd: dto.notes_md ?? null,
     isFeatured: dto.is_featured ?? false,
     publicationState: dto.publication_state ?? 'DRAFT',
     cover: { alt: dto.cover?.alt ?? dto.title, src: dto.cover?.url ?? null },

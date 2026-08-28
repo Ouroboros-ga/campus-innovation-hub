@@ -108,12 +108,15 @@ const recruitingOptions = [
           管理学院所有社团组织信息、招新状态与资料内容
         </p>
       </div>
-      <UButton
-        color="primary"
-        icon="i-lucide-plus"
-      >
-        新建组织
-      </UButton>
+      <UTooltip text="敬请期待">
+        <UButton
+          color="primary"
+          icon="i-lucide-plus"
+          disabled
+        >
+          新建组织
+        </UButton>
+      </UTooltip>
     </div>
 
     <!-- 顶部统计 -->
@@ -123,7 +126,7 @@ const recruitingOptions = [
           <p class="text-xs text-muted">
             全部组织
           </p>
-          <span class="grid size-7 place-items-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-full bg-primary-50 text-primary dark:bg-primary-950"><UIcon
             name="i-lucide-users"
             class="size-4"
           /></span>
@@ -218,14 +221,17 @@ const recruitingOptions = [
       >
         重置
       </UButton>
-      <UButton
-        color="neutral"
-        variant="outline"
-        size="sm"
-        icon="i-lucide-download"
-      >
-        导出
-      </UButton>
+      <UTooltip text="敬请期待">
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-download"
+          disabled
+        >
+          导出
+        </UButton>
+      </UTooltip>
     </div>
 
     <p

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useToast } from '@nuxt/ui/composables'
 
 import GuideEditorModal from '@/features/ops/components/GuideEditorModal.vue'
 import { listGuides, type OpsGuide } from '@/features/ops/api/opsGuideApi'
@@ -8,7 +7,6 @@ import { guideCategoryLabel } from '@/shared/lib/domain-labels'
 import { formatCompactDate } from '@/shared/lib/date'
 
 /** 指南管理（FE-090 /ops/guides）。 */
-const toast = useToast()
 
 const guides = ref<OpsGuide[]>([])
 const loading = ref(false)
@@ -40,15 +38,6 @@ function openCreate() {
 function openEdit(guide: OpsGuide) {
   editing.value = guide
   editorOpen.value = true
-}
-
-function notifyArchive(guide: OpsGuide) {
-  toast.add({
-    title: '归档指南',
-    description: `「${guide.title}」的归档操作待接入（当前未实施）。`,
-    color: 'neutral',
-    icon: 'i-lucide-info'
-  })
 }
 </script>
 
@@ -127,25 +116,33 @@ function notifyArchive(guide: OpsGuide) {
           >
             编辑
           </UButton>
-          <UButton
-            size="sm"
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-archive"
-            @click="notifyArchive(guide)"
-          >
-            归档
-          </UButton>
+          <UTooltip text="敬请期待">
+            <UButton
+              size="sm"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-archive"
+              disabled
+            >
+              归档
+            </UButton>
+          </UTooltip>
         </div>
       </li>
     </ul>
 
-    <p
+    <UEmpty
       v-else
-      class="text-sm text-muted"
+      icon="i-lucide-book-open"
+      title="暂无指南"
+      description="尝试调整筛选或重新加载。"
+      class="rounded-lg border border-default bg-default py-10"
     >
-      暂无指南。
-    </p>
+      <template #actions>
+        <UButton color="neutral" variant="outline" icon="i-lucide-rotate-ccw" @click="loadGuides">重新加载</UButton>
+        <UButton color="primary" variant="soft" icon="i-lucide-plus" @click="openCreate">新建指南</UButton>
+      </template>
+    </UEmpty>
 
     <GuideEditorModal
       :open="editorOpen"

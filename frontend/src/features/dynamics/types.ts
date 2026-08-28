@@ -63,6 +63,8 @@ export interface DynamicsActivity extends ActivitySummary {
   speaker: string | null
   /** Markdown 正文（活动详情）。 */
   descriptionMd: string | null
+  /** 备注说明（运营编辑可选）。 */
+  notesMd?: string | null
   /** 首页精选标记。 */
   isFeatured: boolean
   publicationState?: string

@@ -136,5 +136,42 @@ const officialUrl = computed(() => props.detail.officialUrl)
         </span>
       </dd>
     </div>
+
+    <div
+      v-if="detail.suitableGradeMin != null || detail.suitableGradeMax != null"
+      class="grid grid-cols-[2rem_auto_1fr] items-start gap-3"
+    >
+      <span class="mt-0.5 grid size-8 place-items-center rounded-control bg-primary-50 text-primary-600 dark:bg-primary-950 dark:text-primary-400">
+        <UIcon name="i-lucide-graduation-cap" class="size-4" aria-hidden="true" />
+      </span>
+      <dt class="whitespace-nowrap text-xs text-muted">适合年级</dt>
+      <dd class="text-sm text-highlighted">
+        {{ detail.suitableGradeMin ?? '?' }} - {{ detail.suitableGradeMax ?? '?' }} 年级
+      </dd>
+    </div>
+
+    <div
+      v-if="detail.direction"
+      class="grid grid-cols-[2rem_auto_1fr] items-start gap-3"
+    >
+      <span class="mt-0.5 grid size-8 place-items-center rounded-control bg-primary-50 text-primary-600 dark:bg-primary-950 dark:text-primary-400">
+        <UIcon name="i-lucide-compass" class="size-4" aria-hidden="true" />
+      </span>
+      <dt class="whitespace-nowrap text-xs text-muted">方向</dt>
+      <dd class="text-sm text-highlighted">{{ detail.direction }}</dd>
+    </div>
+
+    <div
+      v-if="detail.registrationUrl"
+      class="grid grid-cols-[2rem_auto_1fr] items-start gap-3"
+    >
+      <span class="mt-0.5 grid size-8 place-items-center rounded-control bg-primary-50 text-primary-600 dark:bg-primary-950 dark:text-primary-400">
+        <UIcon name="i-lucide-link-2" class="size-4" aria-hidden="true" />
+      </span>
+      <dt class="whitespace-nowrap text-xs text-muted">报名链接</dt>
+      <dd class="min-w-0 text-sm">
+        <a :href="detail.registrationUrl" target="_blank" rel="noopener noreferrer" class="break-all text-primary-600 hover:underline dark:text-primary-400">{{ detail.registrationUrl.replace(/^https?:\/\//,'') }}</a>
+      </dd>
+    </div>
   </dl>
 </template>

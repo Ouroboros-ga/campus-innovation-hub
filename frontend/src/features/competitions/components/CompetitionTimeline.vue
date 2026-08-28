@@ -12,24 +12,20 @@ const props = defineProps<{ detail: CompetitionDetail }>()
 const items = computed(() => props.detail.timeline)
 const hasItems = computed(() => items.value.length > 0)
 
-/** 格式化：紧凑日期 + 周几 + 时间，如「2026.08.01 周四 00:00」。 */
-function formatNode(value: string): string {
+/** 格式化：首日全日期，后续同日仅时间，避免 2026.08.01 00:00 冗余 */
+function formatNode(value: string, index: number): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  const weekday = new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(date)
-    .replace('周', '')
-  const datePart = new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  })
-    .format(date)
-    .replace(/\//g, '.')
-  const timePart = new Intl.DateTimeFormat('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  }).format(date)
+  const curDay = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)
+  const prev = index > 0 ? items.value[index - 1] : null
+  const prevDay = prev ? new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(prev.date)) : null
+  const isSameDay = prevDay === curDay
+  if (isSameDay) {
+    return new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
+  }
+  const weekday = new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(date).replace('周', '')
+  const datePart = curDay.replace(/\//g, '.')
+  const timePart = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date)
   return `${datePart} ${weekday} ${timePart}`
 }
 </script>
@@ -62,16 +58,24 @@ function formatNode(value: string): string {
         />
       </span>
 
-      <div class="flex min-w-0 flex-1 items-baseline justify-between gap-3 pb-4 last:pb-0">
-        <span
-          class="truncate text-sm"
-          :class="node.highlighted ? 'font-medium text-highlighted' : 'text-highlighted'"
+      <div class="flex min-w-0 flex-1 flex-col gap-1 pb-4 last:pb-0">
+        <div class="flex items-baseline justify-between gap-3">
+          <span
+            class="truncate text-sm"
+            :class="node.highlighted ? 'font-medium text-highlighted' : 'text-highlighted'"
+          >
+            {{ node.title }}
+          </span>
+          <span class="shrink-0 text-xs tabular-nums text-muted">
+            {{ formatNode(node.date, index) }}
+          </span>
+        </div>
+        <p
+          v-if="node.description"
+          class="line-clamp-3 text-xs leading-5 text-muted"
         >
-          {{ node.title }}
-        </span>
-        <span class="shrink-0 text-xs tabular-nums text-muted">
-          {{ formatNode(node.date) }}
-        </span>
+          {{ node.description }}
+        </p>
       </div>
     </li>
   </ol>

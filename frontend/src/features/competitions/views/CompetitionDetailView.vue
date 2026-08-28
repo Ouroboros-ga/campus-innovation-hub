@@ -131,7 +131,14 @@ function onFieldClick(field: string, section: string) {
     <div class="mt-8 hidden lg:block">
       <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div class="min-w-0 space-y-8">
-          <InlineEditable :editable="editorMode" label="赛事介绍" field="description_md" type="markdown" :modelValue="detail.intro" @save="onInlineSave">
+          <InlineEditable
+            :editable="editorMode"
+            label="赛事介绍"
+            field="description_md"
+            type="markdown"
+            :model-value="detail.intro"
+            @save="onInlineSave"
+          >
             <CompetitionSectionCard
               icon="i-lucide-book-open"
               title="赛事介绍"
@@ -142,7 +149,14 @@ function onFieldClick(field: string, section: string) {
             </CompetitionSectionCard>
           </InlineEditable>
 
-          <InlineEditable :editable="editorMode" label="适合谁参加" field="suitable_for_md" type="markdown" :modelValue="detail.whoShouldJoin" @save="onInlineSave">
+          <InlineEditable
+            :editable="editorMode"
+            label="适合谁参加"
+            field="suitable_for_md"
+            type="markdown"
+            :model-value="detail.whoShouldJoin"
+            @save="onInlineSave"
+          >
             <CompetitionSectionCard
               icon="i-lucide-users"
               title="适合谁参加"
@@ -211,7 +225,14 @@ function onFieldClick(field: string, section: string) {
             </CompetitionSectionCard>
           </div>
 
-          <InlineEditable :editable="editorMode" label="报名提示" field="preparation_advice_md" type="markdown" :modelValue="(detail.registrationTips?.[0] ?? '')" @save="onInlineSave">
+          <InlineEditable
+            :editable="editorMode"
+            label="报名提示"
+            field="preparation_advice_md"
+            type="markdown"
+            :model-value="(detail.registrationTips?.[0] ?? '')"
+            @save="onInlineSave"
+          >
             <CompetitionSectionCard
               icon="i-lucide-circle-help"
               title="报名方式与提示"

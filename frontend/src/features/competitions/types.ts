@@ -98,4 +98,16 @@ export interface CompetitionDetail extends CompetitionSummary {
   }>
   /** 组队信息。 */
   recruitingTeams: RecruitingTeam[]
+  /** 新增详情区块：运营编辑字段透传 */
+  suitableGradeMin?: number | null
+  suitableGradeMax?: number | null
+  direction?: string | null
+  summary?: string | null
+  suitableForMd?: string | null
+  preparationAdviceMd?: string | null
+  collegeContactName?: string | null
+  collegeContactText?: string | null
+  registrationUrl?: string | null
+  officialNoticeUrl?: string | null
+  collegeOrganized?: boolean
 }

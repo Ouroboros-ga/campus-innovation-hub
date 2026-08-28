@@ -4,6 +4,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { getCompetitionHealth } from '@/features/ops/api/opsOverviewApi'
 import { createOpsBanner, listOpsBanners, patchOpsBanner } from '@/features/ops/api/opsBannerApi'
 import type { OpsBanner } from '@/features/ops/api/opsBannerApi'
+import { http } from '@/shared/http/client'
 import { uploadImage } from '@/shared/http/media'
 
 const health = ref<{ featured: number; featured_limit: number } | null>(null)
@@ -64,12 +65,12 @@ async function loadSystemHealth() {
   systemHealthLoading.value = true
   try {
     const [a, b] = await Promise.allSettled([
-      globalThis.fetch('/api/health').then(r => r.ok ? 'ok' : `http ${r.status}`),
-      globalThis.fetch('/api/ready').then(r => r.ok ? 'ready' : `http ${r.status}`)
+      http.get<unknown>('/health').then(() => 'ok'),
+      http.get<unknown>('/ready').then(() => 'ready')
     ])
     systemHealth.value = {
-      api: a.status==='fulfilled' ? String(a.value) : 'error',
-      db: b.status==='fulfilled' ? String(b.value) : 'error'
+      api: a.status === 'fulfilled' ? String(a.value) : 'error',
+      db: b.status === 'fulfilled' ? String(b.value) : 'error'
     }
   } catch {
     systemHealth.value = { api: 'error', db: 'error' }
@@ -148,7 +149,7 @@ async function savePatch() {
     else payload.end_at = null
     if (form.image_asset_id) payload.image_asset_id = form.image_asset_id
 
-    await patchOpsBanner(editing.value.id, payload as never)
+    await patchOpsBanner(editing.value.id, payload as Partial<{ title: string; subtitle: string | null; category_label: string | null; image_asset_id: string | null; alt_text: string | null; is_active: boolean; sort_order: number; link_type: string; internal_path: string | null; external_url: string | null; start_at: string | null; end_at: string | null }>)
     toast.value = { show: true, msg: '已更新 Banner', color: 'success' }
     editOpen.value = false
     await loadBanners()
@@ -226,7 +227,7 @@ async function saveCreate() {
     }
     if (createForm.start_at) payload.start_at = new Date(createForm.start_at).toISOString()
     if (createForm.end_at) payload.end_at = new Date(createForm.end_at).toISOString()
-    await createOpsBanner(payload as never)
+    await createOpsBanner(payload as { title: string; subtitle?: string | null; category_label?: string | null; image_asset_id: string; alt_text?: string | null; link_type: string; internal_path?: string | null; external_url?: string | null; start_at?: string | null; end_at?: string | null; is_active: boolean; sort_order: number })
     toast.value = { show: true, msg: '已创建 Banner', color: 'success' }
     createOpen.value = false
     await loadBanners()
@@ -292,7 +293,9 @@ onMounted(async () => {
 
     <div class="rounded-lg border border-default bg-default p-4">
       <div class="flex items-center justify-between">
-        <h3 class="text-sm font-semibold text-highlighted">服务状态</h3>
+        <h3 class="text-sm font-semibold text-highlighted">
+          服务状态
+        </h3>
         <UButton
           size="xs"
           variant="ghost"
@@ -300,21 +303,37 @@ onMounted(async () => {
           icon="i-lucide-refresh-cw"
           :loading="systemHealthLoading"
           @click="loadSystemHealth"
-        >刷新</UButton>
+        >
+          刷新
+        </UButton>
       </div>
       <div class="mt-2 grid grid-cols-2 gap-3 text-sm">
         <div class="rounded-md bg-muted p-3">
-          <p class="text-xs text-muted">API 健康</p>
-          <p class="mt-1 font-mono text-sm">{{ systemHealth?.api ?? '—' }}</p>
-          <p class="text-xs text-muted">GET /api/health</p>
+          <p class="text-xs text-muted">
+            API 健康
+          </p>
+          <p class="mt-1 font-mono text-sm">
+            {{ systemHealth?.api ?? '—' }}
+          </p>
+          <p class="text-xs text-muted">
+            GET /api/health
+          </p>
         </div>
         <div class="rounded-md bg-muted p-3">
-          <p class="text-xs text-muted">就绪检查</p>
-          <p class="mt-1 font-mono text-sm">{{ systemHealth?.db ?? '—' }}</p>
-          <p class="text-xs text-muted">GET /api/ready（DB/迁移）</p>
+          <p class="text-xs text-muted">
+            就绪检查
+          </p>
+          <p class="mt-1 font-mono text-sm">
+            {{ systemHealth?.db ?? '—' }}
+          </p>
+          <p class="text-xs text-muted">
+            GET /api/ready（DB/迁移）
+          </p>
         </div>
       </div>
-      <p class="mt-2 text-xs text-muted">详细负载（CPU/内存/响应率）走服务器 `htop / free -h / journalctl -u campus-innovation-hub-dev`，不进运营面板。</p>
+      <p class="mt-2 text-xs text-muted">
+        详细负载（CPU/内存/响应率）走服务器 `htop / free -h / journalctl -u campus-innovation-hub-dev`，不进运营面板。
+      </p>
     </div>
 
     <!-- Banner PATCH 管理 -->
@@ -371,12 +390,24 @@ onMounted(async () => {
         <table class="w-full text-left text-sm">
           <thead class="border-b border-default bg-muted/40 text-xs text-muted">
             <tr>
-              <th class="px-3 py-2 font-medium">排序</th>
-              <th class="px-3 py-2 font-medium">标题</th>
-              <th class="px-3 py-2 font-medium">状态</th>
-              <th class="px-3 py-2 font-medium">链接</th>
-              <th class="px-3 py-2 font-medium">时间窗</th>
-              <th class="px-3 py-2 font-medium">操作</th>
+              <th class="px-3 py-2 font-medium">
+                排序
+              </th>
+              <th class="px-3 py-2 font-medium">
+                标题
+              </th>
+              <th class="px-3 py-2 font-medium">
+                状态
+              </th>
+              <th class="px-3 py-2 font-medium">
+                链接
+              </th>
+              <th class="px-3 py-2 font-medium">
+                时间窗
+              </th>
+              <th class="px-3 py-2 font-medium">
+                操作
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -385,10 +416,18 @@ onMounted(async () => {
               :key="b.id"
               class="border-b border-default last:border-0 hover:bg-muted/30"
             >
-              <td class="px-3 py-2 font-mono text-xs">{{ b.sortOrder }}</td>
-              <td class="px-3 py-2 font-medium">{{ b.title }}</td>
+              <td class="px-3 py-2 font-mono text-xs">
+                {{ b.sortOrder }}
+              </td>
+              <td class="px-3 py-2 font-medium">
+                {{ b.title }}
+              </td>
               <td class="px-3 py-2">
-                <UBadge :color="b.isActive ? 'success' : 'neutral'" variant="soft" size="xs">
+                <UBadge
+                  :color="b.isActive ? 'success' : 'neutral'"
+                  variant="soft"
+                  size="xs"
+                >
                   {{ b.isActive ? '启用' : '停用' }}
                 </UBadge>
               </td>
@@ -466,7 +505,10 @@ onMounted(async () => {
                 class="flex-1"
               />
               <label class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-default px-2 py-1 text-xs">
-                <UIcon name="i-lucide-upload" class="size-3.5" />
+                <UIcon
+                  name="i-lucide-upload"
+                  class="size-3.5"
+                />
                 {{ uploading ? '上传中…' : '上传' }}
                 <input
                   type="file"
@@ -478,7 +520,10 @@ onMounted(async () => {
             </div>
           </UFormField>
           <div class="grid grid-cols-2 gap-3">
-            <UFormField label="排序" :error="fieldErrors.sort_order">
+            <UFormField
+              label="排序"
+              :error="fieldErrors.sort_order"
+            >
               <UInput
                 v-model.number="form.sort_order"
                 type="number"
@@ -489,7 +534,10 @@ onMounted(async () => {
               <USwitch v-model="form.is_active" />
             </UFormField>
           </div>
-          <UFormField label="链接类型" :error="fieldErrors.link_type">
+          <UFormField
+            label="链接类型"
+            :error="fieldErrors.link_type"
+          >
             <USelect
               v-model="form.link_type"
               :items="[{label:'无链接',value:'NONE'},{label:'站内',value:'INTERNAL'},{label:'站外',value:'EXTERNAL'}]"
@@ -601,7 +649,10 @@ onMounted(async () => {
                 class="flex-1"
               />
               <label class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-default px-2 py-1 text-xs">
-                <UIcon name="i-lucide-upload" class="size-3.5" />
+                <UIcon
+                  name="i-lucide-upload"
+                  class="size-3.5"
+                />
                 {{ uploading ? '上传中…' : '上传' }}
                 <input
                   type="file"
@@ -620,7 +671,10 @@ onMounted(async () => {
             />
           </UFormField>
           <div class="grid grid-cols-2 gap-3">
-            <UFormField label="排序" :error="createFieldErrors.sort_order">
+            <UFormField
+              label="排序"
+              :error="createFieldErrors.sort_order"
+            >
               <UInput
                 v-model.number="createForm.sort_order"
                 type="number"
@@ -631,7 +685,10 @@ onMounted(async () => {
               <USwitch v-model="createForm.is_active" />
             </UFormField>
           </div>
-          <UFormField label="链接类型" :error="createFieldErrors.link_type">
+          <UFormField
+            label="链接类型"
+            :error="createFieldErrors.link_type"
+          >
             <USelect
               v-model="createForm.link_type"
               :items="[{label:'无链接',value:'NONE'},{label:'站内',value:'INTERNAL'},{label:'站外',value:'EXTERNAL'}]"

@@ -76,7 +76,7 @@ export async function listOpsBanners(params?: { active?: boolean; page?: number;
   return { items: res.results.map(toOpsBanner), total: res.count }
 }
 
-export async function patchOpsBanner(id: string, payload: Partial<{ title: string; subtitle: string | null; category_label: string | null; is_active: boolean; sort_order: number; link_type: string; internal_path: string | null; external_url: string | null; start_at: string | null; end_at: string | null }>) {
+export async function patchOpsBanner(id: string, payload: Partial<{ title: string; subtitle: string | null; category_label: string | null; image_asset_id: string | null; alt_text: string | null; is_active: boolean; sort_order: number; link_type: string; internal_path: string | null; external_url: string | null; start_at: string | null; end_at: string | null }>) {
   const res = await http.patch<BannerDto>(`/ops/banners/${id}`, payload)
   return toOpsBanner(res as unknown as BannerDto)
 }

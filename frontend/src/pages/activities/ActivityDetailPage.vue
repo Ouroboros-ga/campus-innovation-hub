@@ -13,8 +13,10 @@ import ActivityEditorModal from '@/features/ops/components/ActivityEditorModal.v
 import DynamicsDetailSection from '@/features/dynamics/components/DynamicsDetailSection.vue'
 import { useAuthStore } from '@/stores/auth'
 import {
+  cancelActivityRegistration,
   getActivity,
-  listAnnouncements
+  listAnnouncements,
+  registerActivity
 } from '@/features/dynamics/api/dynamicsApi'
 import {
   deriveActivityRegistrationState
@@ -24,6 +26,8 @@ import type {
   DynamicsAnnouncement
 } from '@/features/dynamics/types'
 import RichContent from '@/shared/components/reader/RichContent.vue'
+import { AppError } from '@/shared/http/types'
+import { useToast } from '@nuxt/ui/composables'
 
 /**
  * 活动详情（FE-051 / FE-104 API 驱动）— /activities/:activityId
@@ -80,9 +84,28 @@ const registerable = computed(
 )
 
 const registered = ref(false)
-function toggleRegistration() {
-  if (!registerable.value) return
-  registered.value = !registered.value
+const registerLoading = ref(false)
+const toast = useToast()
+
+async function toggleRegistration() {
+  if (!registerable.value || registerLoading.value) return
+  registerLoading.value = true
+  try {
+    if (registered.value) {
+      await cancelActivityRegistration(id.value)
+      registered.value = false
+      toast.add({ title: '已取消报名', color: 'neutral' })
+    } else {
+      await registerActivity(id.value)
+      registered.value = true
+      toast.add({ title: '报名成功', color: 'success' })
+    }
+  } catch (e) {
+    if (e instanceof AppError && e.code === 'AUTH_REQUIRED') return
+    toast.add({ title: e instanceof Error ? e.message : '操作失败', color: 'error' })
+  } finally {
+    registerLoading.value = false
+  }
 }
 
 const relatedAnnouncements = computed(() =>
@@ -272,6 +295,7 @@ const relatedAnnouncements = computed(() =>
             :color="registered ? 'neutral' : 'primary'"
             :variant="registered ? 'soft' : 'solid'"
             :icon="registered ? 'i-lucide-user-minus' : 'i-lucide-user-plus'"
+            :loading="registerLoading"
             @click="toggleRegistration"
           >
             {{ registered ? '取消报名' : '报名参加' }}
@@ -290,6 +314,13 @@ const relatedAnnouncements = computed(() =>
             >
               暂无活动介绍。
             </p>
+          </DynamicsDetailSection>
+
+          <DynamicsDetailSection
+            v-if="activity.notesMd"
+            title="备注说明"
+          >
+            <RichContent :content="activity.notesMd" />
           </DynamicsDetailSection>
 
           <DynamicsDetailSection title="相关公告">
@@ -341,6 +372,7 @@ const relatedAnnouncements = computed(() =>
           :color="registered ? 'neutral' : 'primary'"
           :variant="registered ? 'soft' : 'solid'"
           class="shrink-0"
+          :loading="registerLoading"
           @click="toggleRegistration"
         >
           {{ registered ? '取消报名' : '报名参加' }}

@@ -19,7 +19,7 @@ const postType = ref((route.query.post_type as string) ?? 'ALL')
 const status = ref((route.query.status as string) ?? 'ALL')
 const competitionId = ref((route.query.competition_id as string) ?? 'ALL')
 const page = ref(Number(route.query.page ?? 1) || 1)
-const pageSize = 20
+const pageSize = 30
 const competitionOptions = ref<Array<{ label: string; value: string }>>([{ label: '全部竞赛', value: 'ALL' }])
 
 function syncFromRoute() {
@@ -179,9 +179,35 @@ const statusOptions = [
       正在加载…
     </div>
 
+    <UEmpty
+      v-else-if="error"
+      icon="i-lucide-circle-alert"
+      title="加载失败"
+      :description="error"
+      class="rounded-lg border border-default bg-default py-10"
+    >
+      <template #actions>
+        <UButton color="primary" icon="i-lucide-refresh-cw" @click="load">重新加载</UButton>
+        <UButton color="neutral" variant="ghost" @click="onReset">清除筛选</UButton>
+      </template>
+    </UEmpty>
+
+    <UEmpty
+      v-else-if="!teams.length"
+      icon="i-lucide-search-x"
+      title="暂无符合条件的组队"
+      description="尝试调整筛选条件或清除关键词后重试。"
+      class="rounded-lg border border-default bg-default py-10"
+    >
+      <template #actions>
+        <UButton color="neutral" variant="outline" icon="i-lucide-rotate-ccw" @click="onReset">清除筛选</UButton>
+        <UButton color="primary" variant="soft" icon="i-lucide-refresh-cw" @click="load">重新加载</UButton>
+      </template>
+    </UEmpty>
+
     <div
       v-else
-      class="overflow-x-auto rounded-lg border border-default bg-default"
+      class="hidden overflow-x-auto rounded-lg border border-default bg-default lg:block"
     >
       <table class="w-full text-sm">
         <thead class="bg-muted/50 text-xs text-muted">
@@ -278,16 +304,32 @@ const statusOptions = [
               </div>
             </td>
           </tr>
-          <tr v-if="!teams.length">
-            <td
-              colspan="8"
-              class="py-10 text-center text-sm text-muted"
-            >
-              暂无符合条件的组队
-            </td>
-          </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Phone: 卡片列表，禁横滚 -->
+    <div
+      v-if="!loading && !error && teams.length"
+      class="space-y-2 lg:hidden"
+    >
+      <div
+        v-for="team in teams"
+        :key="team.id"
+        class="rounded-lg border border-default bg-default p-3"
+      >
+        <p class="truncate text-sm font-medium text-highlighted">{{ team.title }}</p>
+        <p class="truncate text-xs text-muted">{{ team.competitionName }} · {{ team.direction }}</p>
+        <div class="mt-2 flex flex-wrap items-center gap-2">
+          <UBadge size="xs" variant="soft" :color="team.postType==='TEAM_RECRUITING'?'info':'success'">{{ team.postType==='TEAM_RECRUITING'?'队伍招募':'个人找队' }}</UBadge>
+          <UBadge size="xs" variant="soft" :color="team.status==='RECRUITING'?'success':team.status==='FULL'?'warning':'neutral'">{{ team.status==='RECRUITING'?'招募中':team.status==='FULL'?'已满员':'已关闭' }}</UBadge>
+          <span class="text-xs tabular-nums text-muted">{{ team.currentMemberCount }}/{{ team.targetMemberCount }}</span>
+        </div>
+        <div class="mt-3 flex gap-2">
+          <UButton size="xs" variant="ghost" color="neutral" :to="team.detailPath" block>查看</UButton>
+          <UButton v-if="team.status==='RECRUITING'" size="xs" variant="soft" color="neutral" block @click="onClose(team)">关闭</UButton>
+        </div>
+      </div>
     </div>
 
     <div class="flex items-center justify-between text-xs text-muted">

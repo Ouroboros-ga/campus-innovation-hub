@@ -58,4 +58,4 @@ class OpsRecruitmentApplicationCollectionView(OperatorAPIView):
                 | Q(recruitment__title__icontains=q)
                 | Q(recruitment__organization__name__icontains=q)
             ).distinct()
-        return paginated_response(request, qs, lambda item: _serialize_ops_application(item, request), default_page_size=20)
+        return paginated_response(request, qs, lambda item: _serialize_ops_application(item, request), default_page_size=30)

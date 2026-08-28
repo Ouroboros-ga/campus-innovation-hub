@@ -304,24 +304,63 @@ async function save(publish = false) {
               description="年级、方向、简介与贴士（3B+ 新增，可选）"
             >
               <div class="grid gap-4 sm:grid-cols-2">
-                <UFormField label="适合年级下限" :error="errors.suitableGradeMin">
-                  <UInput v-model.number="suitableGradeMin" type="number" :min="1" :max="4" placeholder="1-4" class="w-full" />
+                <UFormField
+                  label="适合年级下限"
+                  :error="errors.suitableGradeMin"
+                >
+                  <UInput
+                    v-model.number="suitableGradeMin"
+                    type="number"
+                    :min="1"
+                    :max="4"
+                    placeholder="1-4"
+                    class="w-full"
+                  />
                 </UFormField>
-                <UFormField label="适合年级上限" :error="errors.suitableGradeMax">
-                  <UInput v-model.number="suitableGradeMax" type="number" :min="1" :max="4" placeholder="1-4" class="w-full" />
+                <UFormField
+                  label="适合年级上限"
+                  :error="errors.suitableGradeMax"
+                >
+                  <UInput
+                    v-model.number="suitableGradeMax"
+                    type="number"
+                    :min="1"
+                    :max="4"
+                    placeholder="1-4"
+                    class="w-full"
+                  />
                 </UFormField>
               </div>
               <UFormField label="方向">
-                <UInput v-model="direction" placeholder="如：人工智能/机器人" class="w-full" />
+                <UInput
+                  v-model="direction"
+                  placeholder="如：人工智能/机器人"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="一句话简介">
-                <UInput v-model="summary" maxlength="300" placeholder="300 字内" class="w-full" />
+                <UInput
+                  v-model="summary"
+                  maxlength="300"
+                  placeholder="300 字内"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="适合人群说明">
-                <UTextarea v-model="suitableForMd" :rows="3" placeholder="适合人群 Markdown" class="w-full" />
+                <UTextarea
+                  v-model="suitableForMd"
+                  :rows="3"
+                  placeholder="适合人群 Markdown"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="备赛建议">
-                <UTextarea v-model="preparationAdviceMd" :rows="3" placeholder="备赛建议 Markdown" class="w-full" />
+                <UTextarea
+                  v-model="preparationAdviceMd"
+                  :rows="3"
+                  placeholder="备赛建议 Markdown"
+                  class="w-full"
+                />
               </UFormField>
             </FormSection>
 
@@ -360,29 +399,65 @@ async function save(publish = false) {
               </UFormField>
 
               <div class="grid gap-4 sm:grid-cols-2">
-                <UFormField label="报名入口链接" :error="errors.registrationUrl">
-                  <UInput v-model="registrationUrl" placeholder="https://报名入口" class="w-full" />
+                <UFormField
+                  label="报名入口链接"
+                  :error="errors.registrationUrl"
+                >
+                  <UInput
+                    v-model="registrationUrl"
+                    placeholder="https://报名入口"
+                    class="w-full"
+                  />
                 </UFormField>
-                <UFormField label="官方通知链接" :error="errors.officialNoticeUrl">
-                  <UInput v-model="officialNoticeUrl" placeholder="https://通知" class="w-full" />
+                <UFormField
+                  label="官方通知链接"
+                  :error="errors.officialNoticeUrl"
+                >
+                  <UInput
+                    v-model="officialNoticeUrl"
+                    placeholder="https://通知"
+                    class="w-full"
+                  />
                 </UFormField>
               </div>
 
               <div class="grid gap-4 sm:grid-cols-2">
-                <UFormField label="赛事开始" :error="errors.eventStartAt">
-                  <UInput v-model="eventStartAt" type="datetime-local" class="w-full" />
+                <UFormField
+                  label="赛事开始"
+                  :error="errors.eventStartAt"
+                >
+                  <UInput
+                    v-model="eventStartAt"
+                    type="datetime-local"
+                    class="w-full"
+                  />
                 </UFormField>
-                <UFormField label="赛事结束" :error="errors.eventEndAt">
-                  <UInput v-model="eventEndAt" type="datetime-local" class="w-full" />
+                <UFormField
+                  label="赛事结束"
+                  :error="errors.eventEndAt"
+                >
+                  <UInput
+                    v-model="eventEndAt"
+                    type="datetime-local"
+                    class="w-full"
+                  />
                 </UFormField>
               </div>
 
               <div class="grid gap-4 sm:grid-cols-2">
                 <UFormField label="校内联系人">
-                  <UInput v-model="collegeContactName" placeholder="如：张老师" class="w-full" />
+                  <UInput
+                    v-model="collegeContactName"
+                    placeholder="如：张老师"
+                    class="w-full"
+                  />
                 </UFormField>
                 <UFormField label="联系方式">
-                  <UInput v-model="collegeContactText" placeholder="邮箱/电话" class="w-full" />
+                  <UInput
+                    v-model="collegeContactText"
+                    placeholder="邮箱/电话"
+                    class="w-full"
+                  />
                 </UFormField>
               </div>
             </FormSection>

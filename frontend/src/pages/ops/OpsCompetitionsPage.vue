@@ -151,13 +151,16 @@ function openEdit(item: OpsCompetition) {
         </p>
       </div>
       <div class="flex gap-2">
-        <UButton
-          color="neutral"
-          variant="outline"
-          icon="i-lucide-upload"
-        >
-          导入数据
-        </UButton>
+        <UTooltip text="敬请期待">
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-upload"
+            disabled
+          >
+            导入数据
+          </UButton>
+        </UTooltip>
         <UButton
           color="primary"
           icon="i-lucide-plus"
@@ -172,7 +175,7 @@ function openEdit(item: OpsCompetition) {
     <div class="grid gap-3 sm:grid-cols-5">
       <div class="rounded-lg border border-default bg-default p-3">
         <div class="flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-md bg-primary-50 text-primary dark:bg-primary-950"><UIcon
             name="i-lucide-layout-grid"
             class="size-4"
           /></span>
@@ -255,15 +258,18 @@ function openEdit(item: OpsCompetition) {
             <span>已归档</span><span>{{ workbench?.overview.archived ?? '-' }}</span>
           </li>
         </ul>
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          class="mt-3 w-full"
-          icon="i-lucide-plus"
-        >
-          创建视图
-        </UButton>
+        <UTooltip text="敬请期待">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            class="mt-3 w-full"
+            icon="i-lucide-plus"
+            disabled
+          >
+            创建视图
+          </UButton>
+        </UTooltip>
       </div>
 
       <!-- 中表 -->

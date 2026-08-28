@@ -46,7 +46,7 @@ function handleClose(): void {
     />
     <span
       v-if="store.unreadCount > 0"
-      class="pointer-events-none absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium leading-none text-white ring-2 ring-default"
+      class="pointer-events-none absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-danger text-[10px] font-medium leading-none text-white ring-2 ring-default"
       aria-hidden="true"
     >
       {{ store.unreadCount > 99 ? '99+' : store.unreadCount }}
@@ -82,7 +82,7 @@ function handleClose(): void {
     </UPopover>
     <span
       v-if="store.unreadCount > 0"
-      class="pointer-events-none absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium leading-none text-white ring-2 ring-default"
+      class="pointer-events-none absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-danger text-[10px] font-medium leading-none text-white ring-2 ring-default"
       aria-hidden="true"
     >
       {{ store.unreadCount > 99 ? '99+' : store.unreadCount }}

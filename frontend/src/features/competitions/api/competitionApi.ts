@@ -68,6 +68,10 @@ interface CompetitionDetailDto extends CompetitionListItemDto {
   college_organized?: boolean
   college_contact_name?: string | null
   college_contact_text?: string | null
+  suitable_grade_min?: number | null
+  suitable_grade_max?: number | null
+  direction?: string | null
+  summary?: string | null
   timeline?: TimelineItemDto[]
   related_guides?: Array<{ id: string; title: string; published_at?: string | null; detail_path?: string | null }>
   related_announcements?: Array<{ id: string; title: string; published_at?: string | null; detail_path?: string | null }>
@@ -144,8 +148,18 @@ function toDetail(item: CompetitionDetailDto): CompetitionDetail {
       teamRequirement: item.participation_mode === 'TEAM' ? '团队赛' : '个人参赛',
       domains: item.direction ?? '',
       organizer: item.college_contact_name ?? '',
-      contactEmail: null
+      contactEmail: item.college_contact_text ?? null
     },
+    suitableGradeMin: item.suitable_grade_min ?? null,
+    suitableGradeMax: item.suitable_grade_max ?? null,
+    direction: item.direction ?? null,
+    summary: item.summary ?? null,
+    suitableForMd: item.suitable_for_md ?? null,
+    preparationAdviceMd: item.preparation_advice_md ?? null,
+    collegeContactName: item.college_contact_name ?? null,
+    collegeContactText: item.college_contact_text ?? null,
+    registrationUrl: item.registration_url ?? null,
+    officialNoticeUrl: item.official_notice_url ?? null,
     timeline: (item.timeline ?? []).map(node => ({
       date: node.event_at,
       title: node.title,

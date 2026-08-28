@@ -1,4 +1,8 @@
-"""BE-020 学生 API 路由。"""
+"""BE-020 学生 API 路由。
+
+注意：/api/teams 与 public_api 共享路径——GET 走公开列表，POST/close 走本文件（需 LOGIN）。
+  覆盖顺序见 config/urls.py include 先后；功能等价，后续分歧应合并为单一视图。
+"""
 
 from django.urls import path
 

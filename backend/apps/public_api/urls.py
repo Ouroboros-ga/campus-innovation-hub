@@ -1,4 +1,7 @@
-"""BE-010 公共读取路由。"""
+"""BE-010 公共读取路由。
+
+注意：/api/teams 与 student_api 共享路径，见 student_api/urls.py 覆盖说明。
+"""
 
 from django.urls import path
 
