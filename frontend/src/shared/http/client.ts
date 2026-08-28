@@ -64,6 +64,18 @@ export function clearCsrfToken(): void {
   csrfToken = null
 }
 
+function readCsrfFromCookie(): string | null {
+  if (typeof document === 'undefined') return null
+  const cookie = document.cookie
+  if (!cookie) return null
+  const match = cookie
+    .split(';')
+    .map(part => part.trim())
+    .find(part => part.startsWith('csrftoken='))
+  if (!match) return null
+  return decodeURIComponent(match.slice('csrftoken='.length))
+}
+
 // ---------------------------------------------------------------------------
 // 内部工具
 // ---------------------------------------------------------------------------
@@ -163,8 +175,9 @@ async function request<T>(
   if (isMutation && options.body !== undefined && !isFormData) {
     headers.set('Content-Type', 'application/json')
   }
-  if (isMutation && csrfToken && !headers.has('X-CSRFToken')) {
-    headers.set('X-CSRFToken', csrfToken)
+  const effectiveCsrfToken = readCsrfFromCookie() ?? csrfToken
+  if (isMutation && effectiveCsrfToken && !headers.has('X-CSRFToken')) {
+    headers.set('X-CSRFToken', effectiveCsrfToken)
   }
 
   let response: Response

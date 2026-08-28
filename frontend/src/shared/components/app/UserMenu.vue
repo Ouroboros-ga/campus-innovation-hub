@@ -25,7 +25,8 @@ const items = computed(() => {
     label: string
     icon: string
     to?: string
-    click?: () => void
+    onSelect?: (e: Event) => void
+    class?: string
   }[] = [
     { label: '个人中心', icon: 'i-lucide-circle-user-round', to: '/me' },
     { label: '账号设置', icon: 'i-lucide-settings', to: '/me/settings' }
@@ -33,11 +34,17 @@ const items = computed(() => {
   if (isOperator.value) {
     menu.push({ label: '平台运营', icon: 'i-lucide-layout-dashboard', to: '/ops' })
   }
-  menu.push({ label: '退出登录', icon: 'i-lucide-log-out', click: onLogout })
+  menu.push({
+    label: '退出登录',
+    icon: 'i-lucide-log-out',
+    onSelect: onLogout,
+    class: 'logout-item'
+  })
   return [account, menu]
 })
 
-function onLogout() {
+function onLogout(e?: Event) {
+  e?.preventDefault()
   void auth.logout().then(() => {
     void router.push('/')
   })

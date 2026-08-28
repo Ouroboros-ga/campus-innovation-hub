@@ -117,6 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = null
       permissions.value = null
       status.value = 'anonymous'
+      initPromise = null
     }
   }
 

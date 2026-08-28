@@ -46,13 +46,23 @@ export async function register(payload: RegisterPayload): Promise<RegisterResult
 
 /** 登录（PUBLIC），成功后后端 Set-Cookie session。 */
 export async function login(payload: LoginPayload): Promise<AuthMeResult> {
-  return http.post<AuthMeResult>('/auth/login', payload)
+  const result = await http.post<AuthMeResult>('/auth/login', payload)
+  const token = getCookie(CSRF_COOKIE_NAME)
+  if (token) setCsrfToken(token)
+  return result
 }
 
 /** 登出（LOGIN）。 */
 export async function logout(): Promise<void> {
-  await http.post('/auth/logout')
-  clearCsrfToken()
+  const token = getCookie(CSRF_COOKIE_NAME)
+  if (token) setCsrfToken(token)
+  try {
+    await http.post('/auth/logout')
+  } finally {
+    const newToken = getCookie(CSRF_COOKIE_NAME)
+    if (newToken) setCsrfToken(newToken)
+    else clearCsrfToken()
+  }
 }
 
 /** 当前用户与权限上下文（LOGIN）；未登录返回 null，其余错误抛出。 */
