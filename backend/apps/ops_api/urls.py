@@ -2,7 +2,7 @@
 
 from django.urls import path
 
-from apps.ops_api import activity_views, competition_views, consultation_views, content_views, organization_views, overview_views
+from apps.ops_api import activity_views, analytics_views, competition_views, consultation_views, content_views, organization_views, overview_views, team_views
 
 
 urlpatterns = [
@@ -43,10 +43,14 @@ urlpatterns = [
     path("ops/consultations", consultation_views.ConsultationCollectionView.as_view(), name="ops-consultation-collection"),
     path("ops/consultations/<str:object_id>", consultation_views.ConsultationDetailView.as_view(), name="ops-consultation-detail"),
     path("ops/consultations/<str:object_id>/replies", consultation_views.ConsultationReplyView.as_view(), name="ops-consultation-reply"),
+    path("ops/teams", team_views.TeamCollectionView.as_view(), name="ops-team-collection"),
+    path("ops/teams/<str:object_id>", team_views.TeamDetailView.as_view(), name="ops-team-detail"),
+    path("ops/teams/<str:object_id>/close", team_views.TeamCloseView.as_view(), name="ops-team-close"),
     path("ops/organizations", organization_views.OrganizationCollectionView.as_view(), name="ops-organization-collection"),
     path("ops/organizations/stats", organization_views.OrganizationStatsView.as_view(), name="ops-organization-stats"),
     path("ops/overview/workbench", overview_views.WorkbenchStatsView.as_view(), name="ops-workbench-stats"),
     path("ops/overview/competitions/health", overview_views.CompetitionHealthView.as_view(), name="ops-competition-health"),
     path("ops/overview/dynamics/stats", overview_views.DynamicsStatsView.as_view(), name="ops-dynamics-stats"),
     path("ops/overview/recent-drafts", overview_views.RecentAndDraftsView.as_view(), name="ops-recent-drafts"),
+    path("ops/analytics/trends", analytics_views.AnalyticsTrendsView.as_view(), name="ops-analytics-trends"),
 ]

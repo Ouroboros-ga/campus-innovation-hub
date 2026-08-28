@@ -166,6 +166,7 @@ export async function listCompetitions(params: {
   status?: string
   category?: string
   level?: string
+  isFeatured?: boolean
   page?: number
   pageSize?: number
 }): Promise<{ items: OpsCompetition[]; total: number; page: number }> {
@@ -175,6 +176,7 @@ export async function listCompetitions(params: {
       status: params.status,
       category: params.category,
       level: params.level,
+      is_featured: params.isFeatured === undefined ? undefined : String(params.isFeatured),
       page: params.page,
       page_size: params.pageSize
     }

@@ -31,6 +31,7 @@ from apps.ops_api.serializers import (
 from apps.public_api.query import (
     filter_text,
     paginated_response,
+    parse_optional_bool,
     parse_optional_enum,
     parse_ordering,
     parse_uuid,
@@ -56,11 +57,12 @@ def _timeline_or_404(competition: Competition, event_id: str) -> TimelineEvent:
 
 class CompetitionCollectionView(OperatorAPIView):
     def get(self, request: Request) -> Response:
-        validate_query_keys(request, {"q", "status", "category", "level", "ordering", "page", "page_size"})
+        validate_query_keys(request, {"q", "status", "category", "level", "is_featured", "ordering", "page", "page_size"})
         status = parse_optional_enum(request, "status", Competition.PublicationState.values)
         category = parse_optional_enum(request, "category", Competition.Category.values)
         level = parse_optional_enum(request, "level", Competition.Level.values)
         ordering = parse_ordering(request, {"created_at", "-created_at", "registration_end_at", "-registration_end_at"})
+        is_featured = parse_optional_bool(request, "is_featured")
         queryset = Competition.objects.select_related("cover_asset").prefetch_related("timeline_events")
         queryset = filter_text(queryset, request.query_params.get("q"), ("name", "edition", "summary", "direction"))
         if status is not None:
@@ -69,6 +71,8 @@ class CompetitionCollectionView(OperatorAPIView):
             queryset = queryset.filter(category=category)
         if level is not None:
             queryset = queryset.filter(level=level)
+        if is_featured is not None:
+            queryset = queryset.filter(is_featured=is_featured)
         queryset = queryset.order_by(ordering or "-created_at")
         return paginated_response(request, queryset, lambda item: serialize_competition_management(item, request), default_page_size=30)
 

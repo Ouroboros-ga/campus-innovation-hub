@@ -112,6 +112,7 @@ function toDynamicsActivity(dto: ActivityMgmtDto): DynamicsActivity {
     speaker: dto.speaker ?? null,
     descriptionMd: dto.description_md ?? null,
     isFeatured: dto.is_featured ?? false,
+    publicationState: dto.publication_state ?? 'DRAFT',
     cover: { alt: dto.cover?.alt ?? dto.title, src: dto.cover?.url ?? null },
     detailPath: `/activities/${dto.id}`
   }

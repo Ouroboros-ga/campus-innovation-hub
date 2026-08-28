@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import ReplyConsultationModal from '@/features/ops/components/ReplyConsultationModal.vue'
 import { listConsultations } from '@/features/ops/api/opsConsultationApi'
@@ -7,19 +8,49 @@ import { qaStatusMeta } from '@/features/consultation/lib/consultationLabels'
 import type { ConsultQaPost } from '@/features/consultation/types'
 import { formatDateTimeCompact } from '@/shared/lib/date'
 
-/** 咨询管理（FE-090 /ops/questions）。 */
-const filter = ref<'ALL' | 'PENDING' | 'ANSWERED'>('ALL')
+const route = useRoute()
+const router = useRouter()
+
+const rawStatus = route.query.status as string | undefined
+const filter = ref<'ALL' | 'PENDING' | 'ANSWERED'>(rawStatus === 'PENDING' || rawStatus === 'ANSWERED' ? rawStatus : 'ALL')
+const q = ref((route.query.q as string) ?? '')
+const page = ref(Number(route.query.page ?? 1) || 1)
+const pageSize = 20
+const total = ref(0)
 
 const questions = ref<ConsultQaPost[]>([])
 const loading = ref(false)
 const error = ref('')
 
+function syncFromRoute() {
+  const s = route.query.status as string | undefined
+  filter.value = s === 'PENDING' || s === 'ANSWERED' ? s : 'ALL'
+  q.value = (route.query.q as string) ?? ''
+  page.value = Number(route.query.page ?? 1) || 1
+}
+function pushRoute(overrides: Record<string, string|undefined> = {}, resetPage=false) {
+  const next: Record<string,string> = {}
+  const s = overrides.status !== undefined ? overrides.status : filter.value
+  const qq = overrides.q !== undefined ? overrides.q : q.value
+  const p = resetPage ? '1' : (overrides.page !== undefined ? overrides.page : String(page.value))
+  if (s && s !== 'ALL') next.status = s
+  if (qq) next.q = qq
+  if (Number(p)>1) next.page = String(p)
+  router.replace({ query: next })
+}
+
 async function loadQuestions() {
   loading.value = true
   error.value = ''
   try {
-    const result = await listConsultations({})
+    const result = await listConsultations({
+      status: filter.value === 'ALL' ? undefined : filter.value,
+      q: q.value || undefined,
+      page: page.value,
+      pageSize
+    })
     questions.value = result.items
+    total.value = result.total
   } catch {
     error.value = '咨询列表加载失败，请稍后重试。'
   } finally {
@@ -27,13 +58,15 @@ async function loadQuestions() {
   }
 }
 
-onMounted(loadQuestions)
+watch(() => route.query, () => { syncFromRoute(); loadQuestions() })
+onMounted(() => { syncFromRoute(); loadQuestions() })
 
-const rows = computed(() =>
-  filter.value === 'ALL'
-    ? questions.value
-    : questions.value.filter(post => post.status === filter.value)
-)
+function onFilter(v: 'ALL'|'PENDING'|'ANSWERED') { filter.value = v; pushRoute({ status: v }, true) }
+function onSearch() { pushRoute({}, true) }
+function onPageChange(p:number) { pushRoute({ page: String(p) }) }
+function onReset() {
+  filter.value='ALL'; q.value=''; page.value=1; router.replace({ query: {} })
+}
 
 const replyOpen = ref(false)
 const replying = ref<ConsultQaPost | null>(null)
@@ -52,22 +85,51 @@ const filters = [
 
 <template>
   <div class="space-y-4">
-    <div
-      role="group"
-      aria-label="咨询状态筛选"
-      class="flex flex-wrap gap-2"
-    >
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-semibold text-highlighted">
+          咨询与反馈
+        </h2>
+        <p class="text-sm text-muted">
+          查看待回复咨询并进行官方回复
+        </p>
+      </div>
       <UButton
-        v-for="item in filters"
-        :key="item.value"
-        size="sm"
         color="neutral"
-        :variant="filter === item.value ? 'solid' : 'outline'"
-        :aria-pressed="filter === item.value"
-        @click="filter = item.value"
+        variant="outline"
+        icon="i-lucide-rotate-ccw"
+        @click="onReset"
       >
-        {{ item.label }}
+        重置
       </UButton>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <UInput
+        v-model="q"
+        placeholder="搜索标题、内容"
+        icon="i-lucide-search"
+        size="sm"
+        class="w-64"
+        @keyup.enter="onSearch"
+      />
+      <div
+        role="group"
+        aria-label="咨询状态筛选"
+        class="flex flex-wrap gap-2"
+      >
+        <UButton
+          v-for="item in filters"
+          :key="item.value"
+          size="sm"
+          color="neutral"
+          :variant="filter === item.value ? 'solid' : 'outline'"
+          :aria-pressed="filter === item.value"
+          @click="onFilter(item.value)"
+        >
+          {{ item.label }}
+        </UButton>
+      </div>
     </div>
 
     <p
@@ -83,11 +145,11 @@ const filters = [
       {{ error }}
     </p>
     <ul
-      v-else-if="rows.length"
+      v-else-if="questions.length"
       class="space-y-3"
     >
       <li
-        v-for="post in rows"
+        v-for="post in questions"
         :key="post.id"
         class="rounded-surface border border-default bg-default p-4"
       >
@@ -106,7 +168,7 @@ const filters = [
               </span>
             </p>
             <p class="mt-1 text-xs text-muted">
-              {{ post.authorName }} · {{ formatDateTimeCompact(post.answeredAt) }}
+              {{ post.authorName }} · {{ post.status === 'PENDING' ? '提问于' : '回答于' }} {{ formatDateTimeCompact(post.status === 'PENDING' ? post.createdAt : post.answeredAt) }}
             </p>
           </div>
           <UBadge
@@ -146,6 +208,24 @@ const filters = [
       class="text-sm text-muted"
     >
       暂无符合条件的咨询。
+    </p>
+
+    <div
+      v-if="!loading && !error && total > pageSize"
+      class="flex justify-center"
+    >
+      <UPagination
+        :page="page"
+        :total="total"
+        :items-per-page="pageSize"
+        @update:page="onPageChange"
+      />
+    </div>
+    <p
+      v-if="!loading && !error"
+      class="text-center text-xs text-muted"
+    >
+      共 {{ total }} 条
     </p>
 
     <ReplyConsultationModal

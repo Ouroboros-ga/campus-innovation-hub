@@ -111,19 +111,55 @@ function teamBadgeLabel(team: { id: string; status: string }) {
 <template>
   <section class="bg-canvas py-4 sm:py-6">
     <PageContainer class="max-w-[90rem]">
-      <div v-if="auth.status === 'loading' || auth.status === 'idle'" class="py-20 text-center text-sm text-muted">
+      <div
+        v-if="auth.status === 'loading' || auth.status === 'idle'"
+        class="py-20 text-center text-sm text-muted"
+      >
         正在加载…
       </div>
-      <div v-else-if="auth.status === 'error'" class="py-20 text-center">
-        <UIcon name="i-lucide-wifi-off" class="mx-auto size-10 text-muted" aria-hidden="true" />
-        <p class="mt-3 text-sm text-muted">{{ auth.lastError ?? '无法连接服务器，请检查网络后重试' }}</p>
-        <UButton class="mt-4" color="primary" variant="soft" @click="auth.init()">重试</UButton>
+      <div
+        v-else-if="auth.status === 'error'"
+        class="py-20 text-center"
+      >
+        <UIcon
+          name="i-lucide-wifi-off"
+          class="mx-auto size-10 text-muted"
+          aria-hidden="true"
+        />
+        <p class="mt-3 text-sm text-muted">
+          {{ auth.lastError ?? '无法连接服务器，请检查网络后重试' }}
+        </p>
+        <UButton
+          class="mt-4"
+          color="primary"
+          variant="soft"
+          @click="auth.init()"
+        >
+          重试
+        </UButton>
       </div>
-      <div v-else-if="!auth.isAuthenticated" class="py-20 text-center">
-        <UIcon name="i-lucide-user-x" class="mx-auto size-10 text-muted" aria-hidden="true" />
-        <p class="mt-3 text-sm font-medium text-highlighted">未登录</p>
-        <p class="mt-1 text-xs text-muted">登录后查看个人中心</p>
-        <UButton class="mt-4" color="primary" to="/login?redirect=/me">去登录</UButton>
+      <div
+        v-else-if="!auth.isAuthenticated"
+        class="py-20 text-center"
+      >
+        <UIcon
+          name="i-lucide-user-x"
+          class="mx-auto size-10 text-muted"
+          aria-hidden="true"
+        />
+        <p class="mt-3 text-sm font-medium text-highlighted">
+          未登录
+        </p>
+        <p class="mt-1 text-xs text-muted">
+          登录后查看个人中心
+        </p>
+        <UButton
+          class="mt-4"
+          color="primary"
+          to="/login?redirect=/me"
+        >
+          去登录
+        </UButton>
       </div>
       <template v-else>
         <!-- PC 标题行（Phone 由 AppHeader 承载个人中心标题，此处隐藏避免重复） -->
@@ -144,123 +180,77 @@ function teamBadgeLabel(team: { id: string; status: string }) {
           </UButton>
         </div>
 
-      <!-- Hero -->
-      <div class="mt-0 md:mt-4">
-        <AccountHero
-          :profile="accountProfile"
-          :display-name="display.displayName"
-          :college-label="display.collegeLabel"
-          :grade-label="display.gradeLabel"
-          :bio="display.bio"
-          :skills="display.skills"
-          :stats="stats"
-          :is-teacher="isTeacher"
-        />
-      </div>
+        <!-- Hero -->
+        <div class="mt-0 md:mt-4">
+          <AccountHero
+            :profile="accountProfile"
+            :display-name="display.displayName"
+            :college-label="display.collegeLabel"
+            :grade-label="display.gradeLabel"
+            :bio="display.bio"
+            :skills="display.skills"
+            :stats="stats"
+            :is-teacher="isTeacher"
+          />
+        </div>
 
-      <!-- ========== Desktop/Tablet 预览区（md+ 可见，Phone 隐藏） ========== -->
-      <div class="mt-4 hidden gap-4 md:grid md:grid-cols-12">
-        <!-- 我的申请：跨 4 列，更高 -->
-        <AccountOverviewSection
-          title="我的申请"
-          icon="i-lucide-file-text"
-          to="/me/applications"
-          action-label="查看全部申请"
-          class="md:col-span-6 lg:col-span-4"
-        >
-          <ul
-            v-if="appPreview.length"
-            class="space-y-3"
-          >
-            <li
-              v-for="item in appPreview"
-              :key="item.id"
-              class="rounded-surface border border-default bg-default p-3"
-            >
-              <div class="flex items-start justify-between gap-2">
-                <p class="line-clamp-1 text-sm font-medium text-highlighted">
-                  {{ item.targetName }}
-                </p>
-                <UBadge
-                  :color="appStateColor(item.state)"
-                  variant="soft"
-                  size="sm"
-                >
-                  {{ appStateLabel(item.state) }}
-                </UBadge>
-              </div>
-              <p class="mt-1 text-xs text-muted">
-                <template v-if="item.positionName">
-                  团队名称：{{ item.positionName }}
-                </template>
-                <template v-else>
-                  提交时间：{{ formatCompactDate(item.submittedAt) }}
-                </template>
-                <span
-                  v-if="item.positionName"
-                  class="ml-2"
-                >提交时间：{{ formatDateTimeCompact(item.submittedAt) }}</span>
-              </p>
-            </li>
-          </ul>
-          <p
-            v-else
-            class="py-6 text-center text-sm text-muted"
-          >
-            暂无申请记录
-          </p>
-          <template #footer>
-            <RouterLink
-              to="/me/applications"
-              class="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400"
-            >
-              查看全部申请记录
-              <UIcon
-                name="i-lucide-chevron-right"
-                class="size-3.5"
-                aria-hidden="true"
-              />
-            </RouterLink>
-          </template>
-        </AccountOverviewSection>
-
-        <!-- 中间列：关注 + 活动 叠放 -->
-        <div class="flex flex-col gap-4 md:col-span-6 lg:col-span-4">
+        <!-- ========== Desktop/Tablet 预览区（md+ 可见，Phone 隐藏） ========== -->
+        <div class="mt-4 hidden gap-4 md:grid md:grid-cols-12">
+          <!-- 我的申请：跨 4 列，更高 -->
           <AccountOverviewSection
-            title="我关注的竞赛"
-            icon="i-lucide-heart"
-            to="/me/follows"
+            title="我的申请"
+            icon="i-lucide-file-text"
+            to="/me/applications"
+            action-label="查看全部申请"
+            class="md:col-span-6 lg:col-span-4"
           >
             <ul
-              v-if="followPreview.length"
-              class="space-y-2.5"
+              v-if="appPreview.length"
+              class="space-y-3"
             >
               <li
-                v-for="item in followPreview"
+                v-for="item in appPreview"
                 :key="item.id"
-                class="flex items-start justify-between gap-3 text-sm"
+                class="rounded-surface border border-default bg-default p-3"
               >
-                <span class="flex min-w-0 items-start gap-1.5">
-                  <span
-                    class="mt-2 size-1 shrink-0 rounded-full bg-primary-600 dark:bg-primary-400"
-                    aria-hidden="true"
-                  />
-                  <RouterLink
-                    :to="item.detailPath"
-                    class="line-clamp-1 text-toned hover:text-primary-600"
+                <div class="flex items-start justify-between gap-2">
+                  <p class="line-clamp-1 text-sm font-medium text-highlighted">
+                    {{ item.targetName }}
+                  </p>
+                  <UBadge
+                    :color="appStateColor(item.state)"
+                    variant="soft"
+                    size="sm"
                   >
-                    {{ item.name }}
-                  </RouterLink>
-                </span>
-                <span class="shrink-0 text-xs text-muted">{{ formatCompactDate(item.deadlineAt) }}</span>
+                    {{ appStateLabel(item.state) }}
+                  </UBadge>
+                </div>
+                <p class="mt-1 text-xs text-muted">
+                  <template v-if="item.positionName">
+                    团队名称：{{ item.positionName }}
+                  </template>
+                  <template v-else>
+                    提交时间：{{ formatCompactDate(item.submittedAt) }}
+                  </template>
+                  <span
+                    v-if="item.positionName"
+                    class="ml-2"
+                  >提交时间：{{ formatDateTimeCompact(item.submittedAt) }}</span>
+                </p>
               </li>
             </ul>
+            <p
+              v-else
+              class="py-6 text-center text-sm text-muted"
+            >
+              暂无申请记录
+            </p>
             <template #footer>
               <RouterLink
-                to="/me/follows"
-                class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400"
+                to="/me/applications"
+                class="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400"
               >
-                更多竞赛动态
+                查看全部申请记录
                 <UIcon
                   name="i-lucide-chevron-right"
                   class="size-3.5"
@@ -270,35 +260,157 @@ function teamBadgeLabel(team: { id: string; status: string }) {
             </template>
           </AccountOverviewSection>
 
+          <!-- 中间列：关注 + 活动 叠放 -->
+          <div class="flex flex-col gap-4 md:col-span-6 lg:col-span-4">
+            <AccountOverviewSection
+              title="我关注的竞赛"
+              icon="i-lucide-heart"
+              to="/me/follows"
+            >
+              <ul
+                v-if="followPreview.length"
+                class="space-y-2.5"
+              >
+                <li
+                  v-for="item in followPreview"
+                  :key="item.id"
+                  class="flex items-start justify-between gap-3 text-sm"
+                >
+                  <span class="flex min-w-0 items-start gap-1.5">
+                    <span
+                      class="mt-2 size-1 shrink-0 rounded-full bg-primary-600 dark:bg-primary-400"
+                      aria-hidden="true"
+                    />
+                    <RouterLink
+                      :to="item.detailPath"
+                      class="line-clamp-1 text-toned hover:text-primary-600"
+                    >
+                      {{ item.name }}
+                    </RouterLink>
+                  </span>
+                  <span class="shrink-0 text-xs text-muted">{{ formatCompactDate(item.deadlineAt) }}</span>
+                </li>
+              </ul>
+              <template #footer>
+                <RouterLink
+                  to="/me/follows"
+                  class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400"
+                >
+                  更多竞赛动态
+                  <UIcon
+                    name="i-lucide-chevron-right"
+                    class="size-3.5"
+                    aria-hidden="true"
+                  />
+                </RouterLink>
+              </template>
+            </AccountOverviewSection>
+
+            <AccountOverviewSection
+              title="我的活动"
+              icon="i-lucide-calendar-check"
+              to="/me/activities"
+            >
+              <ul
+                v-if="activityPreview.length"
+                class="space-y-2.5"
+              >
+                <li
+                  v-for="item in activityPreview"
+                  :key="item.id"
+                  class="flex items-start justify-between gap-3"
+                >
+                  <RouterLink
+                    :to="item.detailPath"
+                    class="line-clamp-1 text-sm text-toned hover:text-primary-600"
+                  >
+                    {{ item.title }}
+                  </RouterLink>
+                  <span class="shrink-0 text-xs text-muted">{{ formatDateTimeCompact(item.startAt) }}</span>
+                </li>
+              </ul>
+              <template #footer>
+                <RouterLink
+                  to="/me/activities"
+                  class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400"
+                >
+                  更多活动
+                  <UIcon
+                    name="i-lucide-chevron-right"
+                    class="size-3.5"
+                    aria-hidden="true"
+                  />
+                </RouterLink>
+              </template>
+            </AccountOverviewSection>
+          </div>
+
+          <!-- 我的团队 -->
           <AccountOverviewSection
-            title="我的活动"
-            icon="i-lucide-calendar-check"
-            to="/me/activities"
+            title="我的团队"
+            icon="i-lucide-users"
+            to="/me/teams"
+            class="md:col-span-6 lg:col-span-2"
           >
             <ul
-              v-if="activityPreview.length"
-              class="space-y-2.5"
+              v-if="teamPreview.length"
+              class="space-y-3"
             >
               <li
-                v-for="item in activityPreview"
-                :key="item.id"
-                class="flex items-start justify-between gap-3"
+                v-for="team in teamPreview"
+                :key="team.id"
+                class="rounded-surface border border-default p-3"
               >
-                <RouterLink
-                  :to="item.detailPath"
-                  class="line-clamp-1 text-sm text-toned hover:text-primary-600"
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-sm font-medium text-highlighted">{{ team.title }}</span>
+                  <UBadge
+                    :color="teamBadgeLabel(team) === '进行中' ? 'success' : 'primary'"
+                    variant="soft"
+                    size="sm"
+                  >
+                    {{ teamBadgeLabel(team) }}
+                  </UBadge>
+                </div>
+                <p class="mt-1 text-xs text-muted">
+                  成员 {{ team.memberCount }} 人 · {{ team.competitionName.includes('智汇') ? '算法/深度学习' : '学习交流' }}
+                </p>
+                <p
+                  v-if="team.id === 'team-ai-explorer'"
+                  class="mt-0.5 text-xs text-muted"
                 >
-                  {{ item.title }}
-                </RouterLink>
-                <span class="shrink-0 text-xs text-muted">{{ formatDateTimeCompact(item.startAt) }}</span>
+                  队长
+                </p>
               </li>
             </ul>
             <template #footer>
               <RouterLink
-                to="/me/activities"
+                to="/me/teams"
                 class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400"
               >
-                更多活动
+                浏览更多团队
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  class="size-3.5"
+                  aria-hidden="true"
+                />
+              </RouterLink>
+            </template>
+          </AccountOverviewSection>
+
+          <!-- 最近动态：桌面端右侧 -->
+          <AccountOverviewSection
+            title="最近动态"
+            icon="i-lucide-activity"
+            to="/notifications"
+            class="md:col-span-6 lg:col-span-2"
+          >
+            <AccountRecentTimeline :items="timelinePreview" />
+            <template #footer>
+              <RouterLink
+                to="/notifications"
+                class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400"
+              >
+                查看全部动态
                 <UIcon
                   name="i-lucide-chevron-right"
                   class="size-3.5"
@@ -309,111 +421,35 @@ function teamBadgeLabel(team: { id: string; status: string }) {
           </AccountOverviewSection>
         </div>
 
-        <!-- 我的团队 -->
-        <AccountOverviewSection
-          title="我的团队"
-          icon="i-lucide-users"
-          to="/me/teams"
-          class="md:col-span-6 lg:col-span-2"
-        >
-          <ul
-            v-if="teamPreview.length"
-            class="space-y-3"
+        <!-- ========== Phone 清单（Phone 专用，md 隐藏） ========== -->
+        <div class="mt-3 space-y-3 md:hidden">
+          <AccountMenuList :items="menuItems" />
+          <AccountOverviewSection
+            title="最近动态"
+            icon="i-lucide-activity"
+            to="/notifications"
           >
-            <li
-              v-for="team in teamPreview"
-              :key="team.id"
-              class="rounded-surface border border-default p-3"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-sm font-medium text-highlighted">{{ team.title }}</span>
-                <UBadge
-                  :color="teamBadgeLabel(team) === '进行中' ? 'success' : 'primary'"
-                  variant="soft"
-                  size="sm"
-                >
-                  {{ teamBadgeLabel(team) }}
-                </UBadge>
-              </div>
-              <p class="mt-1 text-xs text-muted">
-                成员 {{ team.memberCount }} 人 · {{ team.competitionName.includes('智汇') ? '算法/深度学习' : '学习交流' }}
-              </p>
-              <p
-                v-if="team.id === 'team-ai-explorer'"
-                class="mt-0.5 text-xs text-muted"
+            <AccountRecentTimeline :items="timelinePreview.slice(0,3)" />
+            <template #footer>
+              <RouterLink
+                to="/notifications"
+                class="inline-flex items-center gap-1 text-xs text-muted hover:text-primary-600"
               >
-                队长
-              </p>
-            </li>
-          </ul>
-          <template #footer>
-            <RouterLink
-              to="/me/teams"
-              class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400"
-            >
-              浏览更多团队
-              <UIcon
-                name="i-lucide-chevron-right"
-                class="size-3.5"
-                aria-hidden="true"
-              />
-            </RouterLink>
-          </template>
-        </AccountOverviewSection>
+                查看全部
+                <UIcon
+                  name="i-lucide-chevron-right"
+                  class="size-3.5"
+                  aria-hidden="true"
+                />
+              </RouterLink>
+            </template>
+          </AccountOverviewSection>
+        </div>
 
-        <!-- 最近动态：桌面端右侧 -->
-        <AccountOverviewSection
-          title="最近动态"
-          icon="i-lucide-activity"
-          to="/notifications"
-          class="md:col-span-6 lg:col-span-2"
-        >
-          <AccountRecentTimeline :items="timelinePreview" />
-          <template #footer>
-            <RouterLink
-              to="/notifications"
-              class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400"
-            >
-              查看全部动态
-              <UIcon
-                name="i-lucide-chevron-right"
-                class="size-3.5"
-                aria-hidden="true"
-              />
-            </RouterLink>
-          </template>
-        </AccountOverviewSection>
-      </div>
-
-      <!-- ========== Phone 清单（Phone 专用，md 隐藏） ========== -->
-      <div class="mt-3 space-y-3 md:hidden">
-        <AccountMenuList :items="menuItems" />
-        <AccountOverviewSection
-          title="最近动态"
-          icon="i-lucide-activity"
-          to="/notifications"
-        >
-          <AccountRecentTimeline :items="timelinePreview.slice(0,3)" />
-          <template #footer>
-            <RouterLink
-              to="/notifications"
-              class="inline-flex items-center gap-1 text-xs text-muted hover:text-primary-600"
-            >
-              查看全部
-              <UIcon
-                name="i-lucide-chevron-right"
-                class="size-3.5"
-                aria-hidden="true"
-              />
-            </RouterLink>
-          </template>
-        </AccountOverviewSection>
-      </div>
-
-      <!-- ========== 底部账户设置行（仅桌面） ========== -->
-      <div class="mt-4 hidden md:block">
-        <AccountSettingsRow :items="settingsRowItems" />
-      </div>
+        <!-- ========== 底部账户设置行（仅桌面） ========== -->
+        <div class="mt-4 hidden md:block">
+          <AccountSettingsRow :items="settingsRowItems" />
+        </div>
       </template>
     </PageContainer>
   </section>

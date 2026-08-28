@@ -57,6 +57,7 @@ interface PaginatedDto<T> {
 function toConsultQaPost(dto: ConsultationMgmtDto): ConsultQaPost {
   const status: ConsultQaStatus = dto.status === 'ANSWERED' ? 'ANSWERED' : 'PENDING'
   const lastReply = dto.replies?.at(-1)
+  const answered = dto.answered_at ?? lastReply?.created_at ?? ''
   return {
     id: dto.id,
     question: dto.title,
@@ -64,7 +65,8 @@ function toConsultQaPost(dto: ConsultationMgmtDto): ConsultQaPost {
     tags: dto.category ? [faqCategoryLabel[dto.category as FaqCategory] ?? dto.category] : [],
     status,
     authorName: dto.author.display_name ?? dto.author.nickname ?? '',
-    answeredAt: dto.answered_at ?? lastReply?.created_at ?? dto.created_at,
+    answeredAt: answered || dto.created_at,
+    createdAt: dto.created_at,
     likes: 0,
     detailPath: `/qa/questions/${dto.id}`
   }

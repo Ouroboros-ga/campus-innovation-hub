@@ -39,6 +39,8 @@ export interface ConsultQaPost {
   authorName: string
   /** ISO 8601 回答日期。 */
   answeredAt: string
+  /** ISO 8601 提问日期（PENDING 时用于区分创建时间）。 */
+  createdAt: string
   /** 赞同数（仅展示真实数据，此处为 mock）。 */
   likes: number
   detailPath: string

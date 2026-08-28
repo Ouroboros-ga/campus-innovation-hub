@@ -15,28 +15,29 @@ const drawerOpen = ref(false)
 
 <template>
   <div class="flex min-h-[calc(100dvh-4rem)] bg-canvas">
-    <!-- 桌面侧栏 -->
+    <!-- 桌面侧栏：品牌由全局 AppHeader 承载，此处不再重复“运营管理中心”头 -->
     <aside class="hidden w-[260px] shrink-0 flex-col border-r border-default bg-default lg:flex">
-      <div class="flex h-14 items-center gap-3 border-b border-default px-4">
-        <span class="grid size-8 place-items-center rounded-lg bg-primary-600 text-white">
-          <UIcon name="i-lucide-graduation-cap" class="size-5" />
-        </span>
-        <div class="min-w-0">
-          <p class="text-sm font-semibold leading-none text-highlighted">科创与就业服务平台</p>
-          <p class="text-xs text-muted">运营管理中心</p>
-        </div>
-      </div>
       <div class="flex-1 overflow-y-auto px-2 py-3">
         <OpsNav />
       </div>
       <div class="border-t border-default p-3">
         <div class="flex items-center gap-2 rounded-lg bg-muted px-2 py-2">
-          <UAvatar size="sm" alt="张同学" />
+          <UAvatar
+            size="sm"
+            alt="张同学"
+          />
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-highlighted">张同学</p>
-            <p class="text-xs text-muted">平台运营</p>
+            <p class="truncate text-sm font-medium text-highlighted">
+              张同学
+            </p>
+            <p class="text-xs text-muted">
+              平台运营
+            </p>
           </div>
-          <UIcon name="i-lucide-chevron-down" class="size-4 text-muted" />
+          <UIcon
+            name="i-lucide-chevron-down"
+            class="size-4 text-muted"
+          />
         </div>
       </div>
     </aside>
@@ -71,7 +72,10 @@ const drawerOpen = ref(false)
             icon="i-lucide-bell"
             aria-label="通知"
           />
-          <UAvatar size="sm" alt="张同学" />
+          <UAvatar
+            size="sm"
+            alt="张同学"
+          />
         </div>
       </header>
 
@@ -90,14 +94,24 @@ const drawerOpen = ref(false)
         <div class="flex h-full flex-col">
           <div class="flex h-14 items-center gap-3 border-b border-default px-4">
             <span class="grid size-8 place-items-center rounded-lg bg-primary-600 text-white">
-              <UIcon name="i-lucide-graduation-cap" class="size-5" />
+              <UIcon
+                name="i-lucide-graduation-cap"
+                class="size-5"
+              />
             </span>
             <div>
-              <p class="text-sm font-semibold text-highlighted">运营管理中心</p>
-              <p class="text-xs text-muted">科创与就业服务平台</p>
+              <p class="text-sm font-semibold text-highlighted">
+                运营管理中心
+              </p>
+              <p class="text-xs text-muted">
+                科创与就业服务平台
+              </p>
             </div>
           </div>
-          <div class="flex-1 overflow-y-auto px-2 py-3" @click="drawerOpen = false">
+          <div
+            class="flex-1 overflow-y-auto px-2 py-3"
+            @click="drawerOpen = false"
+          >
             <OpsNav />
           </div>
         </div>

@@ -39,6 +39,14 @@ export interface RecentDrafts {
   drafts: Array<{ id: string; title: string; type: string; updated_at: string }>
 }
 
+export interface AnalyticsTrends {
+  days: number
+  start_date: string
+  end_date: string
+  series: Record<string, Array<{ date: string; count: number }>>
+  totals: Record<string, number>
+}
+
 export function getWorkbenchStats() {
   return http.get<WorkbenchStats>('/ops/overview/workbench')
 }
@@ -53,4 +61,7 @@ export function getOrganizationStats() {
 }
 export function getRecentDrafts() {
   return http.get<RecentDrafts>('/ops/overview/recent-drafts')
+}
+export function getAnalyticsTrends(days = 7) {
+  return http.get<AnalyticsTrends>(`/ops/analytics/trends?days=${days}`)
 }

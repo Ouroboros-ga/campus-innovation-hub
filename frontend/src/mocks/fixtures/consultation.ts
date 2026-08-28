@@ -118,6 +118,7 @@ export const consultQaPosts: ConsultQaPost[] = [
     status: 'ANSWERED',
     authorName: '平台小助手',
     answeredAt: '2026-08-20T14:00:00+08:00',
+    createdAt: '2026-08-19T09:00:00+08:00',
     likes: 18,
     detailPath: '/qa/questions/lanqiao-both'
   },
@@ -130,6 +131,7 @@ export const consultQaPosts: ConsultQaPost[] = [
     status: 'ANSWERED',
     authorName: '平台小助手',
     answeredAt: '2026-08-13T10:00:00+08:00',
+    createdAt: '2026-08-12T10:00:00+08:00',
     likes: 12,
     detailPath: '/qa/questions/duplicate-rate'
   },
@@ -142,6 +144,7 @@ export const consultQaPosts: ConsultQaPost[] = [
     status: 'PENDING',
     authorName: '张同学',
     answeredAt: '2026-08-05T15:00:00+08:00',
+    createdAt: '2026-08-05T15:00:00+08:00',
     likes: 6,
     detailPath: '/qa/questions/roadshow'
   }

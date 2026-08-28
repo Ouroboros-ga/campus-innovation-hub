@@ -4,22 +4,19 @@ import { computed, ref, watch } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 
 import {
-  addRecruitment,
-  updateRecruitment,
-  validateRecruitEditor,
-  type RecruitEditorDraft
-} from '../lib/orgManagement'
-import type { OrganizationPosition, RecruitmentDetail } from '../types'
+  createManageRecruitment,
+  publishManageRecruitment,
+  updateManageRecruitment
+} from '@/features/organizations/api/orgManageApi'
+import { validateRecruitEditor } from '../lib/orgManagement'
+import type { RecruitmentDetail } from '../types'
+import { AppError } from '@/shared/http/types'
 import ContentEditorShell from '@/shared/components/editor/ContentEditorShell.vue'
 import FormSection from '@/shared/components/form/FormSection.vue'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 import RichContent from '@/shared/components/reader/RichContent.vue'
 
-/**
- * 招新编辑器（FE-080 / PageMap §新建/编辑招新）。
- * 基本字段 + 岗位编辑器（添加/删除）；校验靠近字段；保存后持久化到内存 store。
- * 正文所见即所得 + 实时预览（桌面双栏 / 移动 编辑↔预览）。
- */
+/** 招新编辑器 — 真实事务接入 DRAFT→PUBLISHED，岗位 sort_order 稳定 */
 const props = defineProps<{
   open: boolean
   orgId: string
@@ -34,6 +31,7 @@ const emit = defineEmits<{
 const toast = useToast()
 
 interface PositionRow {
+  id?: string
   name: string
   headcount: number
   description: string
@@ -49,6 +47,7 @@ const targetGradeMax = ref<number | null>(null)
 const notesMd = ref('')
 const positions = ref<PositionRow[]>([])
 const errors = ref<Record<string, string>>({})
+const submitting = ref(false)
 
 const isEdit = computed(() => Boolean(props.recruitment))
 
@@ -65,11 +64,12 @@ watch(
     targetGradeMax.value = recruitment?.targetGradeMax ?? null
     notesMd.value = recruitment?.notesMd ?? ''
     positions.value = recruitment?.positions.length
-      ? recruitment.positions.map(position => ({
-          name: position.name,
-          headcount: position.headcount,
-          description: position.description ?? '',
-          requirements: position.requirements ?? ''
+      ? recruitment.positions.map(p => ({
+          id: p.id,
+          name: p.name,
+          headcount: p.headcount,
+          description: p.description ?? '',
+          requirements: p.requirements ?? ''
         }))
       : [emptyPosition()]
     errors.value = {}
@@ -92,8 +92,26 @@ function close() {
   emit('update:open', false)
 }
 
-function draft(): RecruitEditorDraft {
-  return {
+const FIELD_MAP: Record<string, string> = {
+  title: 'title',
+  intro_md: 'introMd',
+  apply_start_at: 'applyStartAt',
+  apply_end_at: 'applyEndAt',
+  target_grade_min: 'targetGradeMin',
+  target_grade_max: 'targetGradeMax',
+  notes_md: 'notesMd',
+  positions: 'positions',
+  name: 'positions'
+}
+
+function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, string> {
+  const res: Record<string, string> = {}
+  for (const [k, v] of Object.entries(fieldErrors)) res[FIELD_MAP[k] ?? k] = v
+  return res
+}
+
+async function save(publish = false) {
+  const draft = {
     title: title.value,
     introMd: introMd.value,
     applyStartAt: applyStartAt.value,
@@ -101,34 +119,79 @@ function draft(): RecruitEditorDraft {
     targetGradeMin: targetGradeMin.value,
     targetGradeMax: targetGradeMax.value,
     notesMd: notesMd.value,
-    positions: positions.value.map(position => ({
-      name: position.name,
-      headcount: position.headcount,
-      description: position.description,
-      requirements: position.requirements
-    })) as Array<Omit<OrganizationPosition, 'id'>>
+    positions: positions.value.map((p, idx) => ({
+      ...(p.id ? { id: p.id } : {}),
+      name: p.name,
+      headcount: p.headcount,
+      description: p.description,
+      requirements: p.requirements,
+      sort_order: idx
+    }))
   }
-}
-
-function save() {
-  const value = draft()
-  const formErrors = validateRecruitEditor(value)
+  // 前端校验（靠近字段）
+  const formErrors = validateRecruitEditor({
+    title: draft.title,
+    introMd: draft.introMd,
+    applyStartAt: draft.applyStartAt,
+    applyEndAt: draft.applyEndAt,
+    targetGradeMin: draft.targetGradeMin,
+    targetGradeMax: draft.targetGradeMax,
+    notesMd: draft.notesMd,
+    positions: draft.positions.map(p => ({ name: p.name, headcount: p.headcount, description: p.description ?? '', requirements: p.requirements ?? '' })) as never
+  })
   errors.value = formErrors
   if (Object.keys(formErrors).length > 0) return
 
-  if (isEdit.value && props.recruitment) {
-    updateRecruitment(props.orgId, props.recruitment.id, value)
-  } else {
-    addRecruitment(props.orgId, value)
+  submitting.value = true
+  try {
+    const payload = {
+      title: draft.title.trim(),
+      intro_md: draft.introMd.trim(),
+      apply_start_at: draft.applyStartAt ? new Date(draft.applyStartAt).toISOString() : null,
+      apply_end_at: new Date(draft.applyEndAt).toISOString(),
+      target_grade_min: draft.targetGradeMin,
+      target_grade_max: draft.targetGradeMax,
+      notes_md: draft.notesMd.trim() || null,
+      positions: draft.positions.map(p => ({
+        ...(p.id ? { id: p.id } : {}),
+        name: p.name.trim(),
+        headcount: p.headcount,
+        description_md: p.description?.trim() || null,
+        requirements_md: p.requirements?.trim() || null,
+        sort_order: p.sort_order
+      }))
+    }
+
+    let targetId: string | null = null
+    if (isEdit.value && props.recruitment) {
+      const pub = (props.recruitment as unknown as { publicationState?: string }).publicationState
+      if (pub && pub !== 'DRAFT') throw new AppError('已发布内容不可直接修改，请通过草稿编辑后发布。', { status: 409, code: 'CONFLICT' })
+      const updated = await updateManageRecruitment(props.orgId, props.recruitment.id, payload)
+      targetId = updated.id
+    } else {
+      const created = await createManageRecruitment(props.orgId, payload as never)
+      targetId = created.id
+    }
+    if (publish && targetId) await publishManageRecruitment(props.orgId, targetId)
+
+    toast.add({
+      title: publish ? '已发布招新' : isEdit.value ? '已保存草稿' : '已创建草稿',
+      description: publish ? '已发布到站内可见。' : '已保存到服务器（草稿）。',
+      color: 'success',
+      icon: 'i-lucide-check-circle'
+    })
+    close()
+    emit('saved')
+  } catch (err) {
+    if (err instanceof AppError && err.fieldErrors) {
+      errors.value = { ...errors.value, ...mapFieldErrors(err.fieldErrors) }
+    } else {
+      const msg = err instanceof AppError ? err.message : '保存失败，请稍后重试。'
+      toast.add({ title: '保存失败', description: msg, color: 'error', icon: 'i-lucide-alert-circle' })
+    }
+  } finally {
+    submitting.value = false
   }
-  toast.add({
-    title: isEdit.value ? '已更新招新' : '已新建招新',
-    description: '招新信息已保存（mock）。',
-    color: 'success',
-    icon: 'i-lucide-check-circle'
-  })
-  close()
-  emit('saved')
 }
 </script>
 
@@ -148,7 +211,7 @@ function save() {
       <form
         class="space-y-6"
         novalidate
-        @submit.prevent="save"
+        @submit.prevent="() => save(false)"
       >
         <ContentEditorShell preview-title="招新预览">
           <template #form>
@@ -173,7 +236,6 @@ function save() {
                 <UFormField
                   label="开始时间"
                   name="applyStartAt"
-                  required
                   :error="errors.applyStartAt"
                 >
                   <UInput
@@ -235,7 +297,7 @@ function save() {
 
             <FormSection
               title="岗位与说明"
-              description="招募岗位列表与补充说明"
+              description="招募岗位列表与补充说明（拖序以 sort_order 固化）"
             >
               <UFormField
                 label="招募岗位"
@@ -325,12 +387,21 @@ function save() {
           取消
         </UButton>
         <UButton
+          color="neutral"
+          variant="outline"
+          :loading="submitting"
+          @click="save(false)"
+        >
+          保存草稿
+        </UButton>
+        <UButton
           color="primary"
           variant="solid"
-          icon="i-lucide-save"
-          @click="save"
+          icon="i-lucide-send"
+          :loading="submitting"
+          @click="save(true)"
         >
-          保存
+          保存并发布
         </UButton>
       </div>
     </template>

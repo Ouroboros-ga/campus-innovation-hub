@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import NotificationPanel from '@/features/notifications/components/NotificationPanel.vue'
@@ -17,13 +17,12 @@ onMounted(() => {
   store.startPolling()
 })
 
-function handleClick(): void {
-  if (isPhone.value) {
-    void router.push('/notifications')
-    return
-  }
-  open.value = !open.value
-  if (open.value && !store.initialized) void store.fetchList()
+watch(open, value => {
+  if (value && !store.initialized) void store.fetchList()
+})
+
+function goNotifications(): void {
+  void router.push('/notifications')
 }
 
 function handleClose(): void {
@@ -32,56 +31,61 @@ function handleClose(): void {
 </script>
 
 <template>
-  <!-- 手机端：直接跳转 -->
-  <UButton
+  <!-- 手机端：直接跳转，无 Popover -->
+  <div
     v-if="isPhone"
-    aria-label="查看通知"
-    icon="i-lucide-bell"
-    color="neutral"
-    variant="ghost"
-    class="relative text-default"
-    @click="handleClick"
-  >
-    <span
-      v-if="store.unreadCount > 0"
-      class="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium leading-none text-white ring-2 ring-default"
-      aria-hidden="true"
-    >
-      {{ store.unreadCount > 99 ? '99+' : store.unreadCount }}
-    </span>
-  </UButton>
-
-  <!-- 桌面/平板：下拉面板 -->
-  <UPopover
-    v-else
-    v-model:open="open"
-    :content="{ align: 'end', sideOffset: 8 }"
+    class="relative inline-flex"
   >
     <UButton
       aria-label="查看通知"
       icon="i-lucide-bell"
       color="neutral"
       variant="ghost"
-      class="relative text-default"
-      @click="handleClick"
+      class="text-default"
+      @click="goNotifications"
+    />
+    <span
+      v-if="store.unreadCount > 0"
+      class="pointer-events-none absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium leading-none text-white ring-2 ring-default"
+      aria-hidden="true"
     >
-      <span
-        v-if="store.unreadCount > 0"
-        class="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium leading-none text-white ring-2 ring-default"
-        aria-hidden="true"
-      >
-        {{ store.unreadCount > 99 ? '99+' : store.unreadCount }}
-      </span>
-    </UButton>
+      {{ store.unreadCount > 99 ? '99+' : store.unreadCount }}
+    </span>
+  </div>
 
-    <template #content>
-      <div class="overflow-hidden rounded-xl border border-default bg-default shadow-lg">
-        <NotificationPanel
-          compact
-          @close="handleClose"
-          @view-all="handleClose"
-        />
-      </div>
-    </template>
-  </UPopover>
+  <!-- 桌面/平板：下拉面板 -->
+  <div
+    v-else
+    class="relative inline-flex"
+  >
+    <UPopover
+      v-model:open="open"
+      :content="{ align: 'end', sideOffset: 8 }"
+    >
+      <UButton
+        aria-label="查看通知"
+        icon="i-lucide-bell"
+        color="neutral"
+        variant="ghost"
+        class="text-default"
+      />
+
+      <template #content>
+        <div class="overflow-hidden rounded-xl border border-default bg-default shadow-lg">
+          <NotificationPanel
+            compact
+            @close="handleClose"
+            @view-all="handleClose"
+          />
+        </div>
+      </template>
+    </UPopover>
+    <span
+      v-if="store.unreadCount > 0"
+      class="pointer-events-none absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium leading-none text-white ring-2 ring-default"
+      aria-hidden="true"
+    >
+      {{ store.unreadCount > 99 ? '99+' : store.unreadCount }}
+    </span>
+  </div>
 </template>

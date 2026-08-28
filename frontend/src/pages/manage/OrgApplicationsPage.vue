@@ -1,33 +1,43 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
 
 import { formatCompactDate } from '@/shared/lib/date'
-
+import { AppError } from '@/shared/http/types'
 import {
-  applicationStateLabel,
-  managedApplications,
-  type ManagedApplication
-} from '@/features/organizations/lib/orgManagement'
-import type { RecruitmentApplicationState } from '@/features/organizations/types'
+  acceptManageApplication,
+  listManageApplications,
+  rejectManageApplication,
+  type ManageApplication
+} from '@/features/organizations/api/orgManageApi'
 
-/** 申请管理（FE-080 / PageMap §招新申请管理）。 */
 const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 
 const orgId = String(route.params.organizationId ?? '')
 
-const apps = ref<ManagedApplication[]>(managedApplications(orgId))
-const filter = ref<'ALL' | RecruitmentApplicationState>('ALL')
+const applications = ref<ManageApplication[]>([])
+const total = ref(0)
+const loading = ref(false)
+const error = ref('')
+const filter = ref((route.query.status as string) ?? 'ALL')
+const page = ref(Number(route.query.page ?? 1) || 1)
+const pageSize = 20
 
-const stateColor: Record<RecruitmentApplicationState, 'neutral' | 'success' | 'warning' | 'info'> = {
+const stateColor: Record<string, 'neutral' | 'success' | 'warning' | 'info'> = {
   PENDING: 'warning',
   ACCEPTED: 'success',
   REJECTED: 'neutral',
   WITHDRAWN: 'neutral'
 }
-
+const stateLabel: Record<string, string> = {
+  PENDING: '待处理',
+  ACCEPTED: '已接受',
+  REJECTED: '已拒绝',
+  WITHDRAWN: '已撤回'
+}
 const filters = [
   { value: 'ALL', label: '全部' },
   { value: 'PENDING', label: '待处理' },
@@ -35,21 +45,60 @@ const filters = [
   { value: 'REJECTED', label: '已拒绝' }
 ] as const
 
-const filtered = computed(() =>
-  filter.value === 'ALL'
-    ? apps.value
-    : apps.value.filter(application => application.state === filter.value)
-)
+function syncFromRoute() {
+  filter.value = (route.query.status as string) ?? 'ALL'
+  page.value = Number(route.query.page ?? 1) || 1
+}
+function pushRoute(overrides: Record<string, string | undefined> = {}, resetPage = false) {
+  const next: Record<string, string> = {}
+  const s = overrides.status !== undefined ? overrides.status : filter.value
+  const p = resetPage ? '1' : (overrides.page !== undefined ? overrides.page : String(page.value))
+  if (s && s !== 'ALL') next.status = s
+  if (Number(p) > 1) next.page = String(p)
+  router.replace({ query: next })
+}
 
-function decide(id: string, state: RecruitmentApplicationState) {
-  const application = apps.value.find(item => item.id === id)
-  if (application) application.state = state
-  toast.add({
-    title: state === 'ACCEPTED' ? '已接受' : '已拒绝',
-    description: '操作完成（mock）。',
-    color: state === 'ACCEPTED' ? 'success' : 'neutral',
-    icon: state === 'ACCEPTED' ? 'i-lucide-check-circle' : 'i-lucide-x-circle'
-  })
+async function load() {
+  loading.value = true
+  error.value = ''
+  try {
+    const res = await listManageApplications(orgId, {
+      status: filter.value === 'ALL' ? undefined : filter.value,
+      page: page.value,
+      pageSize
+    })
+    applications.value = res.items
+    total.value = res.total
+  } catch (err) {
+    error.value = err instanceof AppError ? err.message : '申请列表加载失败，请稍后重试。'
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(() => route.query, () => { syncFromRoute(); load() })
+onMounted(() => { syncFromRoute(); load() })
+
+function onFilterChange() { pushRoute({}, true) }
+function onPageChange(p: number) { pushRoute({ page: String(p) }) }
+function onReset() { filter.value = 'ALL'; page.value = 1; router.replace({ query: {} }) }
+
+async function decide(id: string, state: 'ACCEPTED' | 'REJECTED') {
+  try {
+    if (state === 'ACCEPTED') await acceptManageApplication(orgId, id)
+    else await rejectManageApplication(orgId, id)
+    toast.add({
+      title: state === 'ACCEPTED' ? '已接受' : '已拒绝',
+      description: state === 'ACCEPTED' ? '已创建成员身份并通知申请人。' : '已拒绝该申请。',
+      color: state === 'ACCEPTED' ? 'success' : 'neutral',
+      icon: state === 'ACCEPTED' ? 'i-lucide-check-circle' : 'i-lucide-x-circle'
+    })
+    load()
+  } catch (err) {
+    const msg = err instanceof AppError ? err.message : '操作失败，请稍后重试。'
+    // 容量已满 409、重复申请、窗口关闭等后端口径直接透出
+    toast.add({ title: '操作失败', description: msg, color: 'error', icon: 'i-lucide-alert-circle' })
+  }
 }
 </script>
 
@@ -59,6 +108,15 @@ function decide(id: string, state: RecruitmentApplicationState) {
       <h2 class="text-lg font-semibold text-highlighted">
         申请管理
       </h2>
+      <UButton
+        color="neutral"
+        variant="outline"
+        size="sm"
+        icon="i-lucide-rotate-ccw"
+        @click="onReset"
+      >
+        重置
+      </UButton>
     </div>
 
     <div
@@ -73,18 +131,30 @@ function decide(id: string, state: RecruitmentApplicationState) {
         color="neutral"
         :variant="filter === item.value ? 'solid' : 'outline'"
         :aria-pressed="filter === item.value"
-        @click="filter = item.value"
+        @click="filter = item.value; onFilterChange()"
       >
         {{ item.label }}
       </UButton>
     </div>
 
+    <div
+      v-if="loading"
+      class="py-10 text-center text-sm text-muted"
+    >
+      正在加载…
+    </div>
+    <p
+      v-else-if="error"
+      class="py-10 text-center text-sm text-danger-600 dark:text-danger-400"
+    >
+      {{ error }}
+    </p>
     <ul
-      v-if="filtered.length"
+      v-else-if="applications.length"
       class="space-y-3"
     >
       <li
-        v-for="application in filtered"
+        v-for="application in applications"
         :key="application.id"
         class="rounded-surface border border-default bg-default p-4"
       >
@@ -95,27 +165,27 @@ function decide(id: string, state: RecruitmentApplicationState) {
               <span class="font-normal text-muted">申请 {{ application.positionName }}</span>
             </p>
             <p class="mt-1 text-xs text-muted">
-              {{ application.grade }} · {{ application.major }}
+              岗位ID：{{ application.positionId.slice(0, 8) }}
             </p>
           </div>
           <UBadge
             size="sm"
             variant="soft"
-            :color="stateColor[application.state]"
+            :color="stateColor[application.status] ?? 'neutral'"
           >
-            {{ applicationStateLabel[application.state] }}
+            {{ stateLabel[application.status] ?? application.status }}
           </UBadge>
         </div>
 
         <p class="mt-2 text-xs leading-5 text-toned">
-          技能：{{ application.skills }} · 简介：{{ application.selfIntro }}
+          简介：{{ application.selfIntro }}<span v-if="application.skills"> · 技能：{{ application.skills }}</span>
         </p>
         <p class="mt-1 text-xs text-muted">
-          提交于 {{ formatCompactDate(application.submittedAt) }}
+          提交于 {{ formatCompactDate(application.createdAt) }}
         </p>
 
         <div
-          v-if="application.state === 'PENDING'"
+          v-if="application.status === 'PENDING'"
           class="mt-3 flex gap-2"
         >
           <UButton
@@ -145,6 +215,24 @@ function decide(id: string, state: RecruitmentApplicationState) {
       class="text-sm text-muted"
     >
       暂无符合条件的申请。
+    </p>
+
+    <div
+      v-if="!loading && !error && total > pageSize"
+      class="flex justify-center"
+    >
+      <UPagination
+        :page="page"
+        :total="total"
+        :items-per-page="pageSize"
+        @update:page="onPageChange"
+      />
+    </div>
+    <p
+      v-if="!loading && !error"
+      class="text-center text-xs text-muted"
+    >
+      共 {{ total }} 条
     </p>
   </div>
 </template>

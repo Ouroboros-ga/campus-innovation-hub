@@ -46,13 +46,20 @@ const overviewItems = computed(() => {
     <!-- 标题 -->
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-lg font-semibold text-highlighted">运营工作台 👋</h2>
-        <p class="mt-1 text-sm text-muted">统一管理平台内容，提升运营效率与内容质量</p>
+        <h2 class="text-lg font-semibold text-highlighted">
+          运营工作台 👋
+        </h2>
+        <p class="mt-1 text-sm text-muted">
+          统一管理平台内容，提升运营效率与内容质量
+        </p>
       </div>
       <span class="hidden text-xs text-muted sm:block">数据更新于 {{ formatCompactDate(new Date().toISOString()) }}</span>
     </div>
 
-    <div v-if="loading" class="grid gap-4 lg:grid-cols-3">
+    <div
+      v-if="loading"
+      class="grid gap-4 lg:grid-cols-3"
+    >
       <USkeleton class="h-36 rounded-lg" />
       <USkeleton class="h-36 rounded-lg" />
       <USkeleton class="h-36 rounded-lg" />
@@ -64,8 +71,15 @@ const overviewItems = computed(() => {
         <!-- 待办事项 -->
         <div class="rounded-lg border border-default bg-default p-4">
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-highlighted">待办事项</h3>
-            <RouterLink to="/ops/questions" class="text-xs text-primary-600 hover:underline">查看全部待办 →</RouterLink>
+            <h3 class="text-sm font-semibold text-highlighted">
+              待办事项
+            </h3>
+            <RouterLink
+              to="/ops/questions"
+              class="text-xs text-primary-600 hover:underline"
+            >
+              查看全部待办 →
+            </RouterLink>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div
@@ -74,49 +88,91 @@ const overviewItems = computed(() => {
               class="rounded-lg border border-default bg-muted/50 p-3"
             >
               <div class="flex items-center gap-2">
-                <span class="grid size-7 place-items-center rounded-md" :class="item.color">
-                  <UIcon :name="item.icon" class="size-4" />
+                <span
+                  class="grid size-7 place-items-center rounded-md"
+                  :class="item.color"
+                >
+                  <UIcon
+                    :name="item.icon"
+                    class="size-4"
+                  />
                 </span>
               </div>
-              <p class="mt-2 text-xl font-bold tabular-nums text-highlighted">{{ item.value }}</p>
-              <p class="text-xs text-muted">{{ item.label }}</p>
+              <p class="mt-2 text-xl font-bold tabular-nums text-highlighted">
+                {{ item.value }}
+              </p>
+              <p class="text-xs text-muted">
+                {{ item.label }}
+              </p>
             </div>
           </div>
         </div>
 
         <!-- 内容概览 -->
         <div class="rounded-lg border border-default bg-default p-4">
-          <h3 class="mb-3 text-sm font-semibold text-highlighted">内容概览</h3>
+          <h3 class="mb-3 text-sm font-semibold text-highlighted">
+            内容概览
+          </h3>
           <div class="grid grid-cols-4 gap-2">
-            <div v-for="item in overviewItems" :key="item.label" class="text-center">
+            <div
+              v-for="item in overviewItems"
+              :key="item.label"
+              class="text-center"
+            >
               <span class="mx-auto grid size-8 place-items-center rounded-full bg-muted">
-                <UIcon :name="item.icon" class="size-4 text-muted" :class="item.color" />
+                <UIcon
+                  :name="item.icon"
+                  class="size-4 text-muted"
+                  :class="item.color"
+                />
               </span>
-              <p class="mt-2 text-lg font-bold tabular-nums text-highlighted">{{ item.value }}</p>
-              <p class="text-xs text-muted">{{ item.label }}</p>
+              <p class="mt-2 text-lg font-bold tabular-nums text-highlighted">
+                {{ item.value }}
+              </p>
+              <p class="text-xs text-muted">
+                {{ item.label }}
+              </p>
             </div>
           </div>
         </div>
 
         <!-- 快捷数据占位（无 PV/UV 时展示健康） -->
         <div class="rounded-lg border border-default bg-default p-4">
-          <h3 class="mb-3 text-sm font-semibold text-highlighted">内容健康</h3>
+          <h3 class="mb-3 text-sm font-semibold text-highlighted">
+            内容健康
+          </h3>
           <div class="grid grid-cols-2 gap-3">
             <div class="rounded-md bg-muted p-3">
-              <p class="text-xs text-muted">缺封面</p>
-              <p class="mt-1 text-lg font-bold text-highlighted">{{ stats?.health.missing_cover ?? 0 }}</p>
+              <p class="text-xs text-muted">
+                缺封面
+              </p>
+              <p class="mt-1 text-lg font-bold text-highlighted">
+                {{ stats?.health.missing_cover ?? 0 }}
+              </p>
             </div>
             <div class="rounded-md bg-muted p-3">
-              <p class="text-xs text-muted">缺官网</p>
-              <p class="mt-1 text-lg font-bold text-highlighted">{{ stats?.health.missing_official_url ?? 0 }}</p>
+              <p class="text-xs text-muted">
+                缺官网
+              </p>
+              <p class="mt-1 text-lg font-bold text-highlighted">
+                {{ stats?.health.missing_official_url ?? 0 }}
+              </p>
             </div>
             <div class="rounded-md bg-muted p-3">
-              <p class="text-xs text-muted">7天内截止</p>
-              <p class="mt-1 text-lg font-bold text-warning-600">{{ stats?.health.near_deadline ?? 0 }}</p>
+              <p class="text-xs text-muted">
+                7天内截止
+              </p>
+              <p class="mt-1 text-lg font-bold text-warning-600">
+                {{ stats?.health.near_deadline ?? 0 }}
+              </p>
             </div>
             <div class="rounded-md bg-muted p-3">
-              <p class="text-xs text-muted">待发布</p>
-              <p class="mt-1 text-lg font-bold text-highlighted">{{ stats?.pending.pending_publish ?? 0 }}</p>
+              <p class="text-xs text-muted">
+                待发布
+              </p>
+              <p class="mt-1 text-lg font-bold text-highlighted">
+                {{ stats?.pending.pending_publish ?? 0 }}
+              </p>
             </div>
           </div>
         </div>
@@ -126,8 +182,15 @@ const overviewItems = computed(() => {
       <div class="grid gap-4 lg:grid-cols-2">
         <div class="rounded-lg border border-default bg-default p-4">
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-highlighted">最近发布</h3>
-            <RouterLink to="/ops/competitions" class="text-xs text-primary-600 hover:underline">查看全部 →</RouterLink>
+            <h3 class="text-sm font-semibold text-highlighted">
+              最近发布
+            </h3>
+            <RouterLink
+              to="/ops/competitions"
+              class="text-xs text-primary-600 hover:underline"
+            >
+              查看全部 →
+            </RouterLink>
           </div>
           <ul class="space-y-2">
             <li
@@ -136,19 +199,41 @@ const overviewItems = computed(() => {
               class="flex items-center justify-between rounded-md border border-default px-3 py-2"
             >
               <div class="min-w-0">
-                <p class="truncate text-sm text-highlighted">{{ item.title }}</p>
-                <p class="text-xs text-muted">{{ item.type }} · {{ formatCompactDate(item.updated_at) }}</p>
+                <p class="truncate text-sm text-highlighted">
+                  {{ item.title }}
+                </p>
+                <p class="text-xs text-muted">
+                  {{ item.type }} · {{ formatCompactDate(item.updated_at) }}
+                </p>
               </div>
-              <UBadge size="xs" color="success" variant="soft">已发布</UBadge>
+              <UBadge
+                size="xs"
+                color="success"
+                variant="soft"
+              >
+                已发布
+              </UBadge>
             </li>
-            <li v-if="!recent?.recent.length" class="py-6 text-center text-sm text-muted">暂无发布记录</li>
+            <li
+              v-if="!recent?.recent.length"
+              class="py-6 text-center text-sm text-muted"
+            >
+              暂无发布记录
+            </li>
           </ul>
         </div>
 
         <div class="rounded-lg border border-default bg-default p-4">
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-highlighted">草稿箱</h3>
-            <RouterLink to="/ops/competitions" class="text-xs text-primary-600 hover:underline">查看全部 →</RouterLink>
+            <h3 class="text-sm font-semibold text-highlighted">
+              草稿箱
+            </h3>
+            <RouterLink
+              to="/ops/competitions"
+              class="text-xs text-primary-600 hover:underline"
+            >
+              查看全部 →
+            </RouterLink>
           </div>
           <ul class="space-y-2">
             <li
@@ -157,19 +242,36 @@ const overviewItems = computed(() => {
               class="flex items-center justify-between rounded-md border border-default px-3 py-2"
             >
               <div class="min-w-0">
-                <p class="truncate text-sm text-highlighted">{{ item.title }}</p>
-                <p class="text-xs text-muted">{{ item.type }} · {{ formatCompactDate(item.updated_at) }}</p>
+                <p class="truncate text-sm text-highlighted">
+                  {{ item.title }}
+                </p>
+                <p class="text-xs text-muted">
+                  {{ item.type }} · {{ formatCompactDate(item.updated_at) }}
+                </p>
               </div>
-              <UButton size="xs" color="neutral" variant="soft">继续编辑</UButton>
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="soft"
+              >
+                继续编辑
+              </UButton>
             </li>
-            <li v-if="!recent?.drafts.length" class="py-6 text-center text-sm text-muted">草稿箱为空</li>
+            <li
+              v-if="!recent?.drafts.length"
+              class="py-6 text-center text-sm text-muted"
+            >
+              草稿箱为空
+            </li>
           </ul>
         </div>
       </div>
 
       <!-- 快捷入口 -->
       <div class="rounded-lg border border-default bg-default p-4">
-        <h3 class="mb-3 text-sm font-semibold text-highlighted">快捷入口</h3>
+        <h3 class="mb-3 text-sm font-semibold text-highlighted">
+          快捷入口
+        </h3>
         <div class="grid grid-cols-5 gap-2 sm:grid-cols-10">
           <RouterLink
             v-for="entry in [
@@ -188,7 +290,10 @@ const overviewItems = computed(() => {
             :to="entry.to"
             class="flex flex-col items-center gap-1 rounded-md border border-default bg-muted/30 px-2 py-3 hover:bg-muted"
           >
-            <UIcon :name="entry.icon" class="size-5 text-primary-600" />
+            <UIcon
+              :name="entry.icon"
+              class="size-5 text-primary-600"
+            />
             <span class="text-xs text-highlighted">{{ entry.label }}</span>
           </RouterLink>
         </div>

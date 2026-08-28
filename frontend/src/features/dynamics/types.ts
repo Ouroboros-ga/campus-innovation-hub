@@ -48,6 +48,7 @@ export interface DynamicsAnnouncement {
   linkedObject: AnnouncementLinkedObject | null
   /** 可选站外原文链接；只作跳转，不抓取/镜像。 */
   externalUrl: string | null
+  publicationState?: string
   detailPath: string
 }
 
@@ -64,6 +65,7 @@ export interface DynamicsActivity extends ActivitySummary {
   descriptionMd: string | null
   /** 首页精选标记。 */
   isFeatured: boolean
+  publicationState?: string
 }
 
 /** 校园动态的 tab 取值（URL `?tab=`）。 */

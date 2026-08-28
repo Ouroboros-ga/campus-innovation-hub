@@ -2,11 +2,18 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 
-/** 运营侧栏三级导航（去公告管理，软色活力保留但去实色块）。 */
+/**
+ * 运营侧栏 — 按反馈重整：
+ * 1) 去重：移去 aside 品牌头（由全局 AppHeader 承载），侧栏仅导航
+ * 2) 组织：合并「二级社团组织 + 二级组织管理/三级全部组织」为单一「组织管理」分组，唯一入口 ops-organizations
+ * 3) 组队：新增二级「组队管理」直达 ops-teams
+ * 4) 咨询：去重「二级咨询」叶子，保留分组内的三级「咨询与反馈」
+ */
 const route = useRoute()
 
 const contentOpen = ref(true)
-const orgOpen = ref(false)
+const orgOpen = ref(true)
+const consultOpen = ref(true)
 const userOpen = ref(false)
 
 const isActive = (name: string) => route.name === name
@@ -19,13 +26,19 @@ const contentChildren = [
 </script>
 
 <template>
-  <nav aria-label="运营导航" class="space-y-1">
+  <nav
+    aria-label="运营导航"
+    class="space-y-1"
+  >
     <RouterLink
       :to="{ name: 'ops-overview' }"
       class="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors"
       :class="isActive('ops-overview') ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-toned hover:bg-muted hover:text-highlighted'"
     >
-      <UIcon name="i-lucide-layout-dashboard" class="size-4" />
+      <UIcon
+        name="i-lucide-layout-dashboard"
+        class="size-4"
+      />
       运营工作台
     </RouterLink>
 
@@ -36,17 +49,31 @@ const contentChildren = [
         @click="contentOpen = !contentOpen"
       >
         <span class="flex items-center gap-2">
-          <UIcon name="i-lucide-folder-open" class="size-4" />
+          <UIcon
+            name="i-lucide-folder-open"
+            class="size-4"
+          />
           内容管理
         </span>
-        <UIcon :name="contentOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="size-3.5 text-muted" />
+        <UIcon
+          :name="contentOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+          class="size-3.5 text-muted"
+        />
       </button>
-      <div v-show="contentOpen" class="ml-2 space-y-0.5 border-l border-default pl-3">
-        <!-- 首页为固定模板 Studio，占位 -->
-        <a class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-muted hover:bg-muted hover:text-highlighted" href="#">
-          <UIcon name="i-lucide-home" class="size-3.5" />
+      <div
+        v-show="contentOpen"
+        class="ml-2 space-y-0.5 border-l border-default pl-3"
+      >
+        <RouterLink
+          :to="{ name: 'home' }"
+          class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-muted hover:bg-muted hover:text-highlighted"
+        >
+          <UIcon
+            name="i-lucide-home"
+            class="size-3.5"
+          />
           首页管理
-        </a>
+        </RouterLink>
         <RouterLink
           v-for="c in contentChildren"
           :key="c.name"
@@ -54,53 +81,109 @@ const contentChildren = [
           class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm"
           :class="isActive(c.name) ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-muted hover:bg-muted hover:text-highlighted'"
         >
-          <UIcon :name="c.icon" class="size-3.5" />
+          <UIcon
+            :name="c.icon"
+            class="size-3.5"
+          />
           {{ c.label }}
         </RouterLink>
       </div>
     </div>
 
-    <!-- 社团组织（单项，对应 Fig1） -->
+    <!-- 组队广场（新增二级单列） -->
     <RouterLink
-      :to="{ name: 'ops-organizations' }"
+      :to="{ name: 'ops-teams' }"
       class="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm"
-      :class="isActive('ops-organizations') ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-toned hover:bg-muted hover:text-highlighted'"
+      :class="isActive('ops-teams') ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-toned hover:bg-muted hover:text-highlighted'"
     >
-      <UIcon name="i-lucide-users-round" class="size-4" />
-      社团组织
+      <UIcon
+        name="i-lucide-users"
+        class="size-4"
+      />
+      组队管理
     </RouterLink>
 
-    <!-- 组织管理 -->
+    <!-- 组织管理（重整：仅此一组，消去此前“二级社团组织”与“二级组织管理→全部组织”重复） -->
     <div>
       <button
         class="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-sm text-toned hover:bg-muted hover:text-highlighted"
+        :class="isActive('ops-organizations') ? 'text-primary-700 dark:text-primary-300' : ''"
         @click="orgOpen = !orgOpen"
       >
         <span class="flex items-center gap-2">
-          <UIcon name="i-lucide-building-2" class="size-4" />
+          <UIcon
+            name="i-lucide-building-2"
+            class="size-4"
+          />
           组织管理
         </span>
-        <UIcon :name="orgOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="size-3.5 text-muted" />
+        <UIcon
+          :name="orgOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+          class="size-3.5 text-muted"
+        />
       </button>
-      <div v-show="orgOpen" class="ml-2 space-y-0.5 border-l border-default pl-3">
+      <div
+        v-show="orgOpen"
+        class="ml-2 space-y-0.5 border-l border-default pl-3"
+      >
         <RouterLink
           :to="{ name: 'ops-organizations' }"
-          class="flex rounded-md px-2.5 py-1.5 text-sm"
-          :class="isActive('ops-organizations') ? 'font-medium text-primary-700' : 'text-muted hover:text-highlighted'"
+          class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm"
+          :class="isActive('ops-organizations') ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-muted hover:bg-muted hover:text-highlighted'"
         >
+          <UIcon
+            name="i-lucide-users-round"
+            class="size-3.5"
+          />
           全部组织
         </RouterLink>
+        <span class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-muted/60" aria-disabled="true">
+          <UIcon
+            name="i-lucide-user-plus"
+            class="size-3.5"
+          />
+          招新审核
+          <span class="rounded bg-muted px-1 py-0.5 text-[10px] leading-none">筹备中</span>
+        </span>
       </div>
     </div>
 
-    <RouterLink
-      :to="{ name: 'ops-questions' }"
-      class="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm"
-      :class="isActive('ops-questions') ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-toned hover:bg-muted hover:text-highlighted'"
-    >
-      <UIcon name="i-lucide-message-square" class="size-4" />
-      咨询与反馈
-    </RouterLink>
+    <!-- 咨询与反馈（重整：去二级叶子，仅保留分组内的三级） -->
+    <div>
+      <button
+        class="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-sm text-toned hover:bg-muted hover:text-highlighted"
+        :class="isActive('ops-questions') ? 'text-primary-700 dark:text-primary-300' : ''"
+        @click="consultOpen = !consultOpen"
+      >
+        <span class="flex items-center gap-2">
+          <UIcon
+            name="i-lucide-message-square"
+            class="size-4"
+          />
+          咨询与反馈
+        </span>
+        <UIcon
+          :name="consultOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+          class="size-3.5 text-muted"
+        />
+      </button>
+      <div
+        v-show="consultOpen"
+        class="ml-2 space-y-0.5 border-l border-default pl-3"
+      >
+        <RouterLink
+          :to="{ name: 'ops-questions' }"
+          class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm"
+          :class="isActive('ops-questions') ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-muted hover:bg-muted hover:text-highlighted'"
+        >
+          <UIcon
+            name="i-lucide-inbox"
+            class="size-3.5"
+          />
+          咨询列表
+        </RouterLink>
+      </div>
+    </div>
 
     <div>
       <button
@@ -108,24 +191,47 @@ const contentChildren = [
         @click="userOpen = !userOpen"
       >
         <span class="flex items-center gap-2">
-          <UIcon name="i-lucide-user-cog" class="size-4" />
+          <UIcon
+            name="i-lucide-user-cog"
+            class="size-4"
+          />
           用户与申请
         </span>
-        <UIcon :name="userOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="size-3.5 text-muted" />
+        <UIcon
+          :name="userOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+          class="size-3.5 text-muted"
+        />
       </button>
-      <div v-show="userOpen" class="ml-2 space-y-0.5 border-l border-default pl-3">
+      <div
+        v-show="userOpen"
+        class="ml-2 space-y-0.5 border-l border-default pl-3"
+      >
         <span class="block rounded-md px-2.5 py-1.5 text-sm text-muted">用户列表</span>
         <span class="block rounded-md px-2.5 py-1.5 text-sm text-muted">申请审核</span>
       </div>
     </div>
 
-    <a class="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-toned hover:bg-muted hover:text-highlighted" href="#">
-      <UIcon name="i-lucide-bar-chart-3" class="size-4" />
+    <RouterLink
+      :to="{ name: 'ops-analytics' }"
+      class="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm"
+      :class="isActive('ops-analytics') ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-toned hover:bg-muted hover:text-highlighted'"
+    >
+      <UIcon
+        name="i-lucide-bar-chart-3"
+        class="size-4"
+      />
       数据分析
-    </a>
-    <a class="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-toned hover:bg-muted hover:text-highlighted" href="#">
-      <UIcon name="i-lucide-settings" class="size-4" />
+    </RouterLink>
+    <RouterLink
+      :to="{ name: 'ops-system' }"
+      class="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm"
+      :class="isActive('ops-system') ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-toned hover:bg-muted hover:text-highlighted'"
+    >
+      <UIcon
+        name="i-lucide-settings"
+        class="size-4"
+      />
       系统设置
-    </a>
+    </RouterLink>
   </nav>
 </template>

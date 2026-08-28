@@ -88,7 +88,7 @@ function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, str
   return result
 }
 
-async function save() {
+async function save(publish = false) {
   const draft: AnnouncementEditorDraft = {
     title: title.value,
     publisherScope: publisherScope.value,
@@ -104,15 +104,25 @@ async function save() {
 
   submitting.value = true
   try {
+    let targetId: string | null = null
     if (isEdit.value && props.announcement) {
+      // 已发布内容不可直接修改，需走草稿发布流
+      const pubState = (props.announcement as unknown as { publicationState?: string }).publicationState
+      if (pubState && pubState !== 'DRAFT') {
+        throw new AppError('已发布内容不可直接修改，请通过草稿编辑后发布。', { status: 409, code: 'CONFLICT' })
+      }
       await apiUpdateAnnouncement(props.announcement.id, draft)
+      targetId = props.announcement.id
     } else {
-      const id = await createAnnouncement(draft)
-      await publishAnnouncement(id)
+      targetId = await createAnnouncement(draft)
     }
+    if (publish && targetId) {
+      await publishAnnouncement(targetId)
+    }
+    const action = publish ? '已发布公告' : isEdit.value ? '已保存草稿' : '已创建草稿'
     toast.add({
-      title: isEdit.value ? '已更新公告' : '已发布公告',
-      description: '已保存到服务器。',
+      title: action,
+      description: publish ? '已发布到站内可见。' : '已保存到服务器（草稿）。',
       color: 'success',
       icon: 'i-lucide-check-circle'
     })
@@ -152,7 +162,7 @@ async function save() {
       <form
         class="space-y-6"
         novalidate
-        @submit.prevent="save"
+        @submit.prevent="() => save(false)"
       >
         <ContentEditorShell preview-title="公告预览">
           <template #form>
@@ -263,13 +273,21 @@ async function save() {
           取消
         </UButton>
         <UButton
+          color="neutral"
+          variant="outline"
+          :loading="submitting"
+          @click="save(false)"
+        >
+          保存草稿
+        </UButton>
+        <UButton
           color="primary"
           variant="solid"
           icon="i-lucide-send"
           :loading="submitting"
-          @click="save"
+          @click="save(true)"
         >
-          发布
+          保存并发布
         </UButton>
       </div>
     </template>

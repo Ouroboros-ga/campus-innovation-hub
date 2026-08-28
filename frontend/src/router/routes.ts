@@ -290,6 +290,13 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '咨询管理' }
           },
           {
+            path: 'teams',
+            name: 'ops-teams',
+            component: () =>
+              import('@/pages/ops/OpsTeamsPage.vue'),
+            meta: { title: '组队管理' }
+          },
+          {
             path: 'organizations',
             name: 'ops-organizations',
             component: () =>
@@ -302,6 +309,20 @@ export const routes: RouteRecordRaw[] = [
             component: () =>
               import('@/pages/ops/OpsGuidesPage.vue'),
             meta: { title: '指南管理' }
+          },
+          {
+            path: 'analytics',
+            name: 'ops-analytics',
+            component: () =>
+              import('@/pages/ops/OpsAnalyticsPage.vue'),
+            meta: { title: '数据分析' }
+          },
+          {
+            path: 'system',
+            name: 'ops-system',
+            component: () =>
+              import('@/pages/ops/OpsSystemPage.vue'),
+            meta: { title: '系统设置' }
           }
         ]
       },

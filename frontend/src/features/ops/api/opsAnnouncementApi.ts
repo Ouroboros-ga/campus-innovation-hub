@@ -110,6 +110,7 @@ function toDynamicsAnnouncement(dto: AnnouncementMgmtDto): DynamicsAnnouncement 
     bodyMd: dto.body_md ?? null,
     linkedObject,
     externalUrl: dto.external_url ?? null,
+    publicationState: dto.publication_state ?? 'DRAFT',
     detailPath: `/activities/announcements/${dto.id}`
   }
 }
