@@ -222,6 +222,11 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# 本地临时 mock / 调试产物（不入仓）
+mock_api_server.py
+*.bundle
+*.tgz
+
 # 本地保留、不再追踪的编码代理执行文档（历史提交保留）
 MobileWebHandoff.md
 docs/superpowers/
