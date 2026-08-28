@@ -148,6 +148,32 @@ def serialize_competition(competition: Competition, request: Request) -> dict[st
     }
 
 
+def serialize_home_competition(competition: Competition, request: Request) -> dict[str, Any]:
+    """首页专用：完全公共、无用户状态，避免 N+1 与缓存分化。"""
+
+    return {
+        "id": str(competition.id),
+        "name": competition.name,
+        "edition": competition.edition,
+        "category": competition.category,
+        "level": competition.level,
+        "participation_mode": competition.participation_mode,
+        "suitable_grade_min": competition.suitable_grade_min,
+        "suitable_grade_max": competition.suitable_grade_max,
+        "direction": competition.direction,
+        "summary": competition.summary,
+        "cover": media_ref(competition.cover_asset, request),
+        "registration_start_at": competition.registration_start_at,
+        "registration_end_at": competition.registration_end_at,
+        "event_start_at": competition.event_start_at,
+        "event_end_at": competition.event_end_at,
+        "publication_state": competition.publication_state,
+        "registration_state": competition_registration_state(competition),
+        "event_phase": event_phase(competition.event_start_at, competition.event_end_at),
+        "official_url": competition.official_url,
+    }
+
+
 def serialize_timeline_event(event: TimelineEvent) -> dict[str, Any]:
     return {
         "id": str(event.id),
@@ -501,6 +527,7 @@ def serialize_faq(faq: FaqItem, request: Request) -> dict[str, Any]:
         "answer_md": faq.answer_md,
         "sort_order": faq.sort_order,
         "is_featured": faq.is_featured,
+        "featured_order": faq.featured_order,
     }
 
 

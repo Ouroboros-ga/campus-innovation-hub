@@ -84,6 +84,8 @@ class Announcement(UUIDTimestampedModel):
     publication_state = models.CharField(max_length=20, choices=PublicationState.choices, default=PublicationState.DRAFT)
     published_at = models.DateTimeField(null=True, blank=True)
     is_pinned = models.BooleanField(default=False)
+    is_home_featured = models.BooleanField(default=False)
+    home_featured_order = models.IntegerField(default=0)
     publisher_scope = models.CharField(max_length=20, choices=PublisherScope.choices)
     competition = models.ForeignKey(
         "competitions.Competition", null=True, blank=True, on_delete=models.PROTECT, related_name="announcements"
@@ -100,9 +102,13 @@ class Announcement(UUIDTimestampedModel):
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="updated_announcements")
 
     class Meta:
+        constraints = [
+            models.CheckConstraint(condition=Q(home_featured_order__gte=0), name="announcement_home_featured_order_nonnegative"),
+        ]
         indexes = [
             models.Index(fields=["publication_state", "published_at"], name="announcement_state_pub_idx"),
             models.Index(fields=["is_pinned", "published_at"], name="announcement_pinned_pub_idx"),
+            models.Index(fields=["publication_state", "is_home_featured", "home_featured_order"], name="announcement_home_featured_idx"),
             models.Index(fields=["competition", "publication_state"], name="announcement_comp_state_idx"),
             models.Index(fields=["activity", "publication_state"], name="announcement_activity_idx"),
             models.Index(fields=["organization", "publication_state"], name="announcement_org_state_idx"),
@@ -175,12 +181,19 @@ class FaqItem(UUIDTimestampedModel):
     publication_state = models.CharField(max_length=20, choices=PublicationState.choices, default=PublicationState.DRAFT)
     sort_order = models.IntegerField(default=0)
     is_featured = models.BooleanField(default=False)
+    featured_order = models.IntegerField(default=0)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_faq_items")
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="updated_faq_items")
 
     class Meta:
-        constraints = [models.CheckConstraint(condition=Q(sort_order__gte=0), name="faq_sort_nonnegative")]
-        indexes = [models.Index(fields=["publication_state", "sort_order"], name="faq_state_sort_idx")]
+        constraints = [
+            models.CheckConstraint(condition=Q(sort_order__gte=0), name="faq_sort_nonnegative"),
+            models.CheckConstraint(condition=Q(featured_order__gte=0), name="faq_featured_order_nonnegative"),
+        ]
+        indexes = [
+            models.Index(fields=["publication_state", "sort_order"], name="faq_state_sort_idx"),
+            models.Index(fields=["publication_state", "is_featured", "featured_order"], name="faq_home_featured_idx"),
+        ]
 
     def clean(self) -> None:
         super().clean()

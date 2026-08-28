@@ -1832,6 +1832,8 @@ Service 校验 link_type 与 URL 字段匹配。
 | `publication_state` | varchar(20) | 否 |
 | `published_at` | timestamptz | 是 |
 | `is_pinned` | bool | 否 |
+| `is_home_featured` | bool | 否 | default false，首页精选开关，与 `is_pinned` 解耦 |
+| `home_featured_order` | int | 否 | default 0，`is_home_featured=true` 时首页排序，`>=0` |
 | `publisher_scope` | varchar(20) | 否 |
 | `competition_id` | uuid | 是 |
 | `activity_id` | uuid | 是 |
@@ -1889,11 +1891,24 @@ recruitment_id
 
 全部关联字段为空是合法的学院、学校或平台通用公告。若 `activity_id` 非空，该 Announcement 是活动的相关公告；Activity 仍是时间、地点、报名和容量的唯一事实来源，Announcement 不复制这些可变事实字段。
 
+### Check
+
+```text
+home_featured_order >= 0
+```
+
+### 首页精选说明
+
+- `is_pinned` 为公告列表的置顶语义，不等同于首页精选
+- 首页公告由 `publication_state=PUBLISHED AND is_home_featured=true ORDER BY home_featured_order, published_at DESC LIMIT 6` 提供
+- 运营通过批量精选接口统一维护排序，禁止将 `is_pinned` 滥用为首页入口
+
 ### 索引
 
 ```text
 index(publication_state, published_at desc)
 index(is_pinned, published_at desc)
+index(publication_state, is_home_featured, home_featured_order)
 index(competition_id, publication_state)
 index(activity_id, publication_state)
 index(organization_id, publication_state)
@@ -1986,14 +2001,34 @@ unique(guide_id, competition_id)
 | `question` | varchar(300) | 否 |
 | `answer_md` | text | 否 |
 | `publication_state` | varchar(20) | 否 |
-| `sort_order` | int | 否 |
+| `sort_order` | int | 否 | FAQ 列表页排序，`>=0` |
 | `is_featured` | bool | 否 |
+| `featured_order` | int | 否 | default 0，`is_featured=true` 时首页排序，`>=0` |
 | `created_by_id` | uuid | 否 |
 | `updated_by_id` | uuid | 否 |
 | `created_at` | timestamptz | 否 |
 | `updated_at` | timestamptz | 否 |
 
 不保存虚假的浏览量作为排序依据。
+
+### Check
+
+```text
+sort_order >= 0
+featured_order >= 0
+```
+
+### 首页精选说明
+
+- `sort_order` 控制 FAQ 列表页顺序，`featured_order` 控制首页精选顺序，两者互不干扰
+- 首页 FAQ 由 `publication_state=PUBLISHED AND is_featured=true ORDER BY featured_order, sort_order LIMIT 6` 提供
+
+### 索引
+
+```text
+index(publication_state, sort_order)
+index(publication_state, is_featured, featured_order)
+```
 
 category：
 

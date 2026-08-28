@@ -136,6 +136,33 @@ class FeaturedSerializer(StrictSerializer):
     featured_order = serializers.IntegerField(min_value=0, required=False)
 
 
+class HomepageCurationSerializer(StrictSerializer):
+    featured_competitions = serializers.ListField(child=serializers.UUIDField(), max_length=8, required=False, default=list)
+    featured_announcements = serializers.ListField(child=serializers.UUIDField(), max_length=6, required=False, default=list)
+    featured_guides = serializers.ListField(child=serializers.UUIDField(), max_length=6, required=False, default=list)
+    featured_faqs = serializers.ListField(child=serializers.UUIDField(), max_length=6, required=False, default=list)
+
+    def validate_featured_competitions(self, value: list[Any]) -> list[Any]:
+        if len(value) != len(set(str(v) for v in value)):
+            raise serializers.ValidationError("精选竞赛不能重复。")
+        return value
+
+    def validate_featured_announcements(self, value: list[Any]) -> list[Any]:
+        if len(value) != len(set(str(v) for v in value)):
+            raise serializers.ValidationError("精选公告不能重复。")
+        return value
+
+    def validate_featured_guides(self, value: list[Any]) -> list[Any]:
+        if len(value) != len(set(str(v) for v in value)):
+            raise serializers.ValidationError("精选指南不能重复。")
+        return value
+
+    def validate_featured_faqs(self, value: list[Any]) -> list[Any]:
+        if len(value) != len(set(str(v) for v in value)):
+            raise serializers.ValidationError("精选 FAQ 不能重复。")
+        return value
+
+
 class TimelineEventCreateSerializer(StrictSerializer):
     title = serializers.CharField(min_length=1, max_length=100)
     event_at = serializers.DateTimeField()
@@ -354,6 +381,7 @@ class _FaqWriteBase(StrictSerializer):
     answer_md = serializers.CharField(min_length=1, max_length=20000)
     sort_order = serializers.IntegerField(min_value=0)
     is_featured = serializers.BooleanField()
+    featured_order = serializers.IntegerField(min_value=0, required=False, default=0)
 
 
 class FaqCreateSerializer(_FaqWriteBase):
@@ -366,6 +394,7 @@ class FaqPatchSerializer(_FaqWriteBase):
     answer_md = serializers.CharField(min_length=1, max_length=20000, required=False)
     sort_order = serializers.IntegerField(min_value=0, required=False)
     is_featured = serializers.BooleanField(required=False)
+    featured_order = serializers.IntegerField(min_value=0, required=False)
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         if not attrs:
@@ -490,6 +519,9 @@ def serialize_announcement_management(announcement: Announcement, request: Reque
             "organization_id": str(announcement.organization_id) if announcement.organization_id else None,
             "recruitment_id": str(announcement.recruitment_id) if announcement.recruitment_id else None,
             "publication_state": announcement.publication_state,
+            "is_home_featured": announcement.is_home_featured,
+            "home_featured_order": announcement.home_featured_order,
+            "is_pinned": announcement.is_pinned,
             **_management_fields(announcement),
         }
     )

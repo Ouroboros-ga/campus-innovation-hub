@@ -233,10 +233,150 @@ def set_faq_featured(*, actor: User, faq: FaqItem, payload: dict[str, Any]) -> F
     if locked.publication_state != FaqItem.PublicationState.PUBLISHED:
         raise InvalidState
     locked.is_featured = payload["is_featured"]
+    if "featured_order" in payload:
+        locked.featured_order = payload["featured_order"]
     locked.updated_by = actor
-    locked.save(update_fields=["is_featured", "updated_by", "updated_at"])
+    update_fields = ["is_featured", "updated_by", "updated_at"]
+    if "featured_order" in payload:
+        update_fields.insert(1, "featured_order")
+    locked.save(update_fields=update_fields)
     record_audit(actor=actor, action="FAQ_FEATURED_UPDATED", target=locked, changes={"is_featured": locked.is_featured})
     return locked
+
+
+@transaction.atomic
+def update_homepage_curation(
+    *,
+    actor: User,
+    featured_competitions: list[Any],
+    featured_announcements: list[Any],
+    featured_guides: list[Any],
+    featured_faqs: list[Any],
+) -> dict[str, Any]:
+    """批量精选：一次性设置首页四类精选排序，禁止单条连发。"""
+
+    _require_operator(actor)
+
+    # 长度上限与去重由 Serializer 保证，这里做存在性与状态校验
+
+    # 锁顺序固定：Competition -> Announcement -> Guide -> Faq，按 ID 排序锁行避免死锁
+    from apps.competitions.models import Competition
+
+    competition_ids = list(featured_competitions)
+    announcement_ids = list(featured_announcements)
+    guide_ids = list(featured_guides)
+    faq_ids = list(featured_faqs)
+
+    # 校验存在且已发布
+    if competition_ids:
+        qs = Competition.objects.select_for_update().filter(id__in=competition_ids)
+        found = {str(row.id): row for row in qs}
+        if len(found) != len(competition_ids):
+            raise NotFound("精选竞赛中存在不存在的记录。")
+        for cid in competition_ids:
+            row = found[cid]
+            if row.publication_state != Competition.PublicationState.PUBLISHED:
+                raise InvalidState("仅已发布竞赛可设为首页精选。")
+
+    if announcement_ids:
+        qs = Announcement.objects.select_for_update().filter(id__in=announcement_ids)
+        found = {str(row.id): row for row in qs}
+        if len(found) != len(announcement_ids):
+            raise NotFound("精选公告中存在不存在的记录。")
+        for aid in announcement_ids:
+            row = found[aid]
+            if row.publication_state != Announcement.PublicationState.PUBLISHED:
+                raise InvalidState("仅已发布公告可设为首页精选。")
+
+    if guide_ids:
+        qs = GuideArticle.objects.select_for_update().filter(id__in=guide_ids)
+        found = {str(row.id): row for row in qs}
+        if len(found) != len(guide_ids):
+            raise NotFound("精选指南中存在不存在的记录。")
+        for gid in guide_ids:
+            row = found[gid]
+            if row.publication_state != GuideArticle.PublicationState.PUBLISHED:
+                raise InvalidState("仅已发布指南可设为首页精选。")
+
+    if faq_ids:
+        qs = FaqItem.objects.select_for_update().filter(id__in=faq_ids)
+        found = {str(row.id): row for row in qs}
+        if len(found) != len(faq_ids):
+            raise NotFound("精选 FAQ 中存在不存在的记录。")
+        for fid in faq_ids:
+            row = found[fid]
+            if row.publication_state != FaqItem.PublicationState.PUBLISHED:
+                raise InvalidState("仅已发布 FAQ 可设为首页精选。")
+
+    # 清除旧精选（仅对当前 PUBLISHED 且 is_featured/is_home_featured 的行）
+    # 竞赛
+    Competition.objects.filter(is_featured=True).update(is_featured=False, featured_order=0)
+    for order, cid in enumerate(competition_ids):
+        Competition.objects.filter(id=cid).update(is_featured=True, featured_order=order, updated_by=actor)
+
+    # 公告：is_home_featured
+    Announcement.objects.filter(is_home_featured=True).update(is_home_featured=False, home_featured_order=0)
+    for order, aid in enumerate(announcement_ids):
+        Announcement.objects.filter(id=aid).update(is_home_featured=True, home_featured_order=order, updated_by=actor)
+
+    # 指南
+    GuideArticle.objects.filter(is_featured=True).update(is_featured=False, featured_order=0)
+    for order, gid in enumerate(guide_ids):
+        GuideArticle.objects.filter(id=gid).update(is_featured=True, featured_order=order, updated_by=actor)
+
+    # FAQ
+    FaqItem.objects.filter(is_featured=True).update(is_featured=False, featured_order=0)
+    for order, fid in enumerate(faq_ids):
+        FaqItem.objects.filter(id=fid).update(is_featured=True, featured_order=order, updated_by=actor)
+
+    record_audit(
+        actor=actor,
+        action="HOMEPAGE_CURATION_UPDATED",
+        target=None,
+        changes={
+            "featured_competitions": competition_ids,
+            "featured_announcements": announcement_ids,
+            "featured_guides": guide_ids,
+            "featured_faqs": faq_ids,
+        },
+    )
+    return {
+        "featured_competitions": competition_ids,
+        "featured_announcements": announcement_ids,
+        "featured_guides": guide_ids,
+        "featured_faqs": faq_ids,
+    }
+
+
+def get_homepage_curation() -> dict[str, Any]:
+    from apps.competitions.models import Competition
+
+    competitions = (
+        Competition.objects.filter(publication_state=Competition.PublicationState.PUBLISHED, is_featured=True)
+        .order_by("featured_order", "-created_at")
+        .values_list("id", flat=True)
+    )
+    announcements = (
+        Announcement.objects.filter(publication_state=Announcement.PublicationState.PUBLISHED, is_home_featured=True)
+        .order_by("home_featured_order", "-published_at")
+        .values_list("id", flat=True)
+    )
+    guides = (
+        GuideArticle.objects.filter(publication_state=GuideArticle.PublicationState.PUBLISHED, is_featured=True)
+        .order_by("featured_order", "-published_at")
+        .values_list("id", flat=True)
+    )
+    faqs = (
+        FaqItem.objects.filter(publication_state=FaqItem.PublicationState.PUBLISHED, is_featured=True)
+        .order_by("featured_order", "sort_order", "-created_at")
+        .values_list("id", flat=True)
+    )
+    return {
+        "featured_competitions": [str(uid) for uid in competitions],
+        "featured_announcements": [str(uid) for uid in announcements],
+        "featured_guides": [str(uid) for uid in guides],
+        "featured_faqs": [str(uid) for uid in faqs],
+    }
 
 
 @transaction.atomic

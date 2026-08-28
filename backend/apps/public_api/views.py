@@ -47,6 +47,7 @@ from apps.public_api.serializers import (
     serialize_faq,
     serialize_guide,
     serialize_guide_detail,
+    serialize_home_competition,
     serialize_organization,
     serialize_organization_detail,
     serialize_recruitment,
@@ -163,7 +164,9 @@ class HomeView(PublicReadView):
         ).select_related("image_asset").order_by("sort_order", "-created_at")[:4]
         deadlines = published_competitions().filter(registration_end_at__gte=now).order_by("registration_end_at", "event_start_at")[:6]
         featured_competitions = published_competitions().filter(is_featured=True).order_by("featured_order", "-created_at")[:8]
-        announcements = published_announcements().order_by("-is_pinned", "-published_at")[:6]
+        announcements = (
+            published_announcements().filter(is_home_featured=True).order_by("home_featured_order", "-published_at")[:6]
+        )
         guides = published_guides().filter(is_featured=True).order_by("featured_order", "-published_at")[:6]
         teams = public_teams().filter(status=TeamPost.Status.RECRUITING).order_by("-created_at")[:6]
         organizations = active_organizations().annotate(
@@ -172,12 +175,12 @@ class HomeView(PublicReadView):
             )
         ).filter(is_recruiting_value=True).order_by("name")[:6]
         activities = published_activities().filter(start_at__gte=now).order_by("start_at")[:6]
-        faqs = published_faqs().filter(is_featured=True).order_by("sort_order", "-created_at")[:6]
-        return Response(
+        faqs = published_faqs().filter(is_featured=True).order_by("featured_order", "sort_order", "-created_at")[:6]
+        response = Response(
             {
                 "banners": [serialize_banner(item, request) for item in banners],
-                "deadlines": [serialize_competition(item, request) for item in deadlines],
-                "featured_competitions": [serialize_competition(item, request) for item in featured_competitions],
+                "deadlines": [serialize_home_competition(item, request) for item in deadlines],
+                "featured_competitions": [serialize_home_competition(item, request) for item in featured_competitions],
                 "announcements": [serialize_announcement(item, request) for item in announcements],
                 "featured_guides": [serialize_guide(item, request) for item in guides],
                 "team_posts": [serialize_team_post(item, request) for item in teams],
@@ -186,6 +189,9 @@ class HomeView(PublicReadView):
                 "faqs": [serialize_faq(item, request) for item in faqs],
             }
         )
+        # 完全公共响应，允许 Nginx 30~60s 共享缓存；运营预览不走此缓存
+        response["Cache-Control"] = "public, max-age=60"
+        return response
 
 
 class CompetitionListView(PublicReadView):
