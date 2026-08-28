@@ -56,6 +56,9 @@ def _timeline_or_404(competition: Competition, event_id: str) -> TimelineEvent:
 
 
 class CompetitionCollectionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"competition:read"}, "POST": {"competition:write"}}
+
     def get(self, request: Request) -> Response:
         validate_query_keys(request, {"q", "status", "category", "level", "is_featured", "ordering", "page", "page_size"})
         status = parse_optional_enum(request, "status", Competition.PublicationState.values)
@@ -84,6 +87,9 @@ class CompetitionCollectionView(OperatorAPIView):
 
 
 class CompetitionDetailView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"competition:read"}, "PATCH": {"competition:write"}}
+
     def get(self, request: Request, object_id: str) -> Response:
         return Response(serialize_competition_management(_competition_or_404(object_id), request))
 
@@ -107,18 +113,27 @@ class _CompetitionActionView(OperatorAPIView):
 
 
 class CompetitionPublishView(_CompetitionActionView):
+    agent_access = True
+    agent_scopes = {"POST": {"competition:publish"}}
     service = staticmethod(publish_competition)
 
 
 class CompetitionCancelView(_CompetitionActionView):
+    agent_access = True
+    agent_scopes = {"POST": {"competition:publish"}}
     service = staticmethod(cancel_competition)
 
 
 class CompetitionArchiveView(_CompetitionActionView):
+    agent_access = True
+    agent_scopes = {"POST": {"competition:publish"}}
     service = staticmethod(archive_competition)
 
 
 class CompetitionFeaturedView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"PATCH": {"competition:write"}}
+
     def patch(self, request: Request, object_id: str) -> Response:
         serializer = FeaturedSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -135,6 +150,9 @@ class CompetitionFeaturedView(OperatorAPIView):
 
 
 class CompetitionTimelineCollectionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"POST": {"competition:write"}}
+
     def post(self, request: Request, object_id: str) -> Response:
         serializer = TimelineEventCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -145,6 +163,9 @@ class CompetitionTimelineCollectionView(OperatorAPIView):
 
 
 class CompetitionTimelineDetailView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"PATCH": {"competition:write"}, "DELETE": {"competition:write"}}
+
     def patch(self, request: Request, object_id: str, event_id: str) -> Response:
         competition = _competition_or_404(object_id)
         event = _timeline_or_404(competition, event_id)

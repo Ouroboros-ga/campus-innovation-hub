@@ -62,6 +62,9 @@ def _get_or_404(model: Any, object_id: str, label: str, *, queryset: Any = None)
 
 
 class AnnouncementCollectionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"content:read"}, "POST": {"content:write"}}
+
     def get(self, request: Request) -> Response:
         validate_query_keys(request, {"q", "status", "publisher_scope", "page", "page_size"})
         queryset = Announcement.objects.select_related("competition", "activity", "organization", "recruitment__organization")
@@ -84,6 +87,9 @@ class AnnouncementCollectionView(OperatorAPIView):
 
 
 class AnnouncementDetailView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"content:read"}, "PATCH": {"content:write"}}
+
     def get(self, request: Request, object_id: str) -> Response:
         announcement = _get_or_404(
             Announcement, object_id, "公告", queryset=Announcement.objects.select_related("competition", "activity", "organization", "recruitment__organization")
@@ -99,6 +105,8 @@ class AnnouncementDetailView(OperatorAPIView):
 
 
 class _AnnouncementActionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"POST": {"content:publish"}}
     service = None
 
     def post(self, request: Request, object_id: str) -> Response:
@@ -117,6 +125,9 @@ class AnnouncementArchiveView(_AnnouncementActionView):
 
 
 class GuideCollectionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"content:read"}, "POST": {"content:write"}}
+
     def _queryset(self) -> Any:
         return GuideArticle.objects.prefetch_related("competition_links__competition")
 
@@ -142,6 +153,9 @@ class GuideCollectionView(OperatorAPIView):
 
 
 class GuideDetailView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"content:read"}, "PATCH": {"content:write"}}
+
     def _get(self, object_id: str) -> GuideArticle:
         return _get_or_404(GuideArticle, object_id, "指南", queryset=GuideArticle.objects.prefetch_related("competition_links__competition"))
 
@@ -157,6 +171,8 @@ class GuideDetailView(OperatorAPIView):
 
 
 class _GuideActionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"POST": {"content:publish"}}
     service = None
 
     def post(self, request: Request, object_id: str) -> Response:
@@ -175,6 +191,9 @@ class GuideArchiveView(_GuideActionView):
 
 
 class GuideFeaturedView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"PATCH": {"content:write"}}
+
     def patch(self, request: Request, object_id: str) -> Response:
         serializer = FeaturedSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -185,6 +204,9 @@ class GuideFeaturedView(OperatorAPIView):
 
 
 class FaqCollectionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"content:read"}, "POST": {"content:write"}}
+
     def get(self, request: Request) -> Response:
         validate_query_keys(request, {"q", "status", "category", "page", "page_size"})
         queryset = filter_text(FaqItem.objects.all(), request.query_params.get("q"), ("question", "answer_md"))
@@ -206,6 +228,9 @@ class FaqCollectionView(OperatorAPIView):
 
 
 class FaqDetailView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"content:read"}, "PATCH": {"content:write"}}
+
     def get(self, request: Request, object_id: str) -> Response:
         return Response(serialize_faq_management(_get_or_404(FaqItem, object_id, "FAQ"), request))
 
@@ -218,6 +243,8 @@ class FaqDetailView(OperatorAPIView):
 
 
 class _FaqActionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"POST": {"content:publish"}}
     service = None
 
     def post(self, request: Request, object_id: str) -> Response:
@@ -236,6 +263,9 @@ class FaqArchiveView(_FaqActionView):
 
 
 class FaqFeaturedView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"PATCH": {"content:write"}}
+
     def patch(self, request: Request, object_id: str) -> Response:
         serializer = FeaturedSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

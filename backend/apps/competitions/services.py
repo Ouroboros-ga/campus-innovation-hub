@@ -133,6 +133,8 @@ def set_competition_featured(*, actor: User, competition: Competition, payload: 
 def create_timeline_event(*, actor: User, competition: Competition, payload: dict[str, Any]) -> TimelineEvent:
     _require_operator(actor)
     locked = Competition.objects.select_for_update().get(pk=competition.pk)
+    if locked.publication_state != Competition.PublicationState.DRAFT:
+        raise InvalidState("已发布竞赛的时间线不可修改，请先回退至草稿。")
     event = TimelineEvent.objects.create(competition=locked, **payload)
     record_audit(actor=actor, action="COMPETITION_TIMELINE_CREATED", target=event, changes={"competition_id": str(locked.id)})
     return event
@@ -141,7 +143,9 @@ def create_timeline_event(*, actor: User, competition: Competition, payload: dic
 @transaction.atomic
 def update_timeline_event(*, actor: User, competition: Competition, event: TimelineEvent, payload: dict[str, Any]) -> TimelineEvent:
     _require_operator(actor)
-    Competition.objects.select_for_update().get(pk=competition.pk)
+    locked_competition = Competition.objects.select_for_update().get(pk=competition.pk)
+    if locked_competition.publication_state != Competition.PublicationState.DRAFT:
+        raise InvalidState("已发布竞赛的时间线不可修改，请先回退至草稿。")
     locked = TimelineEvent.objects.select_for_update().filter(pk=event.pk, competition_id=competition.id).first()
     if locked is None:
         raise NotFound("时间线节点不存在。")
@@ -156,7 +160,9 @@ def update_timeline_event(*, actor: User, competition: Competition, event: Timel
 @transaction.atomic
 def delete_timeline_event(*, actor: User, competition: Competition, event: TimelineEvent) -> None:
     _require_operator(actor)
-    Competition.objects.select_for_update().get(pk=competition.pk)
+    locked_competition = Competition.objects.select_for_update().get(pk=competition.pk)
+    if locked_competition.publication_state != Competition.PublicationState.DRAFT:
+        raise InvalidState("已发布竞赛的时间线不可修改，请先回退至草稿。")
     locked = TimelineEvent.objects.select_for_update().filter(pk=event.pk, competition_id=competition.id).first()
     if locked is None:
         raise NotFound("时间线节点不存在。")

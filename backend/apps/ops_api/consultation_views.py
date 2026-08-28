@@ -23,6 +23,9 @@ def _consultation_or_404(object_id: str) -> Consultation:
 
 
 class ConsultationCollectionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"consultation:read"}}
+
     def get(self, request: Request) -> Response:
         validate_query_keys(request, {"q", "status", "visibility", "category", "page", "page_size"})
         queryset = Consultation.objects.select_related("author", "author__profile", "author__profile__avatar_asset", "competition").prefetch_related(
@@ -44,11 +47,17 @@ class ConsultationCollectionView(OperatorAPIView):
 
 
 class ConsultationDetailView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"consultation:read"}}
+
     def get(self, request: Request, object_id: str) -> Response:
         return Response(serialize_consultation_management(_consultation_or_404(object_id), request))
 
 
 class ConsultationReplyView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"POST": {"consultation:reply"}}
+
     def post(self, request: Request, object_id: str) -> Response:
         serializer = ConsultationReplySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

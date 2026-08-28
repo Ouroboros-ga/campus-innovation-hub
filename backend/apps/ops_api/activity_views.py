@@ -49,6 +49,9 @@ def _activity_or_404(object_id: str) -> Activity:
 
 
 class ActivityCollectionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"activity:read"}, "POST": {"activity:write"}}
+
     def get(self, request: Request) -> Response:
         validate_query_keys(request, {"q", "status", "activity_type", "page", "page_size"})
         status = parse_optional_enum(request, "status", Activity.PublicationState.values)
@@ -71,6 +74,9 @@ class ActivityCollectionView(OperatorAPIView):
 
 
 class ActivityDetailView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"activity:read"}, "PATCH": {"activity:write"}}
+
     def get(self, request: Request, object_id: str) -> Response:
         return Response(serialize_activity_management(_activity_or_404(object_id), request))
 
@@ -93,22 +99,33 @@ class _ActivityActionView(OperatorAPIView):
 
 
 class ActivityPublishView(_ActivityActionView):
+    agent_access = True
+    agent_scopes = {"POST": {"activity:publish"}}
     service = staticmethod(publish_activity)
 
 
 class ActivityCancelView(_ActivityActionView):
+    agent_access = True
+    agent_scopes = {"POST": {"activity:publish"}}
     service = staticmethod(cancel_activity)
 
 
 class ActivityArchiveView(_ActivityActionView):
+    agent_access = True
+    agent_scopes = {"POST": {"activity:publish"}}
     service = staticmethod(archive_activity)
 
 
 class ActivityCloseRegistrationView(_ActivityActionView):
+    agent_access = True
+    agent_scopes = {"POST": {"activity:publish"}}
     service = staticmethod(close_activity_registration)
 
 
 class ActivityFeaturedView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"PATCH": {"activity:write"}}
+
     def patch(self, request: Request, object_id: str) -> Response:
         serializer = FeaturedSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

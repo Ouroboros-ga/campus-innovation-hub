@@ -38,6 +38,9 @@ class AgentTokenAuthentication(BaseAuthentication):
         raw_token = auth_header[7:].strip()
         if not raw_token.startswith(_AGENT_TOKEN_PREFIX):
             return None
+        # 机器身份仅可用于运营接口，禁止经学生/公开接口侧门
+        if not request.path.startswith("/api/ops/"):
+            raise AuthenticationFailed("Agent 令牌仅可用于 /api/ops/*。")
         match = _AGENT_TOKEN_RE.match(raw_token)
         if not match:
             raise AuthenticationFailed("无效的 Agent 令牌格式。")
