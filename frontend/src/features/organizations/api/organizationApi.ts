@@ -87,6 +87,12 @@ interface OrganizationDetailDto extends OrganizationListItemDto {
   contact_address?: string | null
   wechat_name?: string | null
   public_contact?: string | null
+  qq_group_number?: string | null
+  qq_group_qr?: ImageDto | null
+  qq_group_join_url?: string | null
+  allow_online_application?: boolean | null
+  related_links?: Array<{ label?: string | null; url?: string | null; type?: string | null }> | null
+  related_links_json?: Array<{ label?: string | null; url?: string | null; type?: string | null }> | null
   current_recruitments?: CurrentRecruitmentDto[]
   recent_activities?: Array<{
     id: string
@@ -123,6 +129,11 @@ interface RecruitmentDetailDto {
   publication_state?: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'ARCHIVED'
   application_state?: string | null
   positions?: RecruitmentPositionDto[]
+  qq_group_number?: string | null
+  qq_group_qr?: ImageDto | null
+  qq_group_join_url?: string | null
+  enable_online_application?: boolean | null
+  organization_allow_online_application?: boolean | null
 }
 
 // ---------------------------------------------------------------------------
@@ -200,6 +211,7 @@ function toDetail(dto: OrganizationDetailDto): OrganizationDetail {
     user_id: '',
     membership_id: ''
   } as AdvisorDto] : [])
+  const relatedRaw = dto.related_links ?? dto.related_links_json ?? []
   return {
     ...summary,
     descriptionMd: dto.description_md ?? '',
@@ -220,6 +232,17 @@ function toDetail(dto: OrganizationDetailDto): OrganizationDetail {
     contactAddress: dto.contact_address ?? null,
     wechatName: dto.wechat_name ?? null,
     publicContact: dto.public_contact ?? null,
+    qqGroupNumber: dto.qq_group_number ?? null,
+    qqGroupQr: dto.qq_group_qr ? { alt: `${dto.name}招新 QQ 群二维码`, src: dto.qq_group_qr.url ?? null } : null,
+    qqGroupJoinUrl: dto.qq_group_join_url ?? null,
+    allowOnlineApplication: dto.allow_online_application ?? true,
+    relatedLinks: relatedRaw
+      .filter(item => item.label && item.url)
+      .map(item => ({
+        label: String(item.label),
+        url: String(item.url),
+        type: (item.type === 'competition' || item.type === 'activity' ? item.type : 'external') as 'competition' | 'activity' | 'external'
+      })),
     recentActivities: (dto.recent_activities ?? []).map(activity => ({
       id: activity.id,
       title: activity.title,
@@ -240,11 +263,13 @@ function toPosition(dto: RecruitmentPositionDto): OrganizationPosition {
   }
 }
 
-/** 招新详情段补组织 type/logo（其余取招新 DTO）。 */
+/** 招新详情段补组织 type/logo（其余取招新 DTO），并回退 QQ 群信息到组织级。 */
 function toRecruitmentDetail(
   dto: RecruitmentDetailDto,
   org: OrganizationDetail
 ): RecruitmentDetail {
+  const orgQr = org.qqGroupQr ?? null
+  const dtoQr = dto.qq_group_qr ? { alt: `${dto.title}招新 QQ 群二维码`, src: dto.qq_group_qr.url ?? null } : null
   return {
     id: dto.id,
     organization: {
@@ -264,7 +289,12 @@ function toRecruitmentDetail(
     targetGradeMin: dto.target_grade_min ?? null,
     targetGradeMax: dto.target_grade_max ?? null,
     notesMd: dto.notes_md ?? null,
-    positions: (dto.positions ?? []).map(toPosition)
+    positions: (dto.positions ?? []).map(toPosition),
+    qqGroupNumber: dto.qq_group_number ?? org.qqGroupNumber ?? null,
+    qqGroupQr: dtoQr ?? orgQr,
+    qqGroupJoinUrl: dto.qq_group_join_url ?? org.qqGroupJoinUrl ?? null,
+    enableOnlineApplication: dto.enable_online_application ?? true,
+    organizationAllowOnlineApplication: dto.organization_allow_online_application ?? org.allowOnlineApplication ?? true
   }
 }
 

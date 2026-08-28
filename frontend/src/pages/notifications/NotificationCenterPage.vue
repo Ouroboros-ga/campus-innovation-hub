@@ -114,7 +114,7 @@ async function handleMarkAll(): Promise<void> {
 
     <PageContainer class="max-w-3xl">
       <!-- 分类 -->
-      <div class="mt-2 bg-default md:mt-4 md:rounded-xl md:border md:border-default md:shadow-sm">
+      <div class="mt-2 bg-default md:mt-4 md:rounded-card md:border md:border-default md:shadow-sm">
         <div class="px-2 md:px-4">
           <NotificationTabs
             v-model:active="active"

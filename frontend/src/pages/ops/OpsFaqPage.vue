@@ -117,18 +117,21 @@ async function onPublish(f: OpsFaq) {
       </div>
     </div>
 
-    <p
+    <div
       v-if="loading"
-      class="text-sm text-muted"
+      class="space-y-2"
     >
-      正在加载…
-    </p>
-    <p
+      <USkeleton class="h-16 w-full" />
+      <USkeleton class="h-16 w-full" />
+      <USkeleton class="h-16 w-full" />
+    </div>
+    <div
       v-else-if="error"
-      class="text-sm text-danger-600"
+      class="flex items-center gap-2 py-3 text-sm text-danger-600"
     >
-      {{ error }}
-    </p>
+      <span>{{ error }}</span>
+      <UButton size="xs" variant="ghost" @click="load">重试</UButton>
+    </div>
     <UEmpty
       v-else-if="!faqs.length"
       icon="i-lucide-help-circle"
@@ -141,80 +144,97 @@ async function onPublish(f: OpsFaq) {
         <UButton color="primary" variant="soft" icon="i-lucide-plus" @click="openCreate">新建 FAQ</UButton>
       </template>
     </UEmpty>
-    <div
-      v-else
-      class="overflow-x-auto rounded-lg border border-default bg-default"
-    >
-      <table class="w-full text-sm">
-        <thead class="bg-muted/40 text-xs text-muted">
-          <tr>
-            <th class="px-3 py-2 text-left font-medium">
-              排序
-            </th>
-            <th class="px-3 py-2 text-left font-medium">
-              分类
-            </th>
-            <th class="px-3 py-2 text-left font-medium">
-              问题
-            </th>
-            <th class="px-3 py-2 text-left font-medium">
-              状态
-            </th>
-            <th class="px-3 py-2 text-left font-medium">
-              操作
-            </th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-default">
-          <tr
-            v-for="f in faqs"
-            :key="f.id"
-            class="hover:bg-muted/20"
-          >
-            <td class="px-3 py-2 font-mono text-xs">
-              {{ f.sortOrder }}
-            </td>
-            <td class="px-3 py-2 text-xs">
-              {{ faqCategoryLabel[f.category] ?? f.category }}
-            </td>
-            <td class="px-3 py-2 max-w-[400px] truncate font-medium">
-              {{ f.question }}
-            </td>
-            <td class="px-3 py-2">
-              <UBadge
-                :color="f.publicationState==='PUBLISHED'?'success':'neutral'"
-                variant="soft"
-                size="xs"
-              >
-                {{ f.publicationState==='PUBLISHED'?'已发布':'草稿' }}
-              </UBadge>
-            </td>
-            <td class="px-3 py-2">
-              <div class="flex gap-1">
-                <UButton
-                  size="xs"
-                  variant="ghost"
-                  color="neutral"
-                  icon="i-lucide-pencil"
-                  @click="openEdit(f)"
-                >
-                  编辑
-                </UButton>
-                <UButton
-                  v-if="f.publicationState!=='PUBLISHED'"
-                  size="xs"
+    <template v-else>
+      <div class="hidden overflow-x-auto rounded-lg border border-default bg-default md:block">
+        <table class="w-full text-sm">
+          <thead class="bg-muted/40 text-xs text-muted">
+            <tr>
+              <th class="px-3 py-2 text-left font-medium">
+                排序
+              </th>
+              <th class="px-3 py-2 text-left font-medium">
+                分类
+              </th>
+              <th class="px-3 py-2 text-left font-medium">
+                问题
+              </th>
+              <th class="px-3 py-2 text-left font-medium">
+                状态
+              </th>
+              <th class="px-3 py-2 text-left font-medium">
+                操作
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-default">
+            <tr
+              v-for="f in faqs"
+              :key="f.id"
+              class="hover:bg-muted/20"
+            >
+              <td class="px-3 py-2 font-mono text-xs">
+                {{ f.sortOrder }}
+              </td>
+              <td class="px-3 py-2 text-xs">
+                {{ faqCategoryLabel[f.category] ?? f.category }}
+              </td>
+              <td class="px-3 py-2 max-w-[400px] truncate font-medium">
+                {{ f.question }}
+              </td>
+              <td class="px-3 py-2">
+                <UBadge
+                  :color="f.publicationState==='PUBLISHED'?'success':'neutral'"
                   variant="soft"
-                  color="primary"
-                  @click="onPublish(f)"
+                  size="xs"
                 >
-                  发布
-                </UButton>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+                  {{ f.publicationState==='PUBLISHED'?'已发布':'草稿' }}
+                </UBadge>
+              </td>
+              <td class="px-3 py-2">
+                <div class="flex gap-1">
+                  <UButton
+                    size="xs"
+                    variant="ghost"
+                    color="neutral"
+                    icon="i-lucide-pencil"
+                    @click="openEdit(f)"
+                  >
+                    编辑
+                  </UButton>
+                  <UButton
+                    v-if="f.publicationState!=='PUBLISHED'"
+                    size="xs"
+                    variant="soft"
+                    color="primary"
+                    @click="onPublish(f)"
+                  >
+                    发布
+                  </UButton>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Phone 卡片 -->
+      <div class="space-y-3 md:hidden">
+      <div
+        v-for="f in faqs"
+        :key="f.id"
+        class="rounded-lg border border-default bg-default p-3"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <p class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ f.question }}</p>
+          <UBadge :color="f.publicationState==='PUBLISHED'?'success':'neutral'" variant="soft" size="xs">{{ f.publicationState==='PUBLISHED'?'已发布':'草稿' }}</UBadge>
+        </div>
+        <p class="mt-1 text-xs text-muted">{{ faqCategoryLabel[f.category] ?? f.category }} · 排序 {{ f.sortOrder }}</p>
+        <div class="mt-3 flex gap-1">
+          <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-pencil" @click="openEdit(f)">编辑</UButton>
+          <UButton v-if="f.publicationState!=='PUBLISHED'" size="xs" variant="soft" color="primary" @click="onPublish(f)">发布</UButton>
+        </div>
+      </div>
+      </div>
+    </template>
     <div class="flex justify-between text-xs text-muted">
       <span>共 {{ total }} 条</span>
       <UPagination

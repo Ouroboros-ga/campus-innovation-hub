@@ -13,7 +13,7 @@
  * （min_length=1），前端草稿允许为空，空值会由后端返回字段错误。
  */
 
-import { http } from '@/shared/http/client'
+import { getCsrfToken, http } from '@/shared/http/client'
 import type { ActivityType } from '@/shared/types/homepage'
 import type { DynamicsActivity } from '@/features/dynamics/types'
 import type { ActivityEditorDraft } from '@/features/ops/lib/opsStore'
@@ -91,7 +91,7 @@ export function toActivityWriteDto(
     start_at: draft.startAt,
     end_at: draft.endAt || null,
     registration_required: required,
-    registration_start_at: null,
+    registration_start_at: required ? (draft.registrationStartAt || null) : null,
     registration_end_at: required ? draft.registrationEndAt || null : null,
     capacity: required ? draft.capacity : null,
     notes_md: draft.notesMd?.trim() || null,
@@ -170,6 +170,32 @@ export async function createActivityWithAnnouncement(
     },
     publish
   })
+}
+
+/** 导出活动报名（POST /ops/activities/:id/export-registrations，返回 CSV blob）。 */
+export async function exportActivityRegistrations(activityId: string): Promise<void> {
+  const base = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api').replace(/\/+$/, '')
+  const url = `${base}/ops/activities/${activityId}/export-registrations`
+  const headers: Record<string, string> = {}
+  const token = getCsrfToken()
+  if (token) headers['X-CSRFToken'] = token
+  const response = await fetch(url, { method: 'POST', headers, credentials: 'include' })
+  if (!response.ok) {
+    const text = await response.text().catch(() => '')
+    throw new Error(text || `导出失败（${response.status}）`)
+  }
+  const blob = await response.blob()
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const match = /filename="?([^"]+)"?/.exec(disposition)
+  const filename = match?.[1] ?? `activity-${activityId}-registrations.csv`
+  const objectUrl = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = objectUrl
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(objectUrl)
 }
 
 /** 运营活动列表（GET /ops/activities）。 */

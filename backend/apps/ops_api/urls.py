@@ -6,6 +6,7 @@ from apps.ops_api import activity_views, analytics_views, competition_views, con
 
 
 urlpatterns = [
+    path("ops/competitions/import", competition_views.CompetitionImportView.as_view(), name="ops-competition-import"),
     path("ops/competitions", competition_views.CompetitionCollectionView.as_view(), name="ops-competition-collection"),
     path("ops/competitions/<str:object_id>", competition_views.CompetitionDetailView.as_view(), name="ops-competition-detail"),
     path("ops/competitions/<str:object_id>/publish", competition_views.CompetitionPublishView.as_view(), name="ops-competition-publish"),

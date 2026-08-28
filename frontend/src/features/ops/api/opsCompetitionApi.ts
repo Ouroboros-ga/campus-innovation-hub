@@ -184,6 +184,13 @@ export async function publishCompetition(id: string): Promise<void> {
   await http.post(`/ops/competitions/${id}/publish`)
 }
 
+/** 批量导入竞赛（.xlsx）。 */
+export async function importCompetitions(file: File): Promise<{ success: number; failed: number; errors: Array<{ row: number; message: string }> }> {
+  const form = new FormData()
+  form.append('file', file)
+  return http.post('/ops/competitions/import', form)
+}
+
 /** 运营竞赛列表（GET /ops/competitions）。 */
 export async function listCompetitions(params: {
   q?: string

@@ -213,6 +213,14 @@ export const organizationDetails: OrganizationDetail[] = [
     contactAddress: '科技楼 3 楼 AI 协会办公室',
     wechatName: 'AI 人工智能协会',
     publicContact: 'ai-union@example.edu.cn',
+    qqGroupNumber: '876543210',
+    qqGroupQr: { alt: '人工智能协会招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: 'https://qm.qq.com/q/876543210',
+    allowOnlineApplication: true,
+    relatedLinks: [
+      { label: '全国大学生人工智能创新挑战赛', url: '/competitions/ai-innovation-2026', type: 'competition' },
+      { label: '蓝桥杯全国软件和信息技术专业人才大赛', url: '/competitions/lanqiao-2026', type: 'competition' },
+    ],
     recentActivities: [
       {
         id: 'ai-sharing-4',
@@ -250,6 +258,14 @@ export const organizationDetails: OrganizationDetail[] = [
     contactAddress: '图书馆 4 楼数据科学中心',
     wechatName: 'AI 数据科学社',
     publicContact: 'ds-club@example.edu.cn',
+    qqGroupNumber: '234567890',
+    qqGroupQr: { alt: '数据科学社招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: null,
+    allowOnlineApplication: true,
+    relatedLinks: [
+      { label: '全国大学生数学建模竞赛', url: '/competitions/mcm-2026', type: 'competition' },
+      { label: '中国大学生计算机设计大赛', url: '/competitions/csdc-2026', type: 'competition' },
+    ],
     recentActivities: [
       {
         id: 'python-training',
@@ -281,6 +297,14 @@ export const organizationDetails: OrganizationDetail[] = [
     contactAddress: '科研楼 2 楼 220 室',
     wechatName: null,
     publicContact: null,
+    qqGroupNumber: '345678901',
+    qqGroupQr: { alt: '机器人实验室招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: null,
+    allowOnlineApplication: false,
+    relatedLinks: [
+      { label: '中国机器人大赛', url: '/competitions/robot-cup-2026', type: 'competition' },
+      { label: '全国大学生电子设计竞赛', url: '/competitions/electronics-design-2026', type: 'competition' },
+    ],
     recentActivities: [
       {
         id: 'research-training-camp',
@@ -312,6 +336,14 @@ export const organizationDetails: OrganizationDetail[] = [
     contactAddress: '创客空间 1 层',
     wechatName: 'AI 创新创业中心',
     publicContact: 'innovation-center@example.edu.cn',
+    qqGroupNumber: '567890123',
+    qqGroupQr: { alt: '创新创业中心招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: null,
+    allowOnlineApplication: true,
+    relatedLinks: [
+      { label: '「挑战杯」全国大学生课外学术科技作品竞赛', url: '/competitions/challenge-cup-2026', type: 'competition' },
+      { label: '大学生创新创业训练计划', url: '/competitions/innovation-training-2026', type: 'competition' },
+    ],
     recentActivities: [
       {
         id: 'enterprise-visit-fall-2026',
@@ -343,6 +375,14 @@ export const organizationDetails: OrganizationDetail[] = [
     contactAddress: '行政楼 106 室',
     wechatName: null,
     publicContact: 'sci-career@example.edu.cn',
+    qqGroupNumber: '112233445',
+    qqGroupQr: { alt: '科创与就业部招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: 'https://qm.qq.com/q/112233445',
+    allowOnlineApplication: true,
+    relatedLinks: [
+      { label: '全国大学生数学建模竞赛', url: '/competitions/mcm-2026', type: 'competition' },
+      { label: '校内程序设计竞赛', url: '/competitions/school-programming-2026', type: 'competition' },
+    ],
     recentActivities: [
       {
         id: 'mcm-briefing-2026',
@@ -374,6 +414,11 @@ export const organizationDetails: OrganizationDetail[] = [
     contactAddress: '大学生活动中心 303 室',
     wechatName: '绿色公益社',
     publicContact: 'green-public@example.edu.cn',
+    qqGroupNumber: '678901234',
+    qqGroupQr: { alt: '绿色公益社招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: null,
+    allowOnlineApplication: false,
+    relatedLinks: [],
     recentActivities: [
       {
         id: 'further-study-sharing',
@@ -405,6 +450,11 @@ export const organizationDetails: OrganizationDetail[] = [
     contactAddress: null,
     wechatName: null,
     publicContact: null,
+    qqGroupNumber: null,
+    qqGroupQr: null,
+    qqGroupJoinUrl: null,
+    allowOnlineApplication: true,
+    relatedLinks: [],
     recentActivities: [],
     currentRecruitments: []
   },
@@ -429,6 +479,11 @@ export const organizationDetails: OrganizationDetail[] = [
     contactAddress: null,
     wechatName: null,
     publicContact: null,
+    qqGroupNumber: null,
+    qqGroupQr: null,
+    qqGroupJoinUrl: null,
+    allowOnlineApplication: false,
+    relatedLinks: [],
     recentActivities: [],
     currentRecruitments: []
   }
@@ -454,6 +509,11 @@ export const recruitmentDetails: RecruitmentDetail[] = [
     targetGradeMin: 1,
     targetGradeMax: 4,
     notesMd: '面试安排在 9 月上旬，具体时间将通过邮件通知。',
+    qqGroupNumber: '876543210',
+    qqGroupQr: { alt: '人工智能协会 2026 秋季招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: 'https://qm.qq.com/q/876543210',
+    enableOnlineApplication: true,
+    organizationAllowOnlineApplication: true,
     positions: [
       {
         id: 'ai-union-ml',
@@ -496,6 +556,11 @@ export const recruitmentDetails: RecruitmentDetail[] = [
     targetGradeMin: 1,
     targetGradeMax: 4,
     notesMd: null,
+    qqGroupNumber: '234567890',
+    qqGroupQr: { alt: '数据科学社招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: null,
+    enableOnlineApplication: true,
+    organizationAllowOnlineApplication: true,
     positions: [
       {
         id: 'ds-analysis',
@@ -531,6 +596,11 @@ export const recruitmentDetails: RecruitmentDetail[] = [
     targetGradeMin: 2,
     targetGradeMax: 4,
     notesMd: '实验室将提供开发板与机械结构材料。',
+    qqGroupNumber: '345678901',
+    qqGroupQr: { alt: '机器人实验室招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: null,
+    enableOnlineApplication: false,
+    organizationAllowOnlineApplication: false,
     positions: [
       {
         id: 'robot-embedded',
@@ -566,6 +636,11 @@ export const recruitmentDetails: RecruitmentDetail[] = [
     targetGradeMin: 1,
     targetGradeMax: 4,
     notesMd: '鼓励携带想法或已有项目加入。',
+    qqGroupNumber: '567890123',
+    qqGroupQr: { alt: '创新创业中心招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: null,
+    enableOnlineApplication: true,
+    organizationAllowOnlineApplication: true,
     positions: [
       {
         id: 'innovation-product',
@@ -601,6 +676,11 @@ export const recruitmentDetails: RecruitmentDetail[] = [
     targetGradeMin: 1,
     targetGradeMax: 4,
     notesMd: null,
+    qqGroupNumber: '112233445',
+    qqGroupQr: { alt: '科创与就业部招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: 'https://qm.qq.com/q/112233445',
+    enableOnlineApplication: true,
+    organizationAllowOnlineApplication: true,
     positions: [
       {
         id: 'sci-service',
@@ -636,6 +716,11 @@ export const recruitmentDetails: RecruitmentDetail[] = [
     targetGradeMin: 1,
     targetGradeMax: 4,
     notesMd: '具体活动时间将在加入后通知。',
+    qqGroupNumber: '678901234',
+    qqGroupQr: { alt: '绿色公益社招新 QQ 群二维码', src: null },
+    qqGroupJoinUrl: null,
+    enableOnlineApplication: false,
+    organizationAllowOnlineApplication: false,
     positions: [
       {
         id: 'green-action',

@@ -129,7 +129,12 @@ export function addRecruitment(orgId: string, draft: RecruitEditorDraft): Recrui
       headcount: position.headcount,
       description: position.description ?? null,
       requirements: position.requirements ?? null
-    }))
+    })),
+    qqGroupNumber: null,
+    qqGroupQr: null,
+    qqGroupJoinUrl: null,
+    enableOnlineApplication: true,
+    organizationAllowOnlineApplication: true
   }
   recruitmentStore.push(recruitment)
   return recruitment

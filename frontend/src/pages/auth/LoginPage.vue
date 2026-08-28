@@ -21,8 +21,8 @@ const error = ref('')
 const submitting = ref(false)
 
 function redirectTarget(): string {
-  const redirect = route.query.redirect
-  return typeof redirect === 'string' && redirect.startsWith('/') ? redirect : '/me'
+  const raw = (route.query.redirect ?? route.query.next) as unknown
+  return typeof raw === 'string' && raw.startsWith('/') ? raw : '/me'
 }
 
 function messageFor(errorValue: unknown): string {

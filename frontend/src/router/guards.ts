@@ -13,7 +13,14 @@ import { useAuthStore } from '@/stores/auth'
  */
 export function registerRouterGuards(router: Router): void {
   router.beforeEach(async to => {
-    const required = to.meta.auth as 'auth' | 'operator' | undefined
+    const matchedAuth = to.matched
+      .map(r => (r.meta as Record<string, unknown>).auth as 'auth' | 'operator' | undefined)
+      .filter(Boolean)
+    const required: 'auth' | 'operator' | undefined = matchedAuth.includes('operator')
+      ? 'operator'
+      : matchedAuth.includes('auth')
+        ? 'auth'
+        : (to.meta.auth as 'auth' | 'operator' | undefined)
     if (!required) return true
 
     let auth: ReturnType<typeof useAuthStore>

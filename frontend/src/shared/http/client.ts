@@ -17,6 +17,26 @@ export type { AppError, Paginated, RequestOptions } from './types'
 
 const DEFAULT_BASE_URL = '/api'
 
+let authRedirectHandler: ((target: string) => void) | null = null
+
+export function setAuthRedirectHandler(handler: (target: string) => void): void {
+  authRedirectHandler = handler
+}
+
+function handleAuthRequired(): void {
+  if (typeof window === 'undefined') return
+  const current = window.location.pathname + window.location.search
+  if (current.startsWith('/login') || current.startsWith('/register')) return
+  const loginUrl = `/login?redirect=${encodeURIComponent(current)}`
+  if (authRedirectHandler) authRedirectHandler(loginUrl)
+  else window.location.href = loginUrl
+}
+
+function normalizePath(path: string): string {
+  if (path === '/') return path
+  return path.replace(/\/+$/, '')
+}
+
 /** base URL（环境变量优先，去尾部斜杠）。 */
 function baseUrl(): string {
   const configured = import.meta.env.VITE_API_BASE_URL as string | undefined
@@ -133,7 +153,7 @@ async function request<T>(
   path: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const url = withQuery(`${baseUrl()}${path}`, options.query)
+  const url = withQuery(`${baseUrl()}${normalizePath(path)}`, options.query)
   const headers = new Headers(options.headers)
   headers.set('Accept', 'application/json')
 
@@ -165,6 +185,7 @@ async function request<T>(
   }
 
   if (!response.ok) {
+    if (response.status === 401) handleAuthRequired()
     throw normalizeError(response.status, await readBody(response))
   }
 

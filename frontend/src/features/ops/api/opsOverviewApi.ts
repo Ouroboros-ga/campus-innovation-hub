@@ -62,6 +62,7 @@ export function getOrganizationStats() {
 export function getRecentDrafts() {
   return http.get<RecentDrafts>('/ops/overview/recent-drafts')
 }
-export function getAnalyticsTrends(days = 7) {
-  return http.get<AnalyticsTrends>(`/ops/analytics/trends?days=${days}`)
+export function getAnalyticsTrends(days = 7, opts?: { nocache?: boolean }) {
+  const qs = opts?.nocache ? `?days=${days}&nocache=1` : `?days=${days}`
+  return http.get<AnalyticsTrends>(`/ops/analytics/trends${qs}`)
 }

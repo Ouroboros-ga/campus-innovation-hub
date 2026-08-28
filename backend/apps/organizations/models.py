@@ -29,6 +29,13 @@ class Organization(UUIDTimestampedModel):
         "media.MediaAsset", null=True, blank=True, on_delete=models.SET_NULL, related_name="organization_banners"
     )
     public_contact = models.CharField(max_length=200, null=True, blank=True)
+    qq_group_number = models.CharField(max_length=30, null=True, blank=True)
+    qq_group_qr_asset = models.ForeignKey(
+        "media.MediaAsset", null=True, blank=True, on_delete=models.SET_NULL, related_name="organization_qq_qrs"
+    )
+    qq_group_join_url = models.CharField(max_length=500, null=True, blank=True)
+    allow_online_application = models.BooleanField(default=True)
+    related_links_json = models.JSONField(default=list, blank=True)
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="created_organizations"
@@ -88,6 +95,12 @@ class Recruitment(UUIDTimestampedModel):
     notes_md = models.TextField(null=True, blank=True, validators=[MaxLengthValidator(5000)])
     publication_state = models.CharField(max_length=20, choices=PublicationState.choices, default=PublicationState.DRAFT)
     completed_at = models.DateTimeField(null=True, blank=True)
+    qq_group_number = models.CharField(max_length=30, null=True, blank=True)
+    qq_group_qr_asset = models.ForeignKey(
+        "media.MediaAsset", null=True, blank=True, on_delete=models.SET_NULL, related_name="recruitment_qq_qrs"
+    )
+    qq_group_join_url = models.CharField(max_length=500, null=True, blank=True)
+    enable_online_application = models.BooleanField(default=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_recruitments")
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="updated_recruitments")
 

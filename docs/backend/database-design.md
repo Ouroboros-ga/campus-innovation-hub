@@ -881,6 +881,11 @@ avif（浏览器 / 处理链支持时）
 | `logo_asset_id` | uuid | 是 | SET_NULL |
 | `banner_asset_id` | uuid | 是 | SET_NULL |
 | `public_contact` | varchar(200) | 是 | 仅正式公开联系方式 |
+| `qq_group_number` | varchar(30) | 是 | 招新 QQ 群号（公开，5–15 位数字，可含横杠） |
+| `qq_group_qr_asset_id` | uuid | 是 | FK media_asset SET_NULL，招新 QQ 群二维码图片 |
+| `qq_group_join_url` | varchar(500) | 是 | QQ 群入群链接 / 跳转 URL（可选，与二维码二选一或并存） |
+| `allow_online_application` | bool | 否 | 是否启用平台在线申请（双轨并行开关），default true；组织负责人可自由关闭，仅保留引流 |
+| `related_links_json` | jsonb | 否 | 友情链接：与本组织相关的竞赛/活动外链，默认 `[]`，用于“相关竞赛”展示 |
 | `is_active` | bool | 否 | default true |
 | `created_by_id` | uuid | 是 | SET_NULL |
 | `updated_by_id` | uuid | 是 | SET_NULL |
@@ -929,6 +934,16 @@ is_active = false
 ```
 
 只有 SUPERADMIN 可执行。
+
+### 新增字段说明（双轨并行 · 引流为主）
+
+* `qq_group_*` 三字段为**公开引流**事实：群号为文本、二维码为 `media_asset`、入群链接为 URL；三者可独立存在，页面优先展示二维码，其次群号/链接，且支持一键复制群号。
+* `allow_online_application` 为组织级开关：`true` 时组织主页与招新详情同时展示“查看入群方式（主）+ 在线申请（辅）”；`false` 时仅展示入群方式，在线申请入口自动隐藏，但后端 `RecruitmentApplication` 能力保留，科创部等自用组织可保持 `true`。
+* `related_links_json` 结构：
+  ```json
+  [{ "label": "全国大学生数学建模竞赛", "url": "/competitions/xxx", "type": "competition" }]
+  ```
+  校验：数组 0–10 项，单项 `label <= 40`、`url <= 500`、`type in (competition, activity, external)`；不替代 `content_announcement` 的正式关联，仅为友情链接展示。
 
 ---
 
@@ -1074,6 +1089,10 @@ OPERATOR 不自动拥有任何组织管理身份。
 | `notes_md` | text | 是 | <= 5000 |
 | `publication_state` | varchar(20) | 否 | DRAFT/PUBLISHED/CANCELLED/ARCHIVED |
 | `completed_at` | timestamptz | 是 | 申请处理完成 |
+| `qq_group_number` | varchar(30) | 是 | 本轮招新独立 QQ 群号（为空则回退到组织级群号） |
+| `qq_group_qr_asset_id` | uuid | 是 | FK media_asset SET_NULL，本轮招新独立二维码 |
+| `qq_group_join_url` | varchar(500) | 是 | 本轮招新独立入群链接 |
+| `enable_online_application` | bool | 否 | 本轮是否启用在线申请，default true；受组织级 allow_online_application 约束 |
 | `created_by_id` | uuid | 否 | leader / admin |
 | `updated_by_id` | uuid | 否 | |
 | `created_at` | timestamptz | 否 | |
@@ -1108,6 +1127,13 @@ else                            -> CLOSED
 index(organization_id, publication_state)
 index(publication_state, apply_end_at)
 ```
+
+### 双轨并行规则
+
+* 组织级 `allow_online_application = false` 时，该组织所有招新即使 `enable_online_application = true`，前端也不展示在线申请入口（后端仍保留接口供科创部自用组织直接调用）。
+* 招新级 `enable_online_application = false` 时，单轮招新仅展示入群方式。
+* 前端主操作永远是“查看入群方式（QQ 群二维码/群号/链接）”，次操作为“在线申请（试点）”；未提供任何 QQ 信息时，回退展示 `public_contact`。
+* `qq_group_*` 招新级为空时回退到组织级；组织级也为空则该招新不展示二维码，仅展示文字联系方式。
 
 ---
 

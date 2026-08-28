@@ -134,16 +134,13 @@ const recruitingOptions = [
         <p class="mt-2 text-xl font-bold tabular-nums text-highlighted">
           {{ stats?.total ?? '-' }}
         </p>
-        <p class="text-xs text-success-600">
-          较上周 ↑ 5.2%
-        </p>
       </div>
       <div class="rounded-lg border border-default bg-default p-3">
         <div class="flex items-center justify-between">
           <p class="text-xs text-muted">
             招新中
           </p>
-          <span class="grid size-7 place-items-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-full bg-success-50 text-success-600 dark:bg-success-950"><UIcon
             name="i-lucide-user-plus"
             class="size-4"
           /></span>
@@ -157,7 +154,7 @@ const recruitingOptions = [
           <p class="text-xs text-muted">
             已暂停招新
           </p>
-          <span class="grid size-7 place-items-center rounded-full bg-orange-50 text-orange-600 dark:bg-orange-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-full bg-warning-50 text-warning-600 dark:bg-warning-950"><UIcon
             name="i-lucide-pause"
             class="size-4"
           /></span>
@@ -171,7 +168,7 @@ const recruitingOptions = [
           <p class="text-xs text-muted">
             本月新增
           </p>
-          <span class="grid size-7 place-items-center rounded-full bg-violet-50 text-violet-600 dark:bg-violet-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-full bg-primary-50 text-primary-600 dark:bg-primary-950"><UIcon
             name="i-lucide-sparkles"
             class="size-4"
           /></span>
@@ -241,8 +238,8 @@ const recruitingOptions = [
       {{ error }}
     </p>
 
-    <!-- 表 -->
-    <div class="overflow-x-auto rounded-lg border border-default bg-default">
+    <!-- 表：桌面 -->
+    <div class="hidden overflow-x-auto rounded-lg border border-default bg-default md:block">
       <table class="w-full text-sm">
         <thead class="bg-muted/50 text-xs text-muted">
           <tr>
@@ -421,6 +418,64 @@ const recruitingOptions = [
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Phone 卡片 -->
+    <div class="space-y-3 md:hidden">
+      <div v-if="loading" class="space-y-3">
+        <USkeleton v-for="i in 3" :key="i" class="h-28 rounded-lg" />
+      </div>
+      <p v-else-if="error" class="py-6 text-center text-sm text-danger-600">
+        {{ error }}
+        <UButton size="xs" variant="ghost" class="ml-2" @click="load">重试</UButton>
+      </p>
+      <UEmpty
+        v-else-if="!organizations.length"
+        icon="i-lucide-building-2"
+        title="暂无组织"
+        description="试试调整搜索或筛选"
+      >
+        <template #actions>
+          <UButton size="sm" variant="ghost" @click="onReset">清除筛选</UButton>
+        </template>
+      </UEmpty>
+      <div v-else class="space-y-3">
+        <div
+          v-for="org in organizations"
+          :key="org.id"
+          class="rounded-lg border border-default bg-default p-3"
+        >
+          <div class="flex items-start gap-3">
+            <img
+              v-if="org.logo?.url"
+              :src="org.logo.url"
+              :alt="org.name"
+              class="size-10 shrink-0 rounded-full object-cover"
+            >
+            <span
+              v-else
+              class="grid size-10 place-items-center rounded-full bg-muted"
+            ><UIcon name="i-lucide-building-2" class="size-5 text-muted" /></span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-semibold text-highlighted">{{ org.name }}</p>
+              <p class="truncate text-xs text-muted">{{ org.short_intro ?? '—' }}</p>
+              <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <UBadge size="xs" variant="soft" color="neutral">{{ organizationTypeLabel[org.organization_type as keyof typeof organizationTypeLabel] ?? org.organization_type }}</UBadge>
+                <UBadge v-if="org.is_recruiting" size="xs" variant="soft" color="success">招新中</UBadge>
+                <UBadge v-else size="xs" variant="soft" color="warning">暂停</UBadge>
+                <span class="text-xs tabular-nums text-muted">{{ org.member_count }}人</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-xs text-muted">
+            <span>更新 {{ formatCompactDate(org.updated_at) }}</span>
+            <div class="flex gap-1">
+              <UButton size="xs" variant="ghost" color="neutral" :to="`/organizations/${org.id}`">查看</UButton>
+              <UButton size="xs" variant="soft" color="primary" :to="`/manage/organizations/${org.id}`">Studio</UButton>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="flex items-center justify-between text-xs text-muted">

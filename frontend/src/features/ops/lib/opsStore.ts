@@ -118,6 +118,7 @@ export interface ActivityEditorDraft {
   location: string
   organizerName: string
   registrationRequired: boolean
+  registrationStartAt?: string
   registrationEndAt: string
   capacity: number | null
   descriptionMd: string

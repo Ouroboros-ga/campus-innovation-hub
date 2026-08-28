@@ -65,7 +65,7 @@ const contentChildren = [
         class="ml-2 space-y-0.5 border-l border-default pl-3"
       >
         <RouterLink
-          :to="{ name: 'ops-system' }"
+          :to="{ name: 'ops-system', hash: '#banner' }"
           class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm"
           :class="isActive('ops-system') ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-muted hover:bg-muted hover:text-highlighted'"
         >

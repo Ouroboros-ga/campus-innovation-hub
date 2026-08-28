@@ -71,7 +71,7 @@ function handleClose(): void {
       />
 
       <template #content>
-        <div class="overflow-hidden rounded-xl border border-default bg-default shadow-lg">
+        <div class="overflow-hidden rounded-surface border border-default bg-default shadow-lg">
           <NotificationPanel
             compact
             @close="handleClose"

@@ -34,11 +34,11 @@ async function load() {
   }
 }
 
-async function loadTrends() {
+async function loadTrends(opts?: { nocache?: boolean }) {
   trendsLoading.value = true
   trendsError.value = ''
   try {
-    trends.value = await getAnalyticsTrends(days.value)
+    trends.value = await getAnalyticsTrends(days.value, opts)
     await nextTick()
     await renderChart()
   } catch {
@@ -59,18 +59,21 @@ async function renderChart() {
   Chart.register(...registerables)
   const labels = trends.value.series.competitions?.map(p => p.date.slice(5)) ?? []
   const palette: Record<string, string> = {
-    competitions: '#0ea5e9',
-    activities: '#8b5cf6',
-    announcements: '#f59e0b',
-    team_posts: '#10b981',
-    recruitments: '#ef4444',
-    consultations: '#6366f1'
+    competitions: '#1677ff',
+    activities: '#12a36d',
+    announcements: '#f08a24',
+    team_posts: '#1677ff',
+    recruitments: '#e5484d',
+    recruitment_applications: '#8b5cf6',
+    team_applications: '#06b6d4',
+    consultations: '#6b7280',
+    users: '#f59e0b'
   }
   const datasets = Object.entries(trends.value.series).map(([key, points]) => ({
     label: key,
     data: points.map(p => p.count),
-    borderColor: palette[key] ?? '#94a3b8',
-    backgroundColor: (palette[key] ?? '#94a3b8') + '22',
+    borderColor: palette[key] ?? '#6b7280',
+    backgroundColor: (palette[key] ?? '#6b7280') + '22',
     tension: 0.35,
     fill: false,
     pointRadius: 2
@@ -81,7 +84,7 @@ async function renderChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: prefersReduced ? false : { duration: 300 },
+      animation: prefersReduced ? false : { duration: 240 },
       interaction: { mode: 'index', intersect: false },
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
       scales: {
@@ -92,7 +95,7 @@ async function renderChart() {
   }) as unknown as { destroy: () => void }
 }
 
-watch(days, loadTrends)
+watch(days, () => loadTrends())
 
 onMounted(async () => {
   await load()
@@ -117,7 +120,7 @@ onMounted(async () => {
         size="sm"
         icon="i-lucide-refresh-cw"
         :loading="loading || trendsLoading"
-        @click="() => { load(); loadTrends() }"
+        @click="() => { load(); loadTrends({ nocache: true }) }"
       >
         刷新
       </UButton>
@@ -232,7 +235,7 @@ onMounted(async () => {
             v-if="trends"
             class="mt-2 text-xs text-muted"
           >
-            {{ trends.start_date }} 至 {{ trends.end_date }} · 合计 竞赛 {{ trends.totals.competitions ?? 0 }} / 活动 {{ trends.totals.activities ?? 0 }} / 公告 {{ trends.totals.announcements ?? 0 }} / 组队 {{ trends.totals.team_posts ?? 0 }}
+            {{ trends.start_date }} 至 {{ trends.end_date }} · 合计 竞赛 {{ trends.totals.competitions ?? 0 }} / 活动 {{ trends.totals.activities ?? 0 }} / 公告 {{ trends.totals.announcements ?? 0 }} / 组队 {{ trends.totals.team_posts ?? 0 }} / 招新申请 {{ trends.totals.recruitment_applications ?? 0 }} / 组队申请 {{ trends.totals.team_applications ?? 0 }} / 用户 {{ trends.totals.users ?? 0 }}
           </p>
         </div>
         <div class="rounded-lg border border-default bg-default p-4">

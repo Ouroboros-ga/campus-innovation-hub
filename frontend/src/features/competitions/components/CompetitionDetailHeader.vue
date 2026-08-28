@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useToast } from '@nuxt/ui/composables'
 
 import {
   deriveRegistrationState,
@@ -10,6 +11,8 @@ import {
   participationModeLabel,
   registrationStateLabel
 } from '@/shared/lib/domain-labels'
+import { followCompetition, unfollowCompetition } from '@/features/competitions/api/competitionApi'
+import { AppError } from '@/shared/http/types'
 import type { CompetitionDetail } from '../types'
 
 /**
@@ -35,6 +38,29 @@ const deadlineText = computed(() =>
 )
 
 const followed = ref(false)
+const followLoading = ref(false)
+const toast = useToast()
+
+async function toggleFollow() {
+  if (followLoading.value) return
+  followLoading.value = true
+  try {
+    if (followed.value) {
+      await unfollowCompetition(props.detail.id)
+      followed.value = false
+      toast.add({ title: '已取消关注', color: 'neutral' })
+    } else {
+      await followCompetition(props.detail.id)
+      followed.value = true
+      toast.add({ title: '已关注赛事', color: 'success' })
+    }
+  } catch (e) {
+    if (e instanceof AppError && e.code === 'AUTH_REQUIRED') return
+    toast.add({ title: e instanceof Error ? e.message : '操作失败', color: 'error' })
+  } finally {
+    followLoading.value = false
+  }
+}
 
 /** 主任务（§34.7）：立即报名 → 官网外链，其次报名指南，最后咨询指南。 */
 const registerAction = computed(() => {
@@ -170,7 +196,8 @@ const categoryIcon = computed(() => {
             color="neutral"
             variant="outline"
             icon="i-lucide-star"
-            @click="followed = !followed"
+            :loading="followLoading"
+            @click="toggleFollow"
           >
             {{ followed ? '已关注' : '关注赛事' }}
           </UButton>

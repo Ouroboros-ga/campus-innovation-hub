@@ -42,7 +42,8 @@ describe('应用路由', () => {
       'ops',
       'login',
       'notifications',
-      'register'
+      'register',
+      'not-found'
     ])
   })
 

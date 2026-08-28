@@ -12,13 +12,17 @@ import {
 import ActivityBrowseCard from '@/features/dynamics/components/ActivityBrowseCard.vue'
 import { findActivity, mdToPlainText } from '@/features/dynamics/lib/dynamicsDetail'
 import OrganizationInfoCard from '@/features/organizations/components/OrganizationInfoCard.vue'
+import QqGroupJoinModal from '@/features/organizations/components/QqGroupJoinModal.vue'
 import {
   getOrganization,
   getRecruitment
 } from '@/features/organizations/api/organizationApi'
 import {
   deriveRecruitmentPhase,
-  recruitmentCanApply
+  hasQqGroup,
+  organizationOnlineEnabled,
+  recruitmentCanApply,
+  recruitmentOnlineEnabled
 } from '@/features/organizations/lib/organizationDetail'
 import { recruitmentPhaseLabel } from '@/features/organizations/lib/organizationLabels'
 import type {
@@ -28,15 +32,10 @@ import type {
 } from '@/features/organizations/types'
 
 /**
- * 组织主页（FE-041 / FE-103 API 驱动）。
+ * 组织主页（FE-041 / FE-103 API 驱动，A 双轨并行）。
  *
- * 参考设计稿：面包屑（首页 > 社团组织 > 名称）+ 蓝色 Identity 横幅（logo/名称/类型徽标/简介/
- * 成立时间·成员规模·所属学院）+ 四个信息卡（主要方向/指导老师/负责人/公开联系方式）
- * + 近期活动（桌面卡片）+ 当前招新（含岗位 + 查看招新详情 + 申请加入）。
- *
- * 设计来源：PageMap §组织主页 / FrontendDesign §23、§34.6、§34.7。
- * Phone 使用 Detail Shell + 手机端「申请加入」Sticky 操作条。
- * 数据来源 `GET /api/organizations/{id}`；当前招新经 `GET /api/recruitments/{id}` 补全岗位。
+ * 双轨：二维码入群为主、在线申请为辅；组织可自主关闭在线申请。
+ * 友情链接：相关竞赛展示为外链引流，不替代社团自主性。
  */
 const route = useRoute()
 const id = computed(() => String(route.params.id ?? ''))
@@ -45,6 +44,9 @@ const loading = ref(true)
 const error = ref(false)
 const recDetails = ref<Record<string, RecruitmentDetail>>({})
 const now = computed(() => new Date())
+
+const qqModalOpen = ref(false)
+const selectedRecruitmentId = ref<string | null>(null)
 
 async function load() {
   loading.value = true
@@ -101,24 +103,41 @@ const currentRecruitments = computed(() =>
   (detail.value?.currentRecruitments ?? []).map(recruitment => {
     const recDetail = recDetails.value[recruitment.id]
     const phase = recDetail ? deriveRecruitmentPhase(recDetail, now.value) : null
-    return { recruitment, recDetail, phase }
+    const onlineEnabled = recDetail ? recruitmentOnlineEnabled(recDetail) : false
+    const canApplyOnline = recDetail ? (phase === 'OPEN' && onlineEnabled) : false
+    const hasQq = recDetail ? hasQqGroup(recDetail) : hasQqGroup(detail.value as OrganizationDetail)
+    return { recruitment, recDetail, phase, onlineEnabled, canApplyOnline, hasQq }
   })
 )
 
-/** 是否有可申请的招新（用于手机端 Sticky「申请加入」）。 */
-const hasApply = computed(() =>
-  currentRecruitments.value.some(item => item.phase && recruitmentCanApply(item.phase))
+/** 是否有招新开放（用于 Sticky） */
+const hasOpenRecruitment = computed(() =>
+  currentRecruitments.value.some(item => item.phase === 'OPEN')
 )
+
+/** 组织级入群信息（回退展示） */
+const orgQq = computed(() => detail.value ? { number: detail.value.qqGroupNumber, qr: detail.value.qqGroupQr, url: detail.value.qqGroupJoinUrl } : null)
+const orgHasQq = computed(() => detail.value ? hasQqGroup(detail.value) : false)
+const orgAllowsOnline = computed(() => detail.value ? organizationOnlineEnabled(detail.value) : false)
+
+/** 当前弹窗要展示的招新（若未选则用组织级） */
+const modalRecruitment = computed<RecruitmentDetail | null>(() => {
+  if (selectedRecruitmentId.value) return recDetails.value[selectedRecruitmentId.value] ?? null
+  return null
+})
+const modalTitle = computed(() => modalRecruitment.value ? modalRecruitment.value.title : detail.value?.name ? `${detail.value.name} · 招新入群` : '加入招新 QQ 群')
+const modalQqNumber = computed(() => modalRecruitment.value?.qqGroupNumber ?? detail.value?.qqGroupNumber ?? null)
+const modalQqQr = computed(() => modalRecruitment.value?.qqGroupQr ?? detail.value?.qqGroupQr ?? null)
+const modalQqUrl = computed(() => modalRecruitment.value?.qqGroupJoinUrl ?? detail.value?.qqGroupJoinUrl ?? null)
+
+function openQqModal(recruitmentId?: string) {
+  selectedRecruitmentId.value = recruitmentId ?? null
+  qqModalOpen.value = true
+}
 
 /** 某条招新的申请路径。 */
 function recruitmentApplyPath(recruitmentId: string): string {
   return `/organizations/${id.value}/recruitments/${recruitmentId}`
-}
-
-/** 手机 Sticky 主操作的目标路径（优先第一个可申请招新）。 */
-function applyPath(): string | undefined {
-  const item = currentRecruitments.value.find(i => i.phase && recruitmentCanApply(i.phase))
-  return item ? recruitmentApplyPath(item.recruitment.id) : undefined
 }
 
 /** 方向标签图标（展示用，非虚构统计）。 */
@@ -146,7 +165,7 @@ function phaseColor(
 <template>
   <section
     class="pt-4 pb-10 sm:pt-6 sm:pb-14"
-    :class="{ 'pb-28 md:pb-14': hasApply }"
+    :class="{ 'pb-28 md:pb-14': hasOpenRecruitment }"
   >
     <PageContainer>
       <template v-if="loading">
@@ -206,10 +225,10 @@ function phaseColor(
         <div class="overflow-hidden rounded-card bg-primary-900 text-white">
           <div class="p-5 sm:p-7">
             <div class="flex items-start gap-4">
-              <span
-                class="grid size-16 shrink-0 place-items-center rounded-xl bg-white/10"
-                aria-hidden="true"
-              >
+                <span
+                  class="grid size-16 shrink-0 place-items-center rounded-card bg-white/10"
+                  aria-hidden="true"
+                >
                 <UIcon
                   :name="organizationTypeIcon[detail.type]"
                   class="size-8"
@@ -226,6 +245,9 @@ function phaseColor(
                     color="neutral"
                   >
                     {{ organizationTypeLabel[detail.type] }}
+                  </UBadge>
+                  <UBadge v-if="!orgAllowsOnline" size="sm" variant="soft" color="neutral">
+                    仅引流
                   </UBadge>
                 </div>
                 <p
@@ -391,59 +413,87 @@ function phaseColor(
             </div>
           </OrganizationInfoCard>
 
-          <OrganizationInfoCard title="公开联系方式">
-            <ul class="space-y-1.5 text-xs text-toned">
-              <li
-                v-if="detail.contactEmail"
-                class="flex items-center gap-1.5"
-              >
-                <UIcon
-                  name="i-lucide-mail"
-                  class="size-3.5 shrink-0 text-muted"
-                  aria-hidden="true"
-                />
-                <span class="truncate">{{ detail.contactEmail }}</span>
-              </li>
-              <li
-                v-if="detail.contactPhone"
-                class="flex items-center gap-1.5"
-              >
-                <UIcon
-                  name="i-lucide-phone"
-                  class="size-3.5 shrink-0 text-muted"
-                  aria-hidden="true"
-                />
-                <span>{{ detail.contactPhone }}</span>
-              </li>
-              <li
-                v-if="detail.contactAddress"
-                class="flex items-center gap-1.5"
-              >
-                <UIcon
-                  name="i-lucide-map-pin"
-                  class="size-3.5 shrink-0 text-muted"
-                  aria-hidden="true"
-                />
-                <span>{{ detail.contactAddress }}</span>
-              </li>
-              <li
-                v-if="detail.wechatName"
-                class="flex items-start gap-1.5"
-              >
-                <UIcon
-                  name="i-lucide-qr-code"
-                  class="size-3.5 shrink-0 text-muted"
-                  aria-hidden="true"
-                />
-                <span>{{ detail.wechatName }}</span>
-              </li>
-              <li
-                v-if="!detail.contactEmail && !detail.contactPhone && !detail.contactAddress && !detail.wechatName"
-                class="text-muted"
-              >
-                暂无
-              </li>
-            </ul>
+          <OrganizationInfoCard title="联系与入群">
+            <div class="space-y-3">
+              <!-- QQ 群主入口 -->
+              <div v-if="orgHasQq" class="rounded-lg border border-primary-200 bg-primary-50 p-3 dark:border-primary-800 dark:bg-primary-900/20">
+                <p class="flex items-center gap-1.5 text-xs font-medium text-primary-700 dark:text-primary-300">
+                  <UIcon name="i-lucide-message-circle" class="size-3.5" aria-hidden="true" />
+                  招新 QQ 群
+                </p>
+                <p v-if="orgQq?.number" class="mt-1 font-mono text-sm font-semibold text-highlighted">{{ orgQq.number }}</p>
+                <UButton
+                  color="primary"
+                  variant="soft"
+                  size="xs"
+                  icon="i-lucide-qr-code"
+                  class="mt-2 w-full"
+                  @click="openQqModal()"
+                >
+                  查看二维码入群
+                </UButton>
+                <p class="mt-1.5 text-[11px] leading-4 text-muted">扫码或复制群号入群，获取最新招新安排</p>
+              </div>
+              <div v-else class="rounded-lg border border-dashed border-default bg-muted/30 p-3">
+                <p class="text-xs text-muted">该组织暂未公开 QQ 群，请通过下方方式联系</p>
+              </div>
+
+              <ul class="space-y-1.5 text-xs text-toned">
+                <li
+                  v-if="detail.contactEmail"
+                  class="flex items-center gap-1.5"
+                >
+                  <UIcon
+                    name="i-lucide-mail"
+                    class="size-3.5 shrink-0 text-muted"
+                    aria-hidden="true"
+                  />
+                  <span class="truncate">{{ detail.contactEmail }}</span>
+                </li>
+                <li
+                  v-if="detail.contactPhone"
+                  class="flex items-center gap-1.5"
+                >
+                  <UIcon
+                    name="i-lucide-phone"
+                    class="size-3.5 shrink-0 text-muted"
+                    aria-hidden="true"
+                  />
+                  <span>{{ detail.contactPhone }}</span>
+                </li>
+                <li
+                  v-if="detail.contactAddress"
+                  class="flex items-center gap-1.5"
+                >
+                  <UIcon
+                    name="i-lucide-map-pin"
+                    class="size-3.5 shrink-0 text-muted"
+                    aria-hidden="true"
+                  />
+                  <span>{{ detail.contactAddress }}</span>
+                </li>
+                <li
+                  v-if="detail.wechatName"
+                  class="flex items-start gap-1.5"
+                >
+                  <UIcon
+                    name="i-lucide-qr-code"
+                    class="size-3.5 shrink-0 text-muted"
+                    aria-hidden="true"
+                  />
+                  <span>{{ detail.wechatName }}</span>
+                </li>
+                <li
+                  v-if="!detail.contactEmail && !detail.contactPhone && !detail.contactAddress && !detail.wechatName && !orgHasQq"
+                  class="text-muted"
+                >
+                  暂无
+                </li>
+              </ul>
+              <p v-if="!orgAllowsOnline" class="text-[11px] leading-4 text-muted">
+                该组织当前仅通过 QQ 群引流，未启用平台在线申请。
+              </p>
+            </div>
           </OrganizationInfoCard>
         </div>
 
@@ -510,6 +560,33 @@ function phaseColor(
                 {{ detail.descriptionMd }}
               </p>
             </section>
+
+            <!-- 友情链接：相关竞赛 -->
+            <section v-if="detail.relatedLinks.length">
+              <h2 class="flex items-center gap-2 text-lg font-semibold text-highlighted">
+                <UIcon name="i-lucide-link-2" class="size-5 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+                相关竞赛
+              </h2>
+              <p class="mt-1 text-xs text-muted">该组织关注或参与的竞赛，点击查看详情（友情链接 · 平台仅作引流）</p>
+              <ul class="mt-3 grid gap-2">
+                <li v-for="link in detail.relatedLinks" :key="link.url">
+                  <RouterLink
+                    :to="link.url"
+                    class="group flex items-center justify-between rounded-card border border-default bg-default px-4 py-3 transition-colors hover:border-primary-200 hover:bg-primary-50/50 dark:hover:border-primary-800 dark:hover:bg-primary-900/20"
+                  >
+                    <span class="flex items-center gap-2 text-sm text-highlighted group-hover:text-primary-600">
+                      <UIcon
+                        :name="link.type === 'competition' ? 'i-lucide-trophy' : link.type === 'activity' ? 'i-lucide-calendar-days' : 'i-lucide-external-link'"
+                        class="size-4 shrink-0 text-muted group-hover:text-primary-600"
+                        aria-hidden="true"
+                      />
+                      {{ link.label }}
+                    </span>
+                    <UIcon name="i-lucide-chevron-right" class="size-4 shrink-0 text-muted group-hover:text-primary-600" aria-hidden="true" />
+                  </RouterLink>
+                </li>
+              </ul>
+            </section>
           </div>
 
           <aside class="min-w-0 space-y-6">
@@ -566,7 +643,7 @@ function phaseColor(
                     <div
                       v-for="position in item.recDetail.positions"
                       :key="position.id"
-                      class="rounded-surface border border-default p-3"
+                      class="rounded-md bg-muted/40 p-3"
                     >
                       <div class="flex items-center justify-between gap-2">
                         <span class="text-sm font-semibold text-highlighted">
@@ -596,15 +673,38 @@ function phaseColor(
                     </div>
                   </div>
 
-                  <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <!-- 双轨按钮：二维码为主、在线申请为辅 -->
+                  <div class="mt-4 flex flex-col gap-2">
                     <UButton
-                      v-if="item.phase && recruitmentCanApply(item.phase)"
-                      :to="recruitmentApplyPath(item.recruitment.id)"
                       color="primary"
                       variant="solid"
+                      icon="i-lucide-qr-code"
+                      block
+                      @click="openQqModal(item.recruitment.id)"
+                    >
+                      查看入群方式
+                    </UButton>
+                    <UButton
+                      v-if="item.canApplyOnline"
+                      :to="recruitmentApplyPath(item.recruitment.id)"
+                      color="neutral"
+                      variant="soft"
+                      icon="i-lucide-file-text"
                       block
                     >
-                      申请加入
+                      在线申请（试点）
+                    </UButton>
+                    <p v-else-if="item.phase === 'OPEN' && !item.onlineEnabled" class="text-center text-[11px] text-muted">
+                      该轮招新未启用在线申请，请通过 QQ 群入群
+                    </p>
+                    <UButton
+                      v-else-if="item.phase && !recruitmentCanApply(item.phase)"
+                      :to="recruitmentApplyPath(item.recruitment.id)"
+                      color="neutral"
+                      variant="ghost"
+                      block
+                    >
+                      查看招新详情
                     </UButton>
                   </div>
                 </li>
@@ -621,25 +721,38 @@ function phaseColor(
       </template>
     </PageContainer>
 
-    <!-- 手机 Sticky「申请加入」（§34.7，安全区兼容） -->
+    <!-- 手机 Sticky：入群为主 -->
     <div
-      v-if="detail && hasApply"
+      v-if="detail && hasOpenRecruitment"
       class="fixed inset-x-0 bottom-0 z-40 border-t border-default bg-default md:hidden"
       style="padding-bottom: env(safe-area-inset-bottom)"
     >
       <div class="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3">
         <p class="min-w-0 flex-1 text-sm text-muted">
-          当前正在招新
+          <span class="font-medium text-highlighted">正在招新</span>
+          <span class="ml-1 hidden sm:inline">· 优先加入 QQ 群</span>
         </p>
         <UButton
-          :to="applyPath()"
           color="primary"
           variant="solid"
+          icon="i-lucide-qr-code"
           class="shrink-0"
+          @click="openQqModal(currentRecruitments.find(i => i.phase === 'OPEN')?.recruitment.id)"
         >
-          申请加入
+          入群方式
         </UButton>
       </div>
     </div>
+
+    <QqGroupJoinModal
+      v-if="detail"
+      :open="qqModalOpen"
+      :organization-name="detail.name"
+      :title="modalTitle"
+      :qq-group-number="modalQqNumber"
+      :qq-group-qr="modalQqQr"
+      :qq-group-join-url="modalQqUrl"
+      @update:open="qqModalOpen = $event"
+    />
   </section>
 </template>

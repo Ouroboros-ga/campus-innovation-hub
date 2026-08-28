@@ -18,9 +18,9 @@ from apps.competitions.models import Competition
 from apps.consultations.models import Consultation
 from apps.content.models import Announcement
 from apps.ops_api.base import OperatorAPIView
-from apps.organizations.models import Recruitment
+from apps.organizations.models import Recruitment, RecruitmentApplication
 from apps.public_api.query import validate_query_keys
-from apps.teams.models import TeamPost
+from apps.teams.models import TeamApplication, TeamPost
 
 
 def _parse_days(request: Request) -> int:
@@ -59,16 +59,20 @@ def _daily_counts(model, start_date, end_date):  # noqa: ANN001
 
 class AnalyticsTrendsView(OperatorAPIView):
     def get(self, request: Request) -> Response:
-        validate_query_keys(request, {"days"})
+        validate_query_keys(request, {"days", "nocache"})
         days = _parse_days(request)
+        nocache = request.query_params.get("nocache") is not None
         today = timezone.localdate()
         start_date = today - timedelta(days=days - 1)
         end_date = today
 
         cache_key = f"ops:analytics:trends:{days}:{start_date}:{end_date}"
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return Response(cached)
+        if nocache:
+            cache.delete(cache_key)
+        else:
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return Response(cached)
 
         date_list = [start_date + timedelta(days=i) for i in range(days)]
         date_strs = [str(d) for d in date_list]
@@ -79,6 +83,8 @@ class AnalyticsTrendsView(OperatorAPIView):
             "announcements": Announcement,
             "team_posts": TeamPost,
             "recruitments": Recruitment,
+            "recruitment_applications": RecruitmentApplication,
+            "team_applications": TeamApplication,
             "consultations": Consultation,
             "users": User,
         }

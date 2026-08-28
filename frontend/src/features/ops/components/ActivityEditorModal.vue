@@ -40,7 +40,11 @@ const startAt = ref('')
 const endAt = ref('')
 const location = ref('')
 const organizerName = ref('')
+const summary = ref('')
+const speaker = ref('')
+const notesMd = ref('')
 const registrationRequired = ref(false)
+const registrationStartAt = ref('')
 const registrationEndAt = ref('')
 const capacity = ref<number | null>(null)
 const descriptionMd = ref('')
@@ -61,7 +65,11 @@ watch(
     endAt.value = activity?.endAt?.slice(0, 16) ?? ''
     location.value = activity?.location ?? ''
     organizerName.value = activity?.organizerName ?? ''
+    summary.value = activity?.summary ?? ''
+    speaker.value = activity?.speaker ?? ''
+    notesMd.value = (activity as unknown as { notesMd?: string | null })?.notesMd ?? ''
     registrationRequired.value = activity?.registrationRequired ?? false
+    registrationStartAt.value = activity?.registrationStartAt?.slice(0, 16) ?? ''
     registrationEndAt.value = activity?.registrationEndAt?.slice(0, 16) ?? ''
     capacity.value = activity?.capacity ?? null
     descriptionMd.value = activity?.descriptionMd ?? ''
@@ -79,7 +87,11 @@ const FIELD_MAP: Record<string, string> = {
   title: 'title',
   start_at: 'startAt',
   description_md: 'descriptionMd',
+  summary: 'summary',
+  speaker: 'speaker',
+  notes_md: 'notesMd',
   registration_required: 'registrationRequired',
+  registration_start_at: 'registrationStartAt',
   registration_end_at: 'registrationEndAt',
   capacity: 'capacity',
   location: 'location',
@@ -103,7 +115,11 @@ async function save(publish = false) {
     endAt: endAt.value,
     location: location.value,
     organizerName: organizerName.value,
+    summary: summary.value,
+    speaker: speaker.value,
+    notesMd: notesMd.value,
     registrationRequired: registrationRequired.value,
+    registrationStartAt: registrationStartAt.value,
     registrationEndAt: registrationEndAt.value,
     capacity: capacity.value,
     descriptionMd: descriptionMd.value,
@@ -271,6 +287,21 @@ async function save(publish = false) {
             </FormSection>
 
             <FormSection
+              title="补充信息"
+              description="简介 / 主讲人 / 备注（PRD 可选字段）"
+            >
+              <UFormField label="活动简介（summary）" :error="errors.summary">
+                <UTextarea v-model="summary" :rows="2" placeholder="一句话简介，列表页展示" class="w-full" />
+              </UFormField>
+              <UFormField label="主讲人 / 嘉宾（speaker）" :error="errors.speaker">
+                <UInput v-model="speaker" placeholder="如 张教授 / 特邀嘉宾" class="w-full" />
+              </UFormField>
+              <UFormField label="备注 / 注意事项（notes_md）" :error="errors.notesMd">
+                <UTextarea v-model="notesMd" :rows="3" placeholder="支持 Markdown，展示在详情页注意事项" class="w-full" />
+              </UFormField>
+            </FormSection>
+
+            <FormSection
               title="报名与人数"
               description="报名控制与容量"
             >
@@ -282,14 +313,21 @@ async function save(publish = false) {
               </UFormField>
 
               <div class="grid gap-4 sm:grid-cols-2">
-                <UFormField label="报名截止">
+                <UFormField label="报名开始" :error="errors.registrationStartAt">
+                  <UInput
+                    v-model="registrationStartAt"
+                    type="datetime-local"
+                    class="w-full"
+                  />
+                </UFormField>
+                <UFormField label="报名截止" :error="errors.registrationEndAt">
                   <UInput
                     v-model="registrationEndAt"
                     type="datetime-local"
                     class="w-full"
                   />
                 </UFormField>
-                <UFormField label="人数限制（选填）">
+                <UFormField label="人数限制（选填）" class="sm:col-span-2">
                   <UInputNumber
                     v-model="capacity"
                     :min="1"

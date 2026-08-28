@@ -124,6 +124,13 @@ export interface OrganizationPosition {
   requirements: string | null
 }
 
+/** 组织友情链接（相关竞赛/活动/外链） */
+export interface OrganizationRelatedLink {
+  label: string
+  url: string
+  type: 'competition' | 'activity' | 'external'
+}
+
 /** 组织详情页视图模型（FE-041，PageMap §组织主页）。 */
 export interface OrganizationDetail extends OrganizationSummary {
   /** 完整介绍（Markdown 源，运行时降级为纯文本）。 */
@@ -159,6 +166,16 @@ export interface OrganizationDetail extends OrganizationSummary {
   wechatName: string | null
   /** 单行公开联系方式（兼容字段，页面优先使用结构化联系方式）。 */
   publicContact: string | null
+  /** 招新 QQ 群号（公开引流） */
+  qqGroupNumber: string | null
+  /** 招新 QQ 群二维码（media_asset） */
+  qqGroupQr: HomepageImage | null
+  /** QQ 群入群链接 */
+  qqGroupJoinUrl: string | null
+  /** 是否启用平台在线申请（组织级开关，双轨并行） */
+  allowOnlineApplication: boolean
+  /** 友情链接：相关竞赛/活动 */
+  relatedLinks: OrganizationRelatedLink[]
   recentActivities: OrganizationActivityPreview[]
   currentRecruitments: OrganizationRecruitment[]
 }
@@ -183,6 +200,14 @@ export interface RecruitmentDetail {
   targetGradeMax: number | null
   notesMd: string | null
   positions: OrganizationPosition[]
+  /** 招新独立 QQ 群号（为空回退到组织级） */
+  qqGroupNumber: string | null
+  qqGroupQr: HomepageImage | null
+  qqGroupJoinUrl: string | null
+  /** 本轮是否启用在线申请 */
+  enableOnlineApplication: boolean
+  /** 组织级是否启用（用于双轨并行最终判断） */
+  organizationAllowOnlineApplication: boolean
 }
 
 /** 当前用户的招新申请（Mock store 记录，FE-042）。 */

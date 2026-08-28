@@ -52,11 +52,12 @@ const isMeTab = computed(() => route.name === 'me')
     style="padding-top: env(safe-area-inset-top)"
   >
     <div class="flex h-[3.25rem] items-center justify-between gap-2 px-3">
-      <div class="w-11 shrink-0" />
+      <div class="w-20 shrink-0" />
       <h1 class="min-w-0 flex-1 truncate text-center text-[17px] font-semibold text-highlighted">
         {{ mobileHeaderTitle }}
       </h1>
-      <div class="flex w-11 shrink-0 justify-end">
+      <div class="flex w-20 shrink-0 items-center justify-end gap-0.5">
+        <NotificationButton />
         <UButton
           v-if="isMeTab"
           to="/me/settings"

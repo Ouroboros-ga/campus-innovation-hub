@@ -71,3 +71,33 @@ export function recruitmentCanApply(
 ): boolean {
   return phase === 'OPEN'
 }
+
+/** 双轨并行：该招新是否启用在线申请（组织级与招新级同时为 true 才启用）。 */
+export function recruitmentOnlineEnabled(
+  recruitment: RecruitmentDetail
+): boolean {
+  return recruitment.enableOnlineApplication && recruitment.organizationAllowOnlineApplication
+}
+
+/** 招新是否可在线申请（阶段 OPEN 且启用在线申请）。 */
+export function recruitmentCanApplyOnline(
+  recruitment: RecruitmentDetail,
+  now: Date
+): boolean {
+  const phase = deriveRecruitmentPhase(recruitment, now)
+  return phase === 'OPEN' && recruitmentOnlineEnabled(recruitment)
+}
+
+/** 组织是否启用在线申请。 */
+export function organizationOnlineEnabled(
+  organization: OrganizationDetail
+): boolean {
+  return organization.allowOnlineApplication
+}
+
+/** 组织/招新是否有可展示的入群方式（QQ 群号/二维码/链接任一存在）。 */
+export function hasQqGroup(
+  detail: Pick<OrganizationDetail, 'qqGroupNumber' | 'qqGroupQr' | 'qqGroupJoinUrl'> | Pick<RecruitmentDetail, 'qqGroupNumber' | 'qqGroupQr' | 'qqGroupJoinUrl'>
+): boolean {
+  return Boolean(detail.qqGroupNumber || detail.qqGroupQr?.src || detail.qqGroupJoinUrl)
+}

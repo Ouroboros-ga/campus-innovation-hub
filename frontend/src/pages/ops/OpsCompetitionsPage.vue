@@ -3,8 +3,9 @@ import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import CompetitionEditorModal from '@/features/ops/components/CompetitionEditorModal.vue'
-import { listCompetitions, type OpsCompetition } from '@/features/ops/api/opsCompetitionApi'
+import { importCompetitions, listCompetitions, type OpsCompetition } from '@/features/ops/api/opsCompetitionApi'
 import { getCompetitionHealth, getRecentDrafts, getWorkbenchStats } from '@/features/ops/api/opsOverviewApi'
+import { useToast } from '@nuxt/ui/composables'
 import type { CompetitionHealth, WorkbenchStats } from '@/features/ops/api/opsOverviewApi'
 import { competitionLevelLabel } from '@/shared/lib/domain-labels'
 import { formatCompactDate } from '@/shared/lib/date'
@@ -30,6 +31,10 @@ const pageSize = 20
 const editorOpen = ref(false)
 const editing = ref<OpsCompetition | null>(null)
 const recent = ref<{ drafts: Array<{ title: string; updated_at: string }>; recent: Array<{ title: string; updated_at: string }> } | null>(null)
+const importOpen = ref(false)
+const importFile = ref<File | null>(null)
+const importing = ref(false)
+const importResult = ref<{ success: number; failed: number; errors: Array<{ row: number; message: string }> } | null>(null)
 
 function syncFromRoute() {
   query.value = (route.query.q as string) ?? ''
@@ -136,6 +141,29 @@ function openEdit(item: OpsCompetition) {
   editing.value = item
   editorOpen.value = true
 }
+const toast = useToast()
+function onImportFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  importFile.value = input.files?.[0] ?? null
+  importResult.value = null
+}
+async function onImport() {
+  if (!importFile.value) {
+    toast.add({ title: '请选择 .xlsx 文件', color: 'error' })
+    return
+  }
+  importing.value = true
+  importResult.value = null
+  try {
+    const res = await importCompetitions(importFile.value)
+    importResult.value = res
+    toast.add({ title: `导入完成：成功 ${res.success} / 失败 ${res.failed}`, color: res.failed ? 'warning' : 'success' })
+    if (res.success) await load()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '导入失败'
+    toast.add({ title: msg, color: 'error' })
+  } finally { importing.value = false }
+}
 </script>
 
 <template>
@@ -151,16 +179,14 @@ function openEdit(item: OpsCompetition) {
         </p>
       </div>
       <div class="flex gap-2">
-        <UTooltip text="敬请期待">
-          <UButton
-            color="neutral"
-            variant="outline"
-            icon="i-lucide-upload"
-            disabled
-          >
-            导入数据
-          </UButton>
-        </UTooltip>
+        <UButton
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-upload"
+          @click="importOpen = true"
+        >
+          导入数据
+        </UButton>
         <UButton
           color="primary"
           icon="i-lucide-plus"
@@ -187,7 +213,7 @@ function openEdit(item: OpsCompetition) {
       </div>
       <div class="rounded-lg border border-default bg-default p-3">
         <div class="flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-md bg-success-50 text-success-600 dark:bg-success-950"><UIcon
             name="i-lucide-file-edit"
             class="size-4"
           /></span>
@@ -199,7 +225,7 @@ function openEdit(item: OpsCompetition) {
       </div>
       <div class="rounded-lg border border-default bg-default p-3">
         <div class="flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-md bg-sky-50 text-sky-600 dark:bg-sky-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-md bg-primary-50 text-primary-600 dark:bg-primary-950"><UIcon
             name="i-lucide-send"
             class="size-4"
           /></span>
@@ -211,7 +237,7 @@ function openEdit(item: OpsCompetition) {
       </div>
       <div class="rounded-lg border border-default bg-default p-3">
         <div class="flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-md bg-orange-50 text-orange-600 dark:bg-orange-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-md bg-warning-50 text-warning-600 dark:bg-warning-950"><UIcon
             name="i-lucide-alert-triangle"
             class="size-4"
           /></span>
@@ -223,7 +249,7 @@ function openEdit(item: OpsCompetition) {
       </div>
       <div class="rounded-lg border border-default bg-default p-3">
         <div class="flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-md bg-violet-50 text-violet-600 dark:bg-violet-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-md bg-primary-50 text-primary-600 dark:bg-primary-950"><UIcon
             name="i-lucide-star"
             class="size-4"
           /></span>
@@ -478,5 +504,25 @@ function openEdit(item: OpsCompetition) {
       @update:open="editorOpen=$event"
       @saved="load"
     />
+    <UModal v-model:open="importOpen" title="批量导入竞赛" :ui="{ content: 'sm:max-w-[520px]' }">
+      <template #body>
+        <div class="space-y-3">
+          <p class="text-xs text-muted">支持 .xlsx，表头需含 name/edition（必填），可选 category/level/participation_mode/official_url/description_md 等。</p>
+          <UInput type="file" accept=".xlsx" @change="onImportFileChange" />
+          <div v-if="importResult" class="rounded-md bg-muted p-3 text-xs">
+            <p>成功 {{ importResult.success }} / 失败 {{ importResult.failed }}</p>
+            <ul v-if="importResult.errors.length" class="mt-2 max-h-32 space-y-1 overflow-auto">
+              <li v-for="e in importResult.errors" :key="e.row" class="text-danger-600">第 {{ e.row }} 行：{{ e.message }}</li>
+            </ul>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" color="neutral" @click="importOpen = false">取消</UButton>
+          <UButton :loading="importing" :disabled="!importFile" @click="onImport">开始导入</UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>

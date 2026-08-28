@@ -5,12 +5,13 @@ import { useRoute, useRouter } from 'vue-router'
 import ActivityEditorModal from '@/features/ops/components/ActivityEditorModal.vue'
 import AnnouncementEditorModal from '@/features/ops/components/AnnouncementEditorModal.vue'
 import PublishDynamicsModal from '@/features/ops/components/PublishDynamicsModal.vue'
-import { listActivities } from '@/features/ops/api/opsActivityApi'
+import { exportActivityRegistrations, listActivities } from '@/features/ops/api/opsActivityApi'
 import { listAnnouncements } from '@/features/ops/api/opsAnnouncementApi'
 import { getDynamicsStats } from '@/features/ops/api/opsOverviewApi'
 import type { DynamicsStats } from '@/features/ops/api/opsOverviewApi'
 import type { DynamicsActivity, DynamicsAnnouncement } from '@/features/dynamics/types'
 import { formatCompactDate } from '@/shared/lib/date'
+import { useToast } from '@nuxt/ui/composables'
 
 const route = useRoute()
 const router = useRouter()
@@ -142,6 +143,10 @@ function onPublishSelect(type: 'ACTIVITY' | 'ANNOUNCEMENT' | 'BOTH') {
 }
 function editActivity(a: DynamicsActivity) { editingActivity.value = a; syncAnnouncement.value = false; activityEditorOpen.value = true }
 function editAnnouncement(a: DynamicsAnnouncement) { editingAnnouncement.value = a; announcementEditorOpen.value = true }
+const toast = useToast()
+async function onExport(a: DynamicsActivity) {
+  try { await exportActivityRegistrations(a.id); toast.add({ title: '已开始下载', color: 'success' }) } catch (e) { toast.add({ title: e instanceof Error ? e.message : '导出失败', color: 'error' }) }
+}
 
 const activityTypeOptions = [
   { label: '全部类型', value: 'ALL' },
@@ -249,14 +254,17 @@ const scopeOptions = [
       >
         重置
       </UButton>
-      <UButton
-        color="neutral"
-        variant="outline"
-        size="sm"
-        icon="i-lucide-download"
-      >
-        导出
-      </UButton>
+      <UTooltip text="敬请期待">
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-download"
+          disabled
+        >
+          导出
+        </UButton>
+      </UTooltip>
     </div>
 
     <!-- 统计 5 块 -->
@@ -322,7 +330,7 @@ const scopeOptions = [
         v-if="tab==='all' || tab==='activities'"
         class="rounded-lg border border-default bg-default"
       >
-        <div class="overflow-x-auto">
+        <div class="hidden overflow-x-auto md:block">
           <table class="w-full text-sm">
             <thead class="bg-muted/50 text-xs text-muted">
               <tr>
@@ -424,6 +432,15 @@ const scopeOptions = [
                     >
                       预览
                     </UButton>
+                    <UButton
+                      size="xs"
+                      variant="ghost"
+                      color="neutral"
+                      icon="i-lucide-download"
+                      @click="onExport(a)"
+                    >
+                      导出
+                    </UButton>
                   </div>
                 </td>
               </tr>
@@ -437,6 +454,35 @@ const scopeOptions = [
               </tr>
             </tbody>
           </table>
+        </div>
+        <!-- Phone 活动卡片 -->
+        <div class="p-3 md:hidden">
+          <div v-if="!activities.length" class="py-6 text-center text-sm text-muted">暂无活动</div>
+          <div v-else class="space-y-3">
+            <div
+              v-for="a in activities"
+              :key="a.id"
+              class="rounded-lg border border-default bg-default p-3"
+            >
+            <div class="flex gap-3">
+              <img v-if="a.cover?.src" :src="a.cover.src" class="size-12 shrink-0 rounded object-cover" alt="">
+              <div v-else class="grid size-12 place-items-center rounded bg-muted text-xs">无图</div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold text-highlighted">{{ a.title }}</p>
+                <p class="truncate text-xs text-muted">{{ a.location }}</p>
+                <div class="mt-1 flex items-center gap-1.5">
+                  <UBadge size="xs" variant="soft" color="success">活动</UBadge>
+                  <UBadge size="xs" :color="a.publicationState==='PUBLISHED'?'success':a.publicationState==='DRAFT'?'warning':'neutral'" variant="soft">{{ a.publicationState==='PUBLISHED'?'已发布':a.publicationState==='DRAFT'?'草稿':'已归档' }}</UBadge>
+                </div>
+              </div>
+            </div>
+            <div class="mt-3 flex gap-1">
+              <UButton size="xs" variant="ghost" color="neutral" @click="editActivity(a)">编辑</UButton>
+              <UButton size="xs" variant="ghost" color="neutral" :to="a.detailPath">预览</UButton>
+              <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-download" @click="onExport(a)">导出</UButton>
+            </div>
+          </div>
+          </div>
         </div>
         <div
           v-if="totalActivities > pageSize"
@@ -456,7 +502,7 @@ const scopeOptions = [
         v-if="tab==='all' || tab==='announcements'"
         class="rounded-lg border border-default bg-default"
       >
-        <div class="overflow-x-auto">
+        <div class="hidden overflow-x-auto md:block">
           <table class="w-full text-sm">
             <thead class="bg-muted/50 text-xs text-muted">
               <tr>
@@ -559,6 +605,32 @@ const scopeOptions = [
               </tr>
             </tbody>
           </table>
+        </div>
+        <!-- Phone 公告卡片 -->
+        <div class="p-3 md:hidden">
+          <div v-if="!announcements.length" class="py-6 text-center text-sm text-muted">暂无公告</div>
+          <div v-else class="space-y-3">
+            <div
+              v-for="a in announcements"
+              :key="a.id"
+              class="rounded-lg border border-default bg-default p-3"
+            >
+              <div class="flex gap-2">
+                <div class="grid size-10 place-items-center rounded bg-muted"><UIcon name="i-lucide-megaphone" class="size-5 text-muted" /></div>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-semibold text-highlighted">{{ a.title }}</p>
+                  <p class="truncate text-xs text-muted">{{ a.publisherScope }}</p>
+                  <div class="mt-1">
+                    <UBadge size="xs" :color="a.publicationState==='PUBLISHED'?'success':a.publicationState==='DRAFT'?'warning':'neutral'" variant="soft">{{ a.publicationState==='PUBLISHED'?'已发布':a.publicationState==='DRAFT'?'草稿':'已归档' }}</UBadge>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-3 flex gap-1">
+                <UButton size="xs" variant="ghost" color="neutral" @click="editAnnouncement(a)">编辑</UButton>
+                <UButton size="xs" variant="ghost" color="neutral" :to="a.detailPath">预览</UButton>
+              </div>
+            </div>
+          </div>
         </div>
         <div
           v-if="totalAnnouncements > pageSize"

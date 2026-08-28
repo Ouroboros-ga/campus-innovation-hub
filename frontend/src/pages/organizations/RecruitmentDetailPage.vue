@@ -13,6 +13,7 @@ import {
 } from '@/shared/lib/domain-labels'
 
 import OrganizationDetailSection from '@/features/organizations/components/OrganizationDetailSection.vue'
+import QqGroupJoinModal from '@/features/organizations/components/QqGroupJoinModal.vue'
 import RecruitmentApplicationModal from '@/features/organizations/components/RecruitmentApplicationModal.vue'
 import RecruitmentPositionCard from '@/features/organizations/components/RecruitmentPositionCard.vue'
 import { getRecruitment } from '@/features/organizations/api/organizationApi'
@@ -22,7 +23,7 @@ import {
 } from '@/features/organizations/lib/organizationApplication'
 import {
   deriveRecruitmentPhase,
-  recruitmentCanApply
+  recruitmentOnlineEnabled
 } from '@/features/organizations/lib/organizationDetail'
 import {
   recruitmentApplicationStateLabel,
@@ -35,12 +36,9 @@ import type {
 } from '@/features/organizations/types'
 
 /**
- * 招新详情（FE-042）— /organizations/:id/recruitments/:recruitmentId
- *
- * 展示：组织名、招新标题、状态、截止时间、招新介绍、面向年级、其他说明、岗位列表。
- * 主操作「申请加入」（§14 / §16.3），申请为短表单 Modal（§27）。
- * 设计来源：PageMap §招新详情 / §招新申请；database-design.md §11。
- * Phone 使用 Detail Shell + Sticky 操作条（仅「招新中」阶段）。
+ * 招新详情（FE-042 · A 双轨并行）。
+ * 主操作：查看入群方式（二维码/群号/链接）；
+ * 次操作：在线申请（仅当组织与本轮均启用时展示，科创部自用）。
  */
 const route = useRoute()
 const toast = useToast()
@@ -54,6 +52,7 @@ const error = ref(false)
 const now = computed(() => new Date())
 
 const modalOpen = ref(false)
+const qqModalOpen = ref(false)
 const defaultPositionId = ref<string | undefined>(undefined)
 const activeApplication = ref<MyRecruitmentApplication | undefined>(undefined)
 
@@ -77,9 +76,11 @@ watch(recruitmentId, load, { immediate: true })
 const phase = computed(() =>
   detail.value ? deriveRecruitmentPhase(detail.value, now.value) : null
 )
-const canApply = computed(() =>
-  phase.value ? recruitmentCanApply(phase.value) : false
+const isOpen = computed(() => phase.value === 'OPEN')
+const onlineEnabled = computed(() =>
+  detail.value ? recruitmentOnlineEnabled(detail.value) : false
 )
+const canApplyOnline = computed(() => isOpen.value && onlineEnabled.value && !activeApplication.value)
 
 const deadlineText = computed(() =>
   detail.value ? formatCompactDate(detail.value.applyEndAt) : ''
@@ -114,6 +115,10 @@ function openApply(positionId?: string) {
   modalOpen.value = true
 }
 
+function openQq() {
+  qqModalOpen.value = true
+}
+
 /** 提交申请。 */
 function handleSubmit(draft: RecruitmentApplicationDraft) {
   const positionName =
@@ -133,7 +138,7 @@ function handleSubmit(draft: RecruitmentApplicationDraft) {
 <template>
   <section
     class="py-10 sm:py-14"
-    :class="{ 'pb-28 md:pb-14': detail && canApply }"
+    :class="{ 'pb-28 md:pb-14': detail && isOpen }"
   >
     <PageContainer class="max-w-3xl">
       <template v-if="loading">
@@ -185,6 +190,9 @@ function handleSubmit(draft: RecruitmentApplicationDraft) {
             :color="phaseColor(phase)"
           >
             {{ recruitmentPhaseLabel[phase] }}
+          </UBadge>
+          <UBadge v-if="!onlineEnabled" size="sm" variant="soft" color="neutral">
+            仅 QQ 群引流
           </UBadge>
         </div>
 
@@ -243,7 +251,7 @@ function handleSubmit(draft: RecruitmentApplicationDraft) {
 
         <!-- 未开放 / 未开放的原因提示 -->
         <div
-          v-else-if="detail && !canApply"
+          v-else-if="detail && !isOpen"
           class="mt-5 rounded-surface border border-default bg-default p-3 text-sm text-toned"
         >
           <template v-if="phase === 'UPCOMING'">
@@ -256,21 +264,31 @@ function handleSubmit(draft: RecruitmentApplicationDraft) {
           </template>
         </div>
 
+        <!-- 双轨主操作：入群为主 -->
         <div class="mt-6 flex flex-wrap items-center gap-2">
           <UButton
-            v-if="canApply && !activeApplication"
             color="primary"
             variant="solid"
-            icon="i-lucide-user-plus"
-            @click="openApply()"
+            icon="i-lucide-qr-code"
+            @click="openQq"
           >
-            申请加入
+            查看入群方式
           </UButton>
           <UButton
-            v-if="canApply && activeApplication"
+            v-if="canApplyOnline"
+            color="neutral"
+            variant="soft"
+            icon="i-lucide-file-text"
+            @click="openApply()"
+          >
+            在线申请（试点）
+          </UButton>
+          <UButton
+            v-if="activeApplication"
             color="neutral"
             variant="soft"
             icon="i-lucide-check"
+            disabled
           >
             已申请
           </UButton>
@@ -282,6 +300,41 @@ function handleSubmit(draft: RecruitmentApplicationDraft) {
           >
             查看组织主页
           </UButton>
+        </div>
+        <p v-if="isOpen && !onlineEnabled" class="mt-2 text-xs text-muted">
+          该轮招新未启用在线申请，请通过 QQ 群入群咨询与报名；科创部等组织可保持在线申请开启。
+        </p>
+        <p v-else-if="isOpen && onlineEnabled" class="mt-2 text-xs text-muted">
+          优先加入 QQ 群获取最新安排；也可通过「在线申请（试点）」提交表单。
+        </p>
+
+        <!-- 入群方式卡片（常驻） -->
+        <div class="mt-6 rounded-card border border-primary-200 bg-primary-50 p-4 dark:border-primary-800 dark:bg-primary-900/20">
+          <h3 class="flex items-center gap-1.5 text-sm font-semibold text-highlighted">
+            <UIcon name="i-lucide-message-circle" class="size-4 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+            招新 QQ 群
+          </h3>
+          <div class="mt-3 flex items-start gap-4">
+            <div class="grid size-20 shrink-0 place-items-center overflow-hidden rounded-lg border border-default bg-default">
+              <img
+                v-if="detail.qqGroupQr?.src"
+                :src="detail.qqGroupQr.src"
+                :alt="detail.qqGroupQr.alt"
+                class="size-full object-contain"
+              />
+              <UIcon v-else name="i-lucide-qr-code" class="size-8 text-muted" aria-hidden="true" />
+            </div>
+            <div class="min-w-0 flex-1">
+              <p v-if="detail.qqGroupNumber" class="font-mono text-sm font-semibold text-highlighted">群号 {{ detail.qqGroupNumber }}</p>
+              <p v-else class="text-sm text-muted">群号由社团提供，见二维码</p>
+              <p class="mt-1 text-xs leading-5 text-toned">
+                扫码入群或点击「查看入群方式」复制群号、打开入群链接。平台仅作引流，不替代社团自主审核。
+              </p>
+              <UButton color="primary" variant="soft" size="xs" class="mt-2" icon="i-lucide-qr-code" @click="openQq">
+                查看二维码
+              </UButton>
+            </div>
+          </div>
         </div>
 
         <div class="mt-8 space-y-8">
@@ -308,15 +361,25 @@ function handleSubmit(draft: RecruitmentApplicationDraft) {
               >
                 <RecruitmentPositionCard :position="position">
                   <template #footer>
-                    <UButton
-                      v-if="canApply && !activeApplication"
-                      color="neutral"
-                      variant="outline"
-                      size="sm"
-                      @click="openApply(position.id)"
-                    >
-                      申请此岗位
-                    </UButton>
+                    <div class="flex gap-2">
+                      <UButton
+                        color="primary"
+                        variant="soft"
+                        size="sm"
+                        @click="openQq"
+                      >
+                        入群咨询
+                      </UButton>
+                      <UButton
+                        v-if="canApplyOnline"
+                        color="neutral"
+                        variant="outline"
+                        size="sm"
+                        @click="openApply(position.id)"
+                      >
+                        申请此岗位
+                      </UButton>
+                    </div>
                   </template>
                 </RecruitmentPositionCard>
               </li>
@@ -326,26 +389,48 @@ function handleSubmit(draft: RecruitmentApplicationDraft) {
       </template>
     </PageContainer>
 
-    <!-- Phone Sticky 申请操作条（仅「招新中」且未申请时） -->
+    <!-- Phone Sticky：入群为主 -->
     <div
-      v-if="detail && canApply && !activeApplication"
+      v-if="detail && isOpen"
       class="fixed inset-x-0 bottom-0 z-40 border-t border-default bg-default md:hidden"
       style="padding-bottom: env(safe-area-inset-bottom)"
     >
       <div class="mx-auto flex max-w-2xl items-center gap-3 px-4 py-3">
         <p class="min-w-0 flex-1 text-sm text-muted">
-          报名已开放
+          <span v-if="onlineEnabled">优先入群 · 可在线申请</span>
+          <span v-else>请加入 QQ 群报名</span>
         </p>
         <UButton
           color="primary"
           variant="solid"
           class="shrink-0"
+          icon="i-lucide-qr-code"
+          @click="openQq"
+        >
+          入群方式
+        </UButton>
+        <UButton
+          v-if="canApplyOnline"
+          color="neutral"
+          variant="soft"
+          class="shrink-0 hidden sm:inline-flex"
           @click="openApply()"
         >
-          申请加入
+          在线申请
         </UButton>
       </div>
     </div>
+
+    <QqGroupJoinModal
+      v-if="detail"
+      :open="qqModalOpen"
+      :organization-name="detail.organization.name"
+      :title="detail.title"
+      :qq-group-number="detail.qqGroupNumber"
+      :qq-group-qr="detail.qqGroupQr"
+      :qq-group-join-url="detail.qqGroupJoinUrl"
+      @update:open="qqModalOpen = $event"
+    />
 
     <RecruitmentApplicationModal
       v-if="detail"

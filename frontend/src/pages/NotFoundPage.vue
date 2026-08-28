@@ -25,11 +25,15 @@ function goBack() {
             aria-hidden="true"
           />
         </div>
-        <h1 class="text-2xl font-bold text-highlighted">页面未找到</h1>
+        <h1 class="text-2xl font-bold text-highlighted">
+          页面未找到
+        </h1>
         <p class="text-sm leading-6 text-muted">
           你访问的页面不存在或已移动。请检查地址是否正确，或返回首页继续浏览。
         </p>
-        <p class="font-mono text-xs text-muted">404 · NOT_FOUND</p>
+        <p class="font-mono text-xs text-muted">
+          404 · NOT_FOUND
+        </p>
         <div class="mt-4 flex gap-3">
           <UButton
             color="primary"

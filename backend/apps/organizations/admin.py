@@ -15,10 +15,10 @@ from apps.organizations.services import (
 
 @admin.register(Organization)
 class OrganizationAdmin(NoDeleteAdminMixin, admin.ModelAdmin):
-    list_display = ["name", "organization_type", "is_active", "updated_at"]
-    list_filter = ["organization_type", "is_active"]
-    search_fields = ["name", "short_intro"]
-    raw_id_fields = ["logo_asset", "banner_asset"]
+    list_display = ["name", "organization_type", "qq_group_number", "allow_online_application", "is_active", "updated_at"]
+    list_filter = ["organization_type", "allow_online_application", "is_active"]
+    search_fields = ["name", "short_intro", "qq_group_number"]
+    raw_id_fields = ["logo_asset", "banner_asset", "qq_group_qr_asset"]
     exclude = ["is_active", "created_by", "updated_by"]
     actions = ["activate_organizations", "deactivate_organizations"]
 
@@ -97,10 +97,10 @@ class OrganizationMembershipAdmin(AuditedAdminMixin, admin.ModelAdmin):
 
 @admin.register(Recruitment)
 class RecruitmentAdmin(AuditedAdminMixin, admin.ModelAdmin):
-    list_display = ["title", "organization", "publication_state", "apply_end_at", "completed_at"]
-    list_filter = ["publication_state"]
-    search_fields = ["title", "organization__name"]
-    raw_id_fields = ["organization", "created_by", "updated_by"]
+    list_display = ["title", "organization", "publication_state", "qq_group_number", "enable_online_application", "apply_end_at", "completed_at"]
+    list_filter = ["publication_state", "enable_online_application"]
+    search_fields = ["title", "organization__name", "qq_group_number"]
+    raw_id_fields = ["organization", "qq_group_qr_asset", "created_by", "updated_by"]
     readonly_fields = ["publication_state", "completed_at"]
 
 

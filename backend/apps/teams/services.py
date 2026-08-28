@@ -138,7 +138,9 @@ def create_team_application(
 ) -> TeamApplication:
     """提交申请时锁住帖子与岗位，防止关闭、满员或岗位变更的竞态。"""
 
-    post = TeamPost.objects.select_for_update().select_related("author").get(pk=team.pk)
+    post = TeamPost.objects.select_for_update().select_related("author", "competition").get(pk=team.pk)
+    if post.competition.publication_state != Competition.PublicationState.PUBLISHED:
+        raise TimeWindowClosed("关联竞赛已下线，当前不可申请。")
     if post.author_id == actor.id:
         raise CannotApplyOwn
     if post.status != TeamPost.Status.RECRUITING:
@@ -215,7 +217,9 @@ def accept_team_application(*, actor: User, application: TeamApplication) -> Tea
     """锁定帖子和申请后再统计名额，避免并发接受导致超额。"""
 
     basis = TeamApplication.objects.only("id", "team_post_id").get(pk=application.pk)
-    post = TeamPost.objects.select_for_update().get(pk=basis.team_post_id)
+    post = TeamPost.objects.select_for_update().select_related("competition").get(pk=basis.team_post_id)
+    if post.competition.publication_state != Competition.PublicationState.PUBLISHED:
+        raise TimeWindowClosed("关联竞赛已下线，当前不可处理申请。")
     locked_application = TeamApplication.objects.select_for_update().get(pk=basis.pk)
     if actor.id != post.author_id and not actor.is_superuser:
         raise PermissionDenied

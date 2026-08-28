@@ -383,84 +383,108 @@ onMounted(async () => {
       >
         暂无 Banner
       </div>
-      <div
-        v-else
-        class="overflow-x-auto"
-      >
-        <table class="w-full text-left text-sm">
-          <thead class="border-b border-default bg-muted/40 text-xs text-muted">
-            <tr>
-              <th class="px-3 py-2 font-medium">
-                排序
-              </th>
-              <th class="px-3 py-2 font-medium">
-                标题
-              </th>
-              <th class="px-3 py-2 font-medium">
-                状态
-              </th>
-              <th class="px-3 py-2 font-medium">
-                链接
-              </th>
-              <th class="px-3 py-2 font-medium">
-                时间窗
-              </th>
-              <th class="px-3 py-2 font-medium">
-                操作
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="b in banners"
-              :key="b.id"
-              class="border-b border-default last:border-0 hover:bg-muted/30"
-            >
-              <td class="px-3 py-2 font-mono text-xs">
-                {{ b.sortOrder }}
-              </td>
-              <td class="px-3 py-2 font-medium">
-                {{ b.title }}
-              </td>
-              <td class="px-3 py-2">
-                <UBadge
-                  :color="b.isActive ? 'success' : 'neutral'"
-                  variant="soft"
-                  size="xs"
-                >
-                  {{ b.isActive ? '启用' : '停用' }}
-                </UBadge>
-              </td>
-              <td class="px-3 py-2 text-xs">
+      <template v-else>
+        <div class="hidden overflow-x-auto md:block">
+          <table class="w-full text-left text-sm">
+            <thead class="border-b border-default bg-muted/40 text-xs text-muted">
+              <tr>
+                <th class="px-3 py-2 font-medium">
+                  排序
+                </th>
+                <th class="px-3 py-2 font-medium">
+                  标题
+                </th>
+                <th class="px-3 py-2 font-medium">
+                  状态
+                </th>
+                <th class="px-3 py-2 font-medium">
+                  链接
+                </th>
+                <th class="px-3 py-2 font-medium">
+                  时间窗
+                </th>
+                <th class="px-3 py-2 font-medium">
+                  操作
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="b in banners"
+                :key="b.id"
+                class="border-b border-default last:border-0 hover:bg-muted/30"
+              >
+                <td class="px-3 py-2 font-mono text-xs">
+                  {{ b.sortOrder }}
+                </td>
+                <td class="px-3 py-2 font-medium">
+                  {{ b.title }}
+                </td>
+                <td class="px-3 py-2">
+                  <UBadge
+                    :color="b.isActive ? 'success' : 'neutral'"
+                    variant="soft"
+                    size="xs"
+                  >
+                    {{ b.isActive ? '启用' : '停用' }}
+                  </UBadge>
+                </td>
+                <td class="px-3 py-2 text-xs">
+                  <span class="font-mono">{{ b.linkType }}</span>
+                  <span
+                    v-if="b.internalPath"
+                    class="ml-1 text-muted"
+                  >{{ b.internalPath }}</span>
+                  <span
+                    v-else-if="b.externalUrl"
+                    class="ml-1 text-muted"
+                  >{{ b.externalUrl }}</span>
+                </td>
+                <td class="px-3 py-2 text-xs text-muted">
+                  <span v-if="b.startAt || b.endAt">{{ b.startAt ? new Date(b.startAt).toLocaleString() : '—' }} ~ {{ b.endAt ? new Date(b.endAt).toLocaleString() : '—' }}</span>
+                  <span v-else>常显</span>
+                </td>
+                <td class="px-3 py-2">
+                  <UButton
+                    size="xs"
+                    variant="ghost"
+                    color="neutral"
+                    icon="i-lucide-pencil"
+                    @click="openEdit(b)"
+                  >
+                    编辑
+                  </UButton>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Phone 卡片 -->
+        <div class="space-y-3 p-3 md:hidden">
+        <div
+          v-for="b in banners"
+          :key="b.id"
+          class="rounded-lg border border-default bg-default p-3"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="truncate text-sm font-semibold text-highlighted">{{ b.title }}</p>
+              <p class="mt-1 flex items-center gap-1.5 text-xs text-muted">
                 <span class="font-mono">{{ b.linkType }}</span>
-                <span
-                  v-if="b.internalPath"
-                  class="ml-1 text-muted"
-                >{{ b.internalPath }}</span>
-                <span
-                  v-else-if="b.externalUrl"
-                  class="ml-1 text-muted"
-                >{{ b.externalUrl }}</span>
-              </td>
-              <td class="px-3 py-2 text-xs text-muted">
-                <span v-if="b.startAt || b.endAt">{{ b.startAt ? new Date(b.startAt).toLocaleString() : '—' }} ~ {{ b.endAt ? new Date(b.endAt).toLocaleString() : '—' }}</span>
-                <span v-else>常显</span>
-              </td>
-              <td class="px-3 py-2">
-                <UButton
-                  size="xs"
-                  variant="ghost"
-                  color="neutral"
-                  icon="i-lucide-pencil"
-                  @click="openEdit(b)"
-                >
-                  编辑
-                </UButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                <span v-if="b.internalPath" class="truncate">{{ b.internalPath }}</span>
+                <span v-else-if="b.externalUrl" class="truncate">{{ b.externalUrl }}</span>
+              </p>
+            </div>
+            <UBadge :color="b.isActive ? 'success' : 'neutral'" variant="soft" size="xs">{{ b.isActive ? '启用' : '停用' }}</UBadge>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-xs text-muted">
+            <span class="font-mono">#{{ b.sortOrder }}</span>
+            <span>{{ b.startAt ? new Date(b.startAt).toLocaleDateString() : '—' }} ~ {{ b.endAt ? new Date(b.endAt).toLocaleDateString() : '常显' }}</span>
+            <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-pencil" @click="openEdit(b)">编辑</UButton>
+          </div>
+        </div>
+        </div>
+      </template>
     </div>
 
     <div class="rounded-lg border border-default bg-default p-4 sm:col-span-2">

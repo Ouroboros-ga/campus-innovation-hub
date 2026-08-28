@@ -47,7 +47,7 @@ const overviewItems = computed(() => {
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-lg font-semibold text-highlighted">
-          运营工作台 👋
+          运营工作台
         </h2>
         <p class="mt-1 text-sm text-muted">
           统一管理平台内容，提升运营效率与内容质量
@@ -76,9 +76,14 @@ const overviewItems = computed(() => {
             </h3>
             <RouterLink
               to="/ops/questions"
-              class="text-xs text-primary-600 hover:underline"
+              class="inline-flex items-center gap-1 text-xs text-primary-600 hover:underline"
             >
-              查看全部待办 →
+              查看全部待办
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-3.5"
+                aria-hidden="true"
+              />
             </RouterLink>
           </div>
           <div class="grid grid-cols-2 gap-3">
@@ -187,9 +192,14 @@ const overviewItems = computed(() => {
             </h3>
             <RouterLink
               to="/ops/competitions"
-              class="text-xs text-primary-600 hover:underline"
+              class="inline-flex items-center gap-1 text-xs text-primary-600 hover:underline"
             >
-              查看全部 →
+              查看全部
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-3.5"
+                aria-hidden="true"
+              />
             </RouterLink>
           </div>
           <ul class="space-y-2">
@@ -230,9 +240,14 @@ const overviewItems = computed(() => {
             </h3>
             <RouterLink
               to="/ops/competitions"
-              class="text-xs text-primary-600 hover:underline"
+              class="inline-flex items-center gap-1 text-xs text-primary-600 hover:underline"
             >
-              查看全部 →
+              查看全部
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-3.5"
+                aria-hidden="true"
+              />
             </RouterLink>
           </div>
           <ul class="space-y-2">

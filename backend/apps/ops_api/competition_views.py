@@ -158,3 +158,85 @@ class CompetitionTimelineDetailView(OperatorAPIView):
         competition = _competition_or_404(object_id)
         delete_timeline_event(actor=request.user, competition=competition, event=_timeline_or_404(competition, event_id))
         return Response(status=204)
+
+
+class CompetitionImportView(OperatorAPIView):
+    def post(self, request: Request) -> Response:
+        file = request.FILES.get("file")
+        if file is None:
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError({"file": ["请上传 .xlsx 文件。"]})
+        name = getattr(file, "name", "") or ""
+        if not name.lower().endswith(".xlsx"):
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError({"file": ["仅支持 .xlsx 文件。"]})
+        if file.size and file.size > 5 * 1024 * 1024:
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError({"file": ["文件大小不能超过 5MB。"]})
+        try:
+            import openpyxl  # type: ignore
+        except ImportError as exc:
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError({"file": ["服务器未安装 openpyxl，无法解析 Excel。"]}) from exc
+        try:
+            wb = openpyxl.load_workbook(file, read_only=True, data_only=True)
+            ws = wb.active
+            if ws is None:
+                raise ValueError("工作表为空。")
+            rows = list(ws.iter_rows(values_only=True))
+        except Exception as exc:
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError({"file": [f"解析 Excel 失败：{exc}"]}) from exc
+        if not rows:
+            return Response({"success": 0, "failed": 0, "errors": []})
+        header = [str(c or "").strip().lower() for c in rows[0]]
+        # 期望表头：name, edition, category, level 等（大小写不敏感）
+        required = {"name", "edition"}
+        missing = required - set(header)
+        if missing:
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError({"file": [f"表头缺少必填列：{', '.join(sorted(missing))}"]})
+        idx = {h: i for i, h in enumerate(header)}
+        success = 0
+        failed = 0
+        errors: list[dict] = []
+        from django.db import transaction
+
+        for row_num, row in enumerate(rows[1:], start=2):
+            if row is None or all(c is None or str(c).strip() == "" for c in row):
+                continue
+            try:
+                payload = {
+                    "name": str(row[idx["name"]] or "").strip(),
+                    "edition": str(row[idx["edition"]] or "").strip(),
+                    "category": str(row[idx.get("category", -1)] or "OTHER").strip().upper() if "category" in idx else "OTHER",
+                    "level": str(row[idx.get("level", -1)] or "SCHOOL").strip().upper() if "level" in idx else "SCHOOL",
+                    "participation_mode": str(row[idx.get("participation_mode", -1)] or "TEAM").strip().upper() if "participation_mode" in idx else "TEAM",
+                    "registration_start_at": None,
+                    "registration_end_at": None,
+                    "official_url": str(row[idx.get("official_url", -1)] or "").strip() or None,
+                    "description_md": str(row[idx.get("description_md", -1)] or "").strip() or "批量导入",
+                }
+                # 尝试解析可选日期/链接等
+                if "registration_end_at" in idx and row[idx["registration_end_at"]]:
+                    payload["registration_end_at"] = str(row[idx["registration_end_at"]]).strip()
+                serializer = CompetitionCreateSerializer(data=payload)
+                serializer.is_valid(raise_exception=True)
+                with transaction.atomic():
+                    create_competition(actor=request.user, payload=serializer.validated_data)
+                success += 1
+            except Exception as exc:
+                failed += 1
+                msg = getattr(exc, "detail", None) or str(exc)
+                if isinstance(msg, dict):
+                    msg = "; ".join(f"{k}: {v}" for k, v in msg.items())
+                errors.append({"row": row_num, "message": str(msg)[:500]})
+                if len(errors) >= 50:
+                    break
+        return Response({"success": success, "failed": failed, "errors": errors})
