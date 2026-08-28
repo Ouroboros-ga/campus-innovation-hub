@@ -32,3 +32,22 @@ export function listOpsOrganizations(params: {
     }
   })
 }
+
+export interface OrganizationCreatePayload {
+  name: string
+  organization_type: string
+  short_intro?: string | null
+  description_md?: string | null
+  logo_asset_id?: string | null
+  banner_asset_id?: string | null
+  public_contact?: string | null
+  qq_group_number?: string | null
+  qq_group_qr_asset_id?: string | null
+  qq_group_join_url?: string | null
+  allow_online_application?: boolean
+  related_links_json?: Array<{ label?: string | null; url?: string | null; type?: string | null }>
+}
+
+export function createOpsOrganization(payload: OrganizationCreatePayload) {
+  return http.post<OpsOrganization>('/ops/organizations', payload)
+}

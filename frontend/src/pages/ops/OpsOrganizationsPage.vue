@@ -2,6 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import OrganizationEditorModal from '@/features/ops/components/OrganizationEditorModal.vue'
 import { listOpsOrganizations, type OpsOrganization } from '@/features/ops/api/opsOrganizationApi'
 import { getOrganizationStats, type OrganizationStats } from '@/features/ops/api/opsOverviewApi'
 import { formatCompactDate } from '@/shared/lib/date'
@@ -21,6 +22,7 @@ const orgType = ref((route.query.org_type as string) ?? 'ALL')
 const recruiting = ref((route.query.recruiting as string) ?? 'ALL')
 const page = ref(Number(route.query.page ?? 1) || 1)
 const pageSize = 20
+const editorOpen = ref(false)
 
 function syncFromRoute() {
   query.value = (route.query.q as string) ?? ''
@@ -81,6 +83,7 @@ function onReset() {
   query.value = ''; orgType.value = 'ALL'; recruiting.value = 'ALL'; page.value = 1
   router.replace({ query: {} })
 }
+function openCreate() { editorOpen.value = true }
 
 const typeOptions = [
   { label: '组织类型', value: 'ALL' },
@@ -108,15 +111,13 @@ const recruitingOptions = [
           管理学院所有社团组织信息、招新状态与资料内容
         </p>
       </div>
-      <UTooltip text="敬请期待">
-        <UButton
-          color="primary"
-          icon="i-lucide-plus"
-          disabled
-        >
-          新建组织
-        </UButton>
-      </UTooltip>
+      <UButton
+        color="primary"
+        icon="i-lucide-plus"
+        @click="openCreate"
+      >
+        新建组织
+      </UButton>
     </div>
 
     <!-- 顶部统计 -->
@@ -489,6 +490,8 @@ const recruitingOptions = [
         @update:page="onPageChange"
       />
     </div>
+
+    <OrganizationEditorModal :open="editorOpen" @update:open="editorOpen = $event" @saved="load" />
   </div>
 </template>
 

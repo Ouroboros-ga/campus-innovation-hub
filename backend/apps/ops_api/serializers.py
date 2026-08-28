@@ -457,6 +457,86 @@ class BannerPatchSerializer(_BannerWriteBase):
         return super().validate(attrs)
 
 
+class OrganizationCreateSerializer(StrictSerializer):
+    name = serializers.CharField(min_length=2, max_length=100)
+    organization_type = serializers.ChoiceField(choices=Organization.OrganizationType.choices)
+    short_intro = serializers.CharField(max_length=200, required=False, allow_null=True, allow_blank=True, default=None)
+    description_md = serializers.CharField(max_length=10000, required=False, allow_null=True, allow_blank=True, default=None)
+    logo_asset_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    banner_asset_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    public_contact = serializers.CharField(max_length=200, required=False, allow_null=True, allow_blank=True, default=None)
+    qq_group_number = serializers.CharField(max_length=30, required=False, allow_null=True, allow_blank=True, default=None)
+    qq_group_qr_asset_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    qq_group_join_url = serializers.CharField(max_length=500, required=False, allow_null=True, allow_blank=True, default=None)
+    allow_online_application = serializers.BooleanField(required=False, default=True)
+    related_links_json = serializers.ListField(
+        child=serializers.DictField(), required=False, allow_empty=True, default=list, max_length=10
+    )
+
+    def validate_qq_group_join_url(self, value: Any) -> Any:
+        if value in (None, ""):
+            return None
+        # 允许 http(s) 或空，复用 URL 校验
+        validator = URLValidator(schemes=["http", "https"])
+        try:
+            validator(value)
+        except Exception as exc:
+            raise serializers.ValidationError("请输入合法的 http(s) 链接。") from exc
+        return value
+
+    def validate_related_links_json(self, value: Any) -> Any:
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError("related_links_json 必须是数组。")
+        if len(value) > 10:
+            raise serializers.ValidationError("友情链接最多 10 条。")
+        allowed_types = {"competition", "activity", "external"}
+        cleaned: list[dict[str, Any]] = []
+        for idx, item in enumerate(value):
+            if not isinstance(item, dict):
+                raise serializers.ValidationError(f"第 {idx + 1} 项必须是对象。")
+            label = item.get("label")
+            url = item.get("url")
+            link_type = item.get("type")
+            if label is not None and not isinstance(label, str):
+                raise serializers.ValidationError(f"第 {idx + 1} 项 label 必须是字符串。")
+            if url is not None and not isinstance(url, str):
+                raise serializers.ValidationError(f"第 {idx + 1} 项 url 必须是字符串。")
+            if link_type is not None and not isinstance(link_type, str):
+                raise serializers.ValidationError(f"第 {idx + 1} 项 type 必须是字符串。")
+            if label is not None and len(label) > 40:
+                raise serializers.ValidationError(f"第 {idx + 1} 项 label 最多 40 字符。")
+            if url is not None and len(url) > 500:
+                raise serializers.ValidationError(f"第 {idx + 1} 项 url 最多 500 字符。")
+            if link_type is not None and link_type not in allowed_types:
+                raise serializers.ValidationError(f"第 {idx + 1} 项 type 只能是 {', '.join(sorted(allowed_types))}。")
+            # 空字符串转 None
+            cleaned.append(
+                {
+                    "label": (label.strip() if isinstance(label, str) and label.strip() else None),
+                    "url": (url.strip() if isinstance(url, str) and url.strip() else None),
+                    "type": (link_type.strip() if isinstance(link_type, str) and link_type.strip() else None),
+                }
+            )
+        return cleaned
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        # 空字符串 -> None
+        for field in ("short_intro", "description_md", "public_contact", "qq_group_number", "qq_group_join_url"):
+            if attrs.get(field) == "":
+                attrs[field] = None
+        # MediaAsset 校验
+        for field in ("logo_asset_id", "banner_asset_id", "qq_group_qr_asset_id"):
+            asset_id = attrs.get(field)
+            if asset_id is not None and not MediaAsset.objects.filter(
+                id=asset_id, kind=MediaAsset.Kind.IMAGE, status=MediaAsset.Status.ACTIVE
+            ).exists():
+                raise serializers.ValidationError({field: ["必须引用可用的图片 MediaAsset。"]})
+        # qq_group_join_url 字符串空白已在 field 校验转 None
+        return attrs
+
+
 class ConsultationReplySerializer(StrictSerializer):
     body_md = serializers.CharField(min_length=1, max_length=10000)
 
@@ -521,6 +601,9 @@ def serialize_announcement_management(announcement: Announcement, request: Reque
             "organization_id": str(announcement.organization_id) if announcement.organization_id else None,
             "recruitment_id": str(announcement.recruitment_id) if announcement.recruitment_id else None,
             "publication_state": announcement.publication_state,
+            "publisher_scope": announcement.publisher_scope,
+            "source_name": announcement.source_name,
+            "external_url": announcement.external_url,
             "is_home_featured": announcement.is_home_featured,
             "home_featured_order": announcement.home_featured_order,
             "is_pinned": announcement.is_pinned,

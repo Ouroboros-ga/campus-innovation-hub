@@ -10,7 +10,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.ops_api.base import OperatorAPIView
+from apps.ops_api.serializers import OrganizationCreateSerializer
 from apps.organizations.models import Organization, OrganizationMembership, Recruitment
+from apps.organizations.services import create_organization
 from apps.public_api.query import (
     filter_text,
     paginated_response,
@@ -90,6 +92,14 @@ def _serialize_organization_management(organization: Organization, request: Requ
 
 
 class OrganizationCollectionView(OperatorAPIView):
+    def post(self, request: Request) -> Response:
+        serializer = OrganizationCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        organization = create_organization(actor=request.user, payload=serializer.validated_data)
+        # 重新查询以走统一序列化（含 memberships 预取）
+        organization = Organization.objects.select_related("logo_asset", "banner_asset").get(pk=organization.pk)
+        return Response(_serialize_organization_management(organization, request), status=201)
+
     def get(self, request: Request) -> Response:
         validate_query_keys(request, {"q", "organization_type", "is_recruiting", "is_active", "ordering", "page", "page_size"})
         org_type = parse_optional_enum(request, "organization_type", Organization.OrganizationType.values)

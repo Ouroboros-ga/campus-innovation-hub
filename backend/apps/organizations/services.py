@@ -19,7 +19,7 @@ from apps.domain_errors import (
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
 from apps.organizations.models import Organization, OrganizationMembership, Recruitment, RecruitmentApplication, RecruitmentPosition
-from apps.permissions import can_manage_organization
+from apps.permissions import can_manage_organization, is_operator
 
 
 def get_manageable_organization(*, actor: User, organization_id: object) -> Organization:
@@ -442,6 +442,30 @@ def set_membership_active(*, actor: User, membership: OrganizationMembership, is
         changes={"is_active": {"from": previous_value, "to": is_active}},
     )
     return locked_membership
+
+
+@transaction.atomic
+def create_organization(*, actor: User, payload: Mapping[str, object]) -> Organization:
+    """运营创建组织；仅 OPERATOR/SUPERADMIN，名称唯一由数据库约束保证。"""
+
+    if not is_operator(actor):
+        raise PermissionDenied
+    values = dict(payload)
+    try:
+        organization = Organization.objects.create(
+            created_by=actor,
+            updated_by=actor,
+            **values,
+        )
+    except IntegrityError as error:
+        raise InvalidState("组织名称已存在。") from error
+    record_audit(
+        actor=actor,
+        action="ORGANIZATION_CREATED",
+        target=organization,
+        changes={"name": organization.name, "organization_type": organization.organization_type},
+    )
+    return organization
 
 
 @transaction.atomic
