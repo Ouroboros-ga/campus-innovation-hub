@@ -37,6 +37,8 @@ const editOpen = ref(false)
 const editing = ref<OpsBanner | null>(null)
 const saving = ref(false)
 const uploading = ref(false)
+const dragOverEdit = ref(false)
+const dragOverCreate = ref(false)
 const form = reactive({
   title: '',
   subtitle: '',
@@ -209,6 +211,44 @@ async function onEditFileChange(e: Event) {
 async function onCreateFileChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
+  uploading.value = true
+  try {
+    const res = await uploadImage(file, 'IMAGE')
+    createForm.image_asset_id = res.id
+    showToast('图片已上传')
+  } catch (err: unknown) {
+    showToast(err instanceof Error ? err.message : '上传失败', 'error')
+  } finally {
+    uploading.value = false
+  }
+}
+
+async function handleDropEdit(e: DragEvent) {
+  dragOverEdit.value = false
+  const file = e.dataTransfer?.files?.[0]
+  if (!file || !file.type.startsWith('image/')) {
+    showToast('请拖入图片文件', 'error')
+    return
+  }
+  uploading.value = true
+  try {
+    const res = await uploadImage(file, 'IMAGE')
+    form.image_asset_id = res.id
+    showToast('图片已上传，保存后生效')
+  } catch (err: unknown) {
+    showToast(err instanceof Error ? err.message : '上传失败', 'error')
+  } finally {
+    uploading.value = false
+  }
+}
+
+async function handleDropCreate(e: DragEvent) {
+  dragOverCreate.value = false
+  const file = e.dataTransfer?.files?.[0]
+  if (!file || !file.type.startsWith('image/')) {
+    showToast('请拖入图片文件', 'error')
+    return
+  }
   uploading.value = true
   try {
     const res = await uploadImage(file, 'IMAGE')
@@ -701,9 +741,16 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
     <UModal v-model:open="editOpen" title="编辑 Banner" :ui="{ content: 'sm:max-w-[640px]' }">
       <template #body>
         <div class="space-y-4">
-          <!-- 局部预览 -->
-          <div class="rounded-lg border border-default overflow-hidden bg-neutral-900 aspect-video relative flex flex-col justify-end p-4">
-            <div v-if="form.image_asset_id" class="absolute inset-0 bg-muted flex items-center justify-center text-xs text-muted">图片预览需保存后生效</div>
+          <!-- 局部预览（支持拖入） -->
+          <div
+            class="rounded-lg border-2 border-dashed overflow-hidden bg-neutral-900 aspect-video relative flex flex-col justify-end p-4 transition-colors"
+            :class="dragOverEdit ? 'border-primary-500' : 'border-default'"
+            @dragover.prevent="dragOverEdit = true"
+            @dragleave.prevent="dragOverEdit = false"
+            @drop.prevent="handleDropEdit"
+          >
+            <div v-if="dragOverEdit" class="absolute inset-0 z-10 grid place-items-center bg-primary-500/20 text-sm font-medium text-white">松开以上传图片</div>
+            <div v-else-if="form.image_asset_id" class="absolute inset-0 bg-muted flex items-center justify-center text-xs text-muted">图片已就绪，保存后生效</div>
             <span v-if="form.category_label" class="relative w-fit rounded bg-white/90 px-2 py-0.5 text-xs font-semibold">{{ form.category_label }}</span>
             <h3 class="relative mt-2 text-lg font-bold text-white">{{ form.title || '标题' }}</h3>
             <p v-if="form.subtitle" class="relative text-sm text-white/80">{{ form.subtitle }}</p>
@@ -716,7 +763,21 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
             <UFormField label="副标题"><UInput v-model="form.subtitle" maxlength="160" /></UFormField>
             <UFormField label="分类标签"><UInput v-model="form.category_label" maxlength="30" placeholder="校园推荐/竞赛推荐" /></UFormField>
           </div>
-          <UFormField label="更换图片" hint="留空不改"><div class="flex gap-2"><UInput v-model="form.image_asset_id" placeholder="MediaAsset UUID 或上传" class="flex-1" /><label class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-default px-2 py-1 text-xs"><UIcon name="i-lucide-upload" class="size-3.5" />{{ uploading ? '上传中…' : '上传' }}<input type="file" accept="image/*" class="hidden" @change="onEditFileChange" /></label></div></UFormField>
+          <UFormField label="更换图片" hint="留空不改，支持点击上传或拖动图片至下方区域"><div
+            class="flex items-center gap-2 rounded-lg border-2 border-dashed p-2 transition-colors"
+            :class="dragOverEdit ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30' : 'border-default bg-muted/20'"
+            @dragover.prevent="dragOverEdit = true"
+            @dragleave.prevent="dragOverEdit = false"
+            @drop.prevent="handleDropEdit"
+          >
+            <UInput v-model="form.image_asset_id" placeholder="MediaAsset UUID 或拖动/上传" class="flex-1" />
+            <label class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-default bg-default px-2 py-1.5 text-xs hover:bg-muted">
+              <UIcon name="i-lucide-upload" class="size-3.5" />{{ uploading ? '上传中…' : '选择' }}<input type="file" accept="image/*" class="hidden" @change="onEditFileChange" />
+            </label>
+          </div>
+            <p class="mt-1 text-xs text-muted">
+              <UIcon name="i-lucide-mouse-pointer-2" class="size-3 inline" /> 拖动本地图片至虚线框内自动上传
+            </p></UFormField>
           <UFormField label="链接类型"><USelect v-model="form.link_type" :items="[{label:'无链接',value:'NONE'},{label:'站内',value:'INTERNAL'},{label:'站外',value:'EXTERNAL'}]" /></UFormField>
           <UFormField v-if="form.link_type==='INTERNAL'" label="站内路径"><UInput v-model="form.internal_path" placeholder="/competitions/..." /></UFormField>
           <UFormField v-if="form.link_type==='EXTERNAL'" label="站外链接"><UInput v-model="form.external_url" placeholder="https://..." /></UFormField>
@@ -744,7 +805,22 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
             <UFormField label="副标题"><UInput v-model="createForm.subtitle" maxlength="160" /></UFormField>
             <UFormField label="分类标签"><UInput v-model="createForm.category_label" maxlength="30" /></UFormField>
           </div>
-          <UFormField label="图片" :error="createFieldErrors.image_asset_id" required><div class="flex gap-2"><UInput v-model="createForm.image_asset_id" placeholder="MediaAsset UUID" class="flex-1" /><label class="inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs"><UIcon name="i-lucide-upload" class="size-3.5" />{{ uploading ? '上传中…' : '上传' }}<input type="file" accept="image/*" class="hidden" @change="onCreateFileChange" /></label></div></UFormField>
+          <UFormField label="图片" :error="createFieldErrors.image_asset_id" required hint="支持点击选择或拖动图片至下方区域">
+            <div
+              class="flex items-center gap-2 rounded-lg border-2 border-dashed p-2 transition-colors"
+              :class="dragOverCreate ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30' : 'border-default bg-muted/20'"
+              @dragover.prevent="dragOverCreate = true"
+              @dragleave.prevent="dragOverCreate = false"
+              @drop.prevent="handleDropCreate"
+            >
+              <UInput v-model="createForm.image_asset_id" placeholder="MediaAsset UUID 或拖动/上传" class="flex-1" />
+              <label class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-default bg-default px-2 py-1.5 text-xs hover:bg-muted">
+                <UIcon name="i-lucide-upload" class="size-3.5" />{{ uploading ? '上传中…' : '选择' }}<input type="file" accept="image/*" class="hidden" @change="onCreateFileChange" />
+              </label>
+            </div>
+            <p class="mt-1 text-xs text-muted">
+              <UIcon name="i-lucide-mouse-pointer-2" class="size-3 inline" /> 拖动本地 JPG/PNG 图片至虚线框内自动上传（≤5MB）
+            </p></UFormField>
           <UFormField label="Alt 文本"><UInput v-model="createForm.alt_text" maxlength="160" /></UFormField>
           <div class="grid grid-cols-2 gap-3">
             <UFormField label="排序"><UInput v-model.number="createForm.sort_order" type="number" :min="0" /></UFormField>
