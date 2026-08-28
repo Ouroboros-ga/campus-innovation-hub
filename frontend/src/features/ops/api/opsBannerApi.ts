@@ -5,7 +5,7 @@ interface BannerDto {
   title: string
   subtitle: string | null
   category_label: string | null
-  image: { url: string | null } | null
+  image: { id: string; url: string | null } | null
   alt_text: string | null
   link_type: string
   internal_path: string | null
@@ -33,6 +33,7 @@ export interface OpsBanner {
   subtitle: string | null
   categoryLabel: string | null
   imageUrl: string | null
+  imageAssetId: string | null
   altText: string | null
   linkType: string
   internalPath: string | null
@@ -52,6 +53,7 @@ function toOpsBanner(dto: BannerDto): OpsBanner {
     subtitle: dto.subtitle,
     categoryLabel: dto.category_label,
     imageUrl: dto.image?.url ?? null,
+    imageAssetId: dto.image?.id ?? null,
     altText: dto.alt_text,
     linkType: dto.link_type,
     internalPath: dto.internal_path,

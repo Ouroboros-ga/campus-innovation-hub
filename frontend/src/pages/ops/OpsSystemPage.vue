@@ -248,12 +248,30 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6">
+    <UAlert
+      color="primary"
+      variant="soft"
+      icon="i-lucide-info"
+      title="首页轮播已迁移"
+      description="首页 Banner 与精选内容已迁移至“首页运营”，此处仅保留系统状态与权限说明。"
+    >
+      <template #actions>
+        <UButton
+          size="xs"
+          color="primary"
+          variant="soft"
+          to="/ops/homepage"
+        >
+          前往首页运营
+        </UButton>
+      </template>
+    </UAlert>
     <div>
       <h2 class="text-lg font-semibold text-highlighted">
-        首页管理
+        系统设置
       </h2>
       <p class="text-sm text-muted">
-        首页轮播在此编辑 — 管理首页 Banner 轮播，最多 4 条有效，按排序与时间窗口自动展示
+        系统健康与权限边界说明
       </p>
     </div>
 

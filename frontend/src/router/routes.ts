@@ -333,6 +333,13 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '数据分析' }
           },
           {
+            path: 'homepage',
+            name: 'ops-homepage',
+            component: () =>
+              import('@/pages/ops/OpsHomepagePage.vue'),
+            meta: { title: '首页运营' }
+          },
+          {
             path: 'system',
             name: 'ops-system',
             component: () =>
