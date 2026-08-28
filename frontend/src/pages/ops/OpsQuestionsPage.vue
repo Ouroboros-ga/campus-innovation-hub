@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -151,9 +151,9 @@ const filters = [
       <li
         v-for="post in questions"
         :key="post.id"
-        class="rounded-surface border border-default bg-default p-4"
+        class="rounded-xl border border-default bg-default p-4"
       >
-        <div class="flex items-start justify-between gap-3">
+        <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
             <p class="text-sm font-semibold text-highlighted">
               {{ post.question }}
@@ -236,3 +236,5 @@ const filters = [
     />
   </div>
 </template>
+
+

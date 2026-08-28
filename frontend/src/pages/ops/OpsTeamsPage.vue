@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -123,7 +123,7 @@ const statusOptions = [
       </UButton>
     </div>
 
-    <div class="flex flex-wrap gap-2 rounded-lg border border-default bg-default p-3">
+    <div class="flex flex-wrap gap-2 rounded-xl border border-default bg-default p-5 shadow-sm">
       <UInput
         v-model="q"
         placeholder="搜索标题、方向、队伍名"
@@ -316,7 +316,7 @@ const statusOptions = [
       <div
         v-for="team in teams"
         :key="team.id"
-        class="rounded-lg border border-default bg-default p-3"
+        class="rounded-xl border border-default bg-default p-5 shadow-sm"
       >
         <p class="truncate text-sm font-medium text-highlighted">{{ team.title }}</p>
         <p class="truncate text-xs text-muted">{{ team.competitionName }} · {{ team.direction }}</p>
@@ -344,3 +344,4 @@ const statusOptions = [
     </div>
   </div>
 </template>
+

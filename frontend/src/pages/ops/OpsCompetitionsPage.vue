@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -189,7 +189,7 @@ async function onImport() {
 <template>
   <div class="space-y-4">
     <!-- 标题 -->
-    <div class="flex items-start justify-between gap-3">
+    <div class="flex items-start justify-between gap-4">
       <div>
         <h2 class="text-lg font-semibold text-highlighted">
           竞赛内容库管理
@@ -218,10 +218,10 @@ async function onImport() {
     </div>
 
     <!-- 顶部统计 5 块 -->
-    <div class="grid gap-3 sm:grid-cols-5">
-      <div class="rounded-lg border border-default bg-default p-3">
+    <div class="grid gap-4 sm:grid-cols-5">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <div class="flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-md bg-primary-50 text-primary dark:bg-primary-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-lg bg-primary-50 text-primary dark:bg-primary-950"><UIcon
             name="i-lucide-layout-grid"
             class="size-4"
           /></span>
@@ -231,9 +231,9 @@ async function onImport() {
           {{ health?.total ?? '-' }}
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <div class="flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-md bg-success-50 text-success-600 dark:bg-success-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-lg bg-success-50 text-success-600 dark:bg-success-950"><UIcon
             name="i-lucide-file-edit"
             class="size-4"
           /></span>
@@ -243,9 +243,9 @@ async function onImport() {
           {{ workbench?.overview.draft ?? '-' }}
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <div class="flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-md bg-primary-50 text-primary-600 dark:bg-primary-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950"><UIcon
             name="i-lucide-send"
             class="size-4"
           /></span>
@@ -255,9 +255,9 @@ async function onImport() {
           {{ workbench?.overview.published ?? '-' }}
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <div class="flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-md bg-warning-50 text-warning-600 dark:bg-warning-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-lg bg-warning-50 text-warning-600 dark:bg-warning-950"><UIcon
             name="i-lucide-alert-triangle"
             class="size-4"
           /></span>
@@ -267,9 +267,9 @@ async function onImport() {
           {{ health?.missing_cover ?? 0 }}
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <div class="flex items-center gap-2">
-          <span class="grid size-7 place-items-center rounded-md bg-primary-50 text-primary-600 dark:bg-primary-950"><UIcon
+          <span class="grid size-7 place-items-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950"><UIcon
             name="i-lucide-star"
             class="size-4"
           /></span>
@@ -283,7 +283,7 @@ async function onImport() {
 
     <div class="grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)_260px]">
       <!-- 左视图（可点筛选） -->
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <p class="text-xs font-semibold text-muted">
           内容视图
         </p>
@@ -329,7 +329,7 @@ async function onImport() {
       </div>
 
       <!-- 中表 -->
-      <div class="min-w-0 rounded-lg border border-default bg-default p-3">
+      <div class="min-w-0 rounded-xl border border-default bg-default p-5 shadow-sm">
         <div class="mb-3 flex flex-wrap gap-2">
           <UInput
             v-model="query"
@@ -397,7 +397,7 @@ async function onImport() {
           <li
             v-for="item in competitions"
             :key="item.id"
-            class="flex gap-3 py-3"
+            class="flex gap-4 py-3"
           >
             <img
               v-if="item.cover?.src"
@@ -486,7 +486,7 @@ async function onImport() {
 
       <!-- 右健康 -->
       <div class="space-y-4">
-        <div class="rounded-lg border border-default bg-default p-3">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <h4 class="text-sm font-semibold text-highlighted">
             内容健康状态
           </h4>
@@ -514,7 +514,7 @@ async function onImport() {
             </li>
           </ul>
         </div>
-        <div class="rounded-lg border border-default bg-default p-3">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <h4 class="text-sm font-semibold text-highlighted">
             最近操作
           </h4>
@@ -565,3 +565,5 @@ async function onImport() {
     </UModal>
   </div>
 </template>
+
+

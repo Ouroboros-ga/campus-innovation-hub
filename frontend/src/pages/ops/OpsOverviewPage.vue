@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
 import { getRecentDrafts, getWorkbenchStats, type RecentDrafts, type WorkbenchStats } from '@/features/ops/api/opsOverviewApi'
@@ -69,7 +69,7 @@ const overviewItems = computed(() => {
       <!-- 上排三列 -->
       <div class="grid gap-4 lg:grid-cols-3">
         <!-- 待办事项 -->
-        <div class="rounded-lg border border-default bg-default p-4">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-highlighted">
               待办事项
@@ -86,7 +86,7 @@ const overviewItems = computed(() => {
               />
             </RouterLink>
           </div>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <div
               v-for="item in pendingItems"
               :key="item.label"
@@ -94,7 +94,7 @@ const overviewItems = computed(() => {
             >
               <div class="flex items-center gap-2">
                 <span
-                  class="grid size-7 place-items-center rounded-md"
+                  class="grid size-7 place-items-center rounded-lg"
                   :class="item.color"
                 >
                   <UIcon
@@ -114,7 +114,7 @@ const overviewItems = computed(() => {
         </div>
 
         <!-- 内容概览 -->
-        <div class="rounded-lg border border-default bg-default p-4">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <h3 class="mb-3 text-sm font-semibold text-highlighted">
             内容概览
           </h3>
@@ -142,11 +142,11 @@ const overviewItems = computed(() => {
         </div>
 
         <!-- 快捷数据占位（无 PV/UV 时展示健康） -->
-        <div class="rounded-lg border border-default bg-default p-4">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <h3 class="mb-3 text-sm font-semibold text-highlighted">
             内容健康
           </h3>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <div class="rounded-md bg-muted p-3">
               <p class="text-xs text-muted">
                 缺封面
@@ -185,7 +185,7 @@ const overviewItems = computed(() => {
 
       <!-- 中排 -->
       <div class="grid gap-4 lg:grid-cols-2">
-        <div class="rounded-lg border border-default bg-default p-4">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-highlighted">
               最近发布
@@ -233,7 +233,7 @@ const overviewItems = computed(() => {
           </ul>
         </div>
 
-        <div class="rounded-lg border border-default bg-default p-4">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-highlighted">
               草稿箱
@@ -283,7 +283,7 @@ const overviewItems = computed(() => {
       </div>
 
       <!-- 快捷入口 -->
-      <div class="rounded-lg border border-default bg-default p-4">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <h3 class="mb-3 text-sm font-semibold text-highlighted">
           快捷入口
         </h3>
@@ -316,3 +316,5 @@ const overviewItems = computed(() => {
     </template>
   </div>
 </template>
+
+

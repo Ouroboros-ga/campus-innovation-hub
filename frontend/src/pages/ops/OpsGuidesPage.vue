@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
 import GuideEditorModal from '@/features/ops/components/GuideEditorModal.vue'
@@ -77,9 +77,9 @@ function openEdit(guide: OpsGuide) {
       <li
         v-for="guide in guides"
         :key="guide.id"
-        class="rounded-surface border border-default bg-default p-4"
+        class="rounded-xl border border-default bg-default p-4"
       >
-        <div class="flex items-start justify-between gap-3">
+        <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
             <p class="text-sm font-semibold text-highlighted">
               {{ guide.title }}
@@ -152,3 +152,5 @@ function openEdit(guide: OpsGuide) {
     />
   </div>
 </template>
+
+

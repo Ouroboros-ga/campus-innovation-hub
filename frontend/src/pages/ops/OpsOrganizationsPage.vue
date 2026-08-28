@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -120,8 +120,8 @@ const recruitingOptions = [
     </div>
 
     <!-- 顶部统计 -->
-    <div class="grid gap-3 sm:grid-cols-4">
-      <div class="rounded-lg border border-default bg-default p-3">
+    <div class="grid gap-4 sm:grid-cols-4">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <div class="flex items-center justify-between">
           <p class="text-xs text-muted">
             全部组织
@@ -135,7 +135,7 @@ const recruitingOptions = [
           {{ stats?.total ?? '-' }}
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <div class="flex items-center justify-between">
           <p class="text-xs text-muted">
             招新中
@@ -149,7 +149,7 @@ const recruitingOptions = [
           {{ stats?.recruiting ?? '-' }}
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <div class="flex items-center justify-between">
           <p class="text-xs text-muted">
             已暂停招新
@@ -163,7 +163,7 @@ const recruitingOptions = [
           {{ stats?.not_recruiting ?? '-' }}
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <div class="flex items-center justify-between">
           <p class="text-xs text-muted">
             本月新增
@@ -186,7 +186,7 @@ const recruitingOptions = [
     </div>
 
     <!-- 筛选 -->
-    <div class="flex flex-wrap gap-2 rounded-lg border border-default bg-default p-3">
+    <div class="flex flex-wrap gap-2 rounded-xl border border-default bg-default p-5 shadow-sm">
       <UInput
         v-model="query"
         placeholder="搜索组织名称、简介、负责人..."
@@ -443,9 +443,9 @@ const recruitingOptions = [
         <div
           v-for="org in organizations"
           :key="org.id"
-          class="rounded-lg border border-default bg-default p-3"
+          class="rounded-xl border border-default bg-default p-5 shadow-sm"
         >
-          <div class="flex items-start gap-3">
+          <div class="flex items-start gap-4">
             <img
               v-if="org.logo?.url"
               :src="org.logo.url"
@@ -491,3 +491,5 @@ const recruitingOptions = [
     </div>
   </div>
 </template>
+
+

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -107,7 +107,7 @@ function onReset() { q.value=''; status.value='ALL'; organizationId.value='ALL';
       </UButton>
     </div>
 
-    <div class="flex flex-wrap gap-2 rounded-lg border border-default bg-default p-3">
+    <div class="flex flex-wrap gap-2 rounded-xl border border-default bg-default p-5 shadow-sm">
       <UInput
         v-model="q"
         placeholder="搜申请人/招新/组织"
@@ -266,7 +266,7 @@ function onReset() { q.value=''; status.value='ALL'; organizationId.value='ALL';
         <div
           v-for="it in items"
           :key="it.id"
-          class="rounded-lg border border-default bg-default p-3"
+          class="rounded-xl border border-default bg-default p-5 shadow-sm"
         >
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
@@ -294,3 +294,4 @@ function onReset() { q.value=''; status.value='ALL'; organizationId.value='ALL';
     </div>
   </div>
 </template>
+

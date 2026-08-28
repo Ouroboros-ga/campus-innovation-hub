@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 
 import { getCompetitionHealth } from '@/features/ops/api/opsOverviewApi'
@@ -408,9 +408,9 @@ onMounted(async () => {
         <div
           v-for="b in banners"
           :key="b.id"
-          class="rounded-lg border border-default bg-default p-3"
+          class="rounded-xl border border-default bg-default p-5 shadow-sm"
         >
-          <div class="flex items-start justify-between gap-3">
+          <div class="flex items-start justify-between gap-4">
             <div class="min-w-0">
               <p class="truncate text-sm font-semibold text-highlighted">{{ b.title }}</p>
               <p class="mt-1 flex items-center gap-1.5 text-xs text-muted">
@@ -441,7 +441,7 @@ onMounted(async () => {
       v-else
       class="grid gap-4 sm:grid-cols-2"
     >
-      <div class="rounded-lg border border-default bg-default p-4">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <h3 class="text-sm font-semibold text-highlighted">
           首页推荐
         </h3>
@@ -452,7 +452,7 @@ onMounted(async () => {
           控制首页“热门推荐”展示数量
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-4">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <h3 class="text-sm font-semibold text-highlighted">
           发布窗口
         </h3>
@@ -465,7 +465,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="rounded-lg border border-default bg-default p-4">
+    <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
       <div class="flex items-center justify-between">
         <h3 class="text-sm font-semibold text-highlighted">
           服务状态
@@ -481,7 +481,7 @@ onMounted(async () => {
           刷新
         </UButton>
       </div>
-      <div class="mt-2 grid grid-cols-2 gap-3 text-sm">
+      <div class="mt-2 grid grid-cols-2 gap-4 text-sm">
         <div class="rounded-md bg-muted p-3">
           <p class="text-xs text-muted">
             API 健康
@@ -510,7 +510,7 @@ onMounted(async () => {
       </p>
     </div>
 
-    <div class="rounded-lg border border-default bg-default p-4 sm:col-span-2">
+    <div class="rounded-xl border border-default bg-default p-5 shadow-sm sm:col-span-2">
       <h3 class="text-sm font-semibold text-highlighted">
         权限边界
       </h3>
@@ -566,7 +566,7 @@ onMounted(async () => {
               </label>
             </div>
           </UFormField>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField
               label="排序"
               :error="fieldErrors.sort_order"
@@ -611,7 +611,7 @@ onMounted(async () => {
               placeholder="https://..."
             />
           </UFormField>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField label="开始时间">
               <UInput
                 v-model="form.start_at"
@@ -665,7 +665,7 @@ onMounted(async () => {
               placeholder="轮播标题 1-80"
             />
           </UFormField>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField
               label="副标题"
             >
@@ -717,7 +717,7 @@ onMounted(async () => {
               placeholder="可选"
             />
           </UFormField>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField
               label="排序"
               :error="createFieldErrors.sort_order"
@@ -762,7 +762,7 @@ onMounted(async () => {
               placeholder="https://..."
             />
           </UFormField>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField label="开始时间">
               <UInput
                 v-model="createForm.start_at"
@@ -807,3 +807,5 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+

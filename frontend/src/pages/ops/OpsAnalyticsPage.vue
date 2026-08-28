@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue'
 
 import { getAnalyticsTrends, getCompetitionHealth, getDynamicsStats, getOrganizationStats, getWorkbenchStats } from '@/features/ops/api/opsOverviewApi'
@@ -139,8 +139,8 @@ onMounted(async () => {
       {{ error }}
     </p>
     <template v-else>
-      <div class="grid gap-3 sm:grid-cols-4">
-        <div class="rounded-lg border border-default bg-default p-3">
+      <div class="grid gap-4 sm:grid-cols-4">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <p class="text-xs text-muted">
             全部竞赛
           </p>
@@ -151,7 +151,7 @@ onMounted(async () => {
             已发布 {{ workbench?.overview.published ?? '-' }} · 草稿 {{ workbench?.overview.draft ?? '-' }}
           </p>
         </div>
-        <div class="rounded-lg border border-default bg-default p-3">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <p class="text-xs text-muted">
             活动/公告
           </p>
@@ -162,7 +162,7 @@ onMounted(async () => {
             已发布 {{ dynamics?.published ?? '-' }} · 草稿 {{ dynamics?.draft ?? '-' }}
           </p>
         </div>
-        <div class="rounded-lg border border-default bg-default p-3">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <p class="text-xs text-muted">
             组织
           </p>
@@ -173,7 +173,7 @@ onMounted(async () => {
             招新中 {{ orgStats?.recruiting ?? '-' }}
           </p>
         </div>
-        <div class="rounded-lg border border-default bg-default p-3">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <p class="text-xs text-muted">
             待处理
           </p>
@@ -187,7 +187,7 @@ onMounted(async () => {
       </div>
 
       <div class="grid gap-4 lg:grid-cols-2">
-        <div class="rounded-lg border border-default bg-default p-4">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <div class="flex items-center justify-between gap-2">
             <h3 class="text-sm font-semibold text-highlighted">
               7 日趋势
@@ -238,7 +238,7 @@ onMounted(async () => {
             {{ trends.start_date }} 至 {{ trends.end_date }} · 合计 竞赛 {{ trends.totals.competitions ?? 0 }} / 活动 {{ trends.totals.activities ?? 0 }} / 公告 {{ trends.totals.announcements ?? 0 }} / 组队 {{ trends.totals.team_posts ?? 0 }} / 招新申请 {{ trends.totals.recruitment_applications ?? 0 }} / 组队申请 {{ trends.totals.team_applications ?? 0 }} / 用户 {{ trends.totals.users ?? 0 }}
           </p>
         </div>
-        <div class="rounded-lg border border-default bg-default p-4">
+        <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
           <h3 class="text-sm font-semibold text-highlighted">
             健康度
           </h3>
@@ -261,3 +261,5 @@ onMounted(async () => {
     </template>
   </div>
 </template>
+
+

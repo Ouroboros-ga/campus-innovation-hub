@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 
@@ -221,7 +221,7 @@ async function onPublish(f: OpsFaq) {
       <div
         v-for="f in faqs"
         :key="f.id"
-        class="rounded-lg border border-default bg-default p-3"
+        class="rounded-xl border border-default bg-default p-5 shadow-sm"
       >
         <div class="flex items-start justify-between gap-2">
           <p class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ f.question }}</p>
@@ -284,7 +284,7 @@ async function onPublish(f: OpsFaq) {
               placeholder="支持 Markdown 20000"
             />
           </UFormField>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField
               label="排序"
               :error="fieldErrors.sortOrder"
@@ -321,3 +321,5 @@ async function onPublish(f: OpsFaq) {
     </UModal>
   </div>
 </template>
+
+

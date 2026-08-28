@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -268,8 +268,8 @@ const scopeOptions = [
     </div>
 
     <!-- 统计 5 块 -->
-    <div class="grid gap-3 sm:grid-cols-5">
-      <div class="rounded-lg border border-default bg-default p-3">
+    <div class="grid gap-4 sm:grid-cols-5">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <p class="text-xs text-muted">
           全部内容
         </p>
@@ -277,7 +277,7 @@ const scopeOptions = [
           {{ stats?.total ?? '-' }}<span class="text-xs font-normal"> 篇</span>
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <p class="text-xs text-muted">
           已发布
         </p>
@@ -285,7 +285,7 @@ const scopeOptions = [
           {{ stats?.published ?? '-' }}<span class="text-xs font-normal"> 篇</span>
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <p class="text-xs text-muted">
           草稿中
         </p>
@@ -293,7 +293,7 @@ const scopeOptions = [
           {{ stats?.draft ?? '-' }}<span class="text-xs font-normal"> 篇</span>
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <p class="text-xs text-muted">
           审核中
         </p>
@@ -301,7 +301,7 @@ const scopeOptions = [
           —
         </p>
       </div>
-      <div class="rounded-lg border border-default bg-default p-3">
+      <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
         <p class="text-xs text-muted">
           已下线
         </p>
@@ -462,9 +462,9 @@ const scopeOptions = [
             <div
               v-for="a in activities"
               :key="a.id"
-              class="rounded-lg border border-default bg-default p-3"
+              class="rounded-xl border border-default bg-default p-5 shadow-sm"
             >
-            <div class="flex gap-3">
+            <div class="flex gap-4">
               <img v-if="a.cover?.src" :src="a.cover.src" class="size-12 shrink-0 rounded object-cover" alt="">
               <div v-else class="grid size-12 place-items-center rounded bg-muted text-xs">无图</div>
               <div class="min-w-0 flex-1">
@@ -613,7 +613,7 @@ const scopeOptions = [
             <div
               v-for="a in announcements"
               :key="a.id"
-              class="rounded-lg border border-default bg-default p-3"
+              class="rounded-xl border border-default bg-default p-5 shadow-sm"
             >
               <div class="flex gap-2">
                 <div class="grid size-10 place-items-center rounded bg-muted"><UIcon name="i-lucide-megaphone" class="size-5 text-muted" /></div>
@@ -666,3 +666,5 @@ const scopeOptions = [
     />
   </div>
 </template>
+
+

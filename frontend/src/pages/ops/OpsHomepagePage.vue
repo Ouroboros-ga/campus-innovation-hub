@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -486,7 +486,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 class="text-xl font-semibold text-highlighted">首页运营管理</h1>
         <p class="mt-1 text-sm text-muted">配置首页轮播和精选内容，所有修改将实时生效于正式首页</p>
@@ -537,7 +537,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
                   </div>
                 </td>
                 <td class="px-3 py-3">
-                  <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-4">
                     <img v-if="b.imageUrl" :src="b.imageUrl" :alt="b.title" class="h-10 w-16 rounded-md object-cover border border-default bg-muted" />
                     <div v-else class="h-10 w-16 rounded-md border border-dashed border-default bg-muted" />
                     <div class="min-w-0">
@@ -576,7 +576,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
         <!-- Mobile cards -->
         <div class="space-y-3 p-3 md:hidden">
           <div v-for="(b, idx) in banners" :key="b.id" class="rounded-lg border border-default p-3">
-            <div class="flex gap-3">
+            <div class="flex gap-4">
               <img v-if="b.imageUrl" :src="b.imageUrl" :alt="b.title" class="h-16 w-20 rounded-md object-cover border border-default" />
               <div v-else class="h-16 w-20 rounded-md border border-dashed bg-muted" />
               <div class="min-w-0 flex-1">
@@ -689,8 +689,8 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
         <h2 class="text-sm font-semibold">自动聚合内容模块</h2>
         <span class="text-xs text-muted">以下模块由系统自动生成，无需手动配置</span>
       </div>
-      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div class="flex items-start gap-3 rounded-lg border border-default bg-muted/30 p-3">
+      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="flex items-start gap-4 rounded-lg border border-default bg-muted/30 p-3">
           <span class="grid size-8 place-items-center rounded-md bg-primary-50 text-primary-600"><UIcon name="i-lucide-clock-3" class="size-4" /></span>
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium">即将截止</p>
@@ -698,7 +698,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
           </div>
           <UBadge color="success" variant="soft" size="xs">自动生成</UBadge>
         </div>
-        <div class="flex items-start gap-3 rounded-lg border border-default bg-muted/30 p-3">
+        <div class="flex items-start gap-4 rounded-lg border border-default bg-muted/30 p-3">
           <span class="grid size-8 place-items-center rounded-md bg-primary-50 text-primary-600"><UIcon name="i-lucide-users" class="size-4" /></span>
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium">正在组队</p>
@@ -706,7 +706,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
           </div>
           <UBadge color="success" variant="soft" size="xs">自动生成</UBadge>
         </div>
-        <div class="flex items-start gap-3 rounded-lg border border-default bg-muted/30 p-3">
+        <div class="flex items-start gap-4 rounded-lg border border-default bg-muted/30 p-3">
           <span class="grid size-8 place-items-center rounded-md bg-primary-50 text-primary-600"><UIcon name="i-lucide-building-2" class="size-4" /></span>
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium">正在招新的组织</p>
@@ -714,7 +714,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
           </div>
           <UBadge color="success" variant="soft" size="xs">自动生成</UBadge>
         </div>
-        <div class="flex items-start gap-3 rounded-lg border border-default bg-muted/30 p-3">
+        <div class="flex items-start gap-4 rounded-lg border border-default bg-muted/30 p-3">
           <span class="grid size-8 place-items-center rounded-md bg-primary-50 text-primary-600"><UIcon name="i-lucide-calendar-days" class="size-4" /></span>
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium">近期活动</p>
@@ -755,11 +755,11 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
             <h3 class="relative mt-2 text-lg font-bold text-white">{{ form.title || '标题' }}</h3>
             <p v-if="form.subtitle" class="relative text-sm text-white/80">{{ form.subtitle }}</p>
           </div>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField label="标题" :error="fieldErrors.title" required><UInput v-model="form.title" maxlength="80" /></UFormField>
             <UFormField label="排序"><UInput v-model.number="form.sort_order" type="number" :min="0" /></UFormField>
           </div>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField label="副标题"><UInput v-model="form.subtitle" maxlength="160" /></UFormField>
             <UFormField label="分类标签"><UInput v-model="form.category_label" maxlength="30" placeholder="校园推荐/竞赛推荐" /></UFormField>
           </div>
@@ -781,7 +781,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
           <UFormField label="链接类型"><USelect v-model="form.link_type" :items="[{label:'无链接',value:'NONE'},{label:'站内',value:'INTERNAL'},{label:'站外',value:'EXTERNAL'}]" /></UFormField>
           <UFormField v-if="form.link_type==='INTERNAL'" label="站内路径"><UInput v-model="form.internal_path" placeholder="/competitions/..." /></UFormField>
           <UFormField v-if="form.link_type==='EXTERNAL'" label="站外链接"><UInput v-model="form.external_url" placeholder="https://..." /></UFormField>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField label="开始时间"><UInput v-model="form.start_at" type="datetime-local" /></UFormField>
             <UFormField label="结束时间"><UInput v-model="form.end_at" type="datetime-local" /></UFormField>
           </div>
@@ -801,7 +801,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
       <template #body>
         <div class="space-y-3">
           <UFormField label="标题" :error="createFieldErrors.title" required><UInput v-model="createForm.title" maxlength="80" /></UFormField>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField label="副标题"><UInput v-model="createForm.subtitle" maxlength="160" /></UFormField>
             <UFormField label="分类标签"><UInput v-model="createForm.category_label" maxlength="30" /></UFormField>
           </div>
@@ -822,14 +822,14 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
               <UIcon name="i-lucide-mouse-pointer-2" class="size-3 inline" /> 拖动本地 JPG/PNG 图片至虚线框内自动上传（≤5MB）
             </p></UFormField>
           <UFormField label="Alt 文本"><UInput v-model="createForm.alt_text" maxlength="160" /></UFormField>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField label="排序"><UInput v-model.number="createForm.sort_order" type="number" :min="0" /></UFormField>
             <UFormField label="启用"><USwitch v-model="createForm.is_active" /></UFormField>
           </div>
           <UFormField label="链接类型"><USelect v-model="createForm.link_type" :items="[{label:'无链接',value:'NONE'},{label:'站内',value:'INTERNAL'},{label:'站外',value:'EXTERNAL'}]" /></UFormField>
           <UFormField v-if="createForm.link_type==='INTERNAL'" label="站内路径"><UInput v-model="createForm.internal_path" placeholder="/competitions/..." /></UFormField>
           <UFormField v-if="createForm.link_type==='EXTERNAL'" label="站外链接"><UInput v-model="createForm.external_url" placeholder="https://..." /></UFormField>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <UFormField label="开始时间"><UInput v-model="createForm.start_at" type="datetime-local" /></UFormField>
             <UFormField label="结束时间"><UInput v-model="createForm.end_at" type="datetime-local" /></UFormField>
           </div>
@@ -913,3 +913,4 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
     <div v-if="toast" class="fixed bottom-4 right-4 rounded-md border border-default bg-default px-3 py-2 text-sm shadow" :class="toast.color==='success' ? 'text-success-700' : 'text-danger-600'">{{ toast.msg }}</div>
   </div>
 </template>
+
