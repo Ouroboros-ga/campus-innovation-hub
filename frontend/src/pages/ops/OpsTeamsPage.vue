@@ -3,6 +3,7 @@ import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { closeOpsTeam, listOpsTeams, type OpsTeam } from '@/features/ops/api/opsTeamApi'
+import { listCompetitions } from '@/features/competitions/api/competitionApi'
 import { formatCompactDate } from '@/shared/lib/date'
 import { AppError } from '@/shared/http/types'
 
@@ -16,13 +17,16 @@ const error = ref('')
 const q = ref((route.query.q as string) ?? '')
 const postType = ref((route.query.post_type as string) ?? 'ALL')
 const status = ref((route.query.status as string) ?? 'ALL')
+const competitionId = ref((route.query.competition_id as string) ?? 'ALL')
 const page = ref(Number(route.query.page ?? 1) || 1)
 const pageSize = 20
+const competitionOptions = ref<Array<{ label: string; value: string }>>([{ label: '全部竞赛', value: 'ALL' }])
 
 function syncFromRoute() {
   q.value = (route.query.q as string) ?? ''
   postType.value = (route.query.post_type as string) ?? 'ALL'
   status.value = (route.query.status as string) ?? 'ALL'
+  competitionId.value = (route.query.competition_id as string) ?? 'ALL'
   page.value = Number(route.query.page ?? 1) || 1
 }
 function pushRoute(overrides: Record<string, string | undefined> = {}, resetPage = false) {
@@ -30,10 +34,12 @@ function pushRoute(overrides: Record<string, string | undefined> = {}, resetPage
   const qq = overrides.q !== undefined ? overrides.q : q.value
   const pt = overrides.post_type !== undefined ? overrides.post_type : postType.value
   const st = overrides.status !== undefined ? overrides.status : status.value
+  const cid = overrides.competition_id !== undefined ? overrides.competition_id : competitionId.value
   const p = resetPage ? '1' : (overrides.page !== undefined ? overrides.page : String(page.value))
   if (qq) next.q = qq
   if (pt && pt !== 'ALL') next.post_type = pt
   if (st && st !== 'ALL') next.status = st
+  if (cid && cid !== 'ALL') next.competition_id = cid
   if (Number(p) > 1) next.page = String(p)
   router.replace({ query: next })
 }
@@ -46,6 +52,7 @@ async function load() {
       q: q.value || undefined,
       postType: postType.value === 'ALL' ? undefined : postType.value,
       status: status.value === 'ALL' ? undefined : status.value,
+      competitionId: competitionId.value === 'ALL' ? undefined : competitionId.value,
       page: page.value,
       pageSize
     })
@@ -58,13 +65,20 @@ async function load() {
   }
 }
 
+async function loadCompetitionOptions() {
+  try {
+    const res = await listCompetitions({ pageSize: 50 })
+    competitionOptions.value = [{ label: '全部竞赛', value: 'ALL' }, ...res.items.map(c => ({ label: c.name, value: c.id }))]
+  } catch { /* ignore */ }
+}
+
 watch(() => route.query, () => { syncFromRoute(); load() })
-onMounted(() => { syncFromRoute(); load() })
+onMounted(() => { syncFromRoute(); load(); loadCompetitionOptions() })
 
 function onSearch() { pushRoute({}, true) }
 function onFilterChange() { pushRoute({}, true) }
 function onPageChange(p: number) { pushRoute({ page: String(p) }) }
-function onReset() { q.value = ''; postType.value = 'ALL'; status.value = 'ALL'; page.value = 1; router.replace({ query: {} }) }
+function onReset() { q.value = ''; postType.value = 'ALL'; status.value = 'ALL'; competitionId.value = 'ALL'; page.value = 1; router.replace({ query: {} }) }
 
 async function onClose(team: OpsTeam) {
   try {
@@ -130,6 +144,14 @@ const statusOptions = [
         :items="statusOptions"
         size="sm"
         class="w-32"
+        @update:model-value="onFilterChange"
+      />
+      <USelect
+        v-model="competitionId"
+        :items="competitionOptions"
+        size="sm"
+        class="w-44"
+        placeholder="全部竞赛"
         @update:model-value="onFilterChange"
       />
       <UButton

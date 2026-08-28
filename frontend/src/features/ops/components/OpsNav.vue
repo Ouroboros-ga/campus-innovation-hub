@@ -14,14 +14,14 @@ const route = useRoute()
 const contentOpen = ref(true)
 const orgOpen = ref(true)
 const consultOpen = ref(true)
-const userOpen = ref(false)
 
 const isActive = (name: string) => route.name === name
 
 const contentChildren = [
   { name: 'ops-competitions', label: '竞赛管理', icon: 'i-lucide-trophy' },
   { name: 'ops-activities', label: '校园动态', icon: 'i-lucide-calendar-days' },
-  { name: 'ops-guides', label: '指南管理', icon: 'i-lucide-book-open' }
+  { name: 'ops-guides', label: '指南管理', icon: 'i-lucide-book-open' },
+  { name: 'ops-faq', label: 'FAQ 管理', icon: 'i-lucide-help-circle' }
 ]
 </script>
 
@@ -65,8 +65,9 @@ const contentChildren = [
         class="ml-2 space-y-0.5 border-l border-default pl-3"
       >
         <RouterLink
-          :to="{ name: 'home' }"
-          class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-muted hover:bg-muted hover:text-highlighted"
+          :to="{ name: 'ops-system' }"
+          class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm"
+          :class="isActive('ops-system') ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-muted hover:bg-muted hover:text-highlighted'"
         >
           <UIcon
             name="i-lucide-home"
@@ -137,14 +138,17 @@ const contentChildren = [
           />
           全部组织
         </RouterLink>
-        <span class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-muted/60" aria-disabled="true">
+        <RouterLink
+          :to="{ name: 'ops-recruitment-applications' }"
+          class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm"
+          :class="isActive('ops-recruitment-applications') ? 'bg-primary-50 font-medium text-primary-700 dark:bg-primary-950 dark:text-primary-300' : 'text-muted hover:bg-muted hover:text-highlighted'"
+        >
           <UIcon
             name="i-lucide-user-plus"
             class="size-3.5"
           />
           招新审核
-          <span class="rounded bg-muted px-1 py-0.5 text-[10px] leading-none">筹备中</span>
-        </span>
+        </RouterLink>
       </div>
     </div>
 
@@ -182,32 +186,6 @@ const contentChildren = [
           />
           咨询列表
         </RouterLink>
-      </div>
-    </div>
-
-    <div>
-      <button
-        class="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-sm text-toned hover:bg-muted hover:text-highlighted"
-        @click="userOpen = !userOpen"
-      >
-        <span class="flex items-center gap-2">
-          <UIcon
-            name="i-lucide-user-cog"
-            class="size-4"
-          />
-          用户与申请
-        </span>
-        <UIcon
-          :name="userOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-          class="size-3.5 text-muted"
-        />
-      </button>
-      <div
-        v-show="userOpen"
-        class="ml-2 space-y-0.5 border-l border-default pl-3"
-      >
-        <span class="block rounded-md px-2.5 py-1.5 text-sm text-muted">用户列表</span>
-        <span class="block rounded-md px-2.5 py-1.5 text-sm text-muted">申请审核</span>
       </div>
     </div>
 

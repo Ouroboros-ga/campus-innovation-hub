@@ -24,7 +24,8 @@ const form = reactive({
   internal_path: '',
   external_url: '',
   start_at: '',
-  end_at: ''
+  end_at: '',
+  image_asset_id: ''
 })
 const fieldErrors = ref<Record<string, string>>({})
 
@@ -57,6 +58,24 @@ async function loadHealth() {
   }
 }
 
+const systemHealth = ref<{ api: string; db: string } | null>(null)
+const systemHealthLoading = ref(false)
+async function loadSystemHealth() {
+  systemHealthLoading.value = true
+  try {
+    const [a, b] = await Promise.allSettled([
+      globalThis.fetch('/api/health').then(r => r.ok ? 'ok' : `http ${r.status}`),
+      globalThis.fetch('/api/ready').then(r => r.ok ? 'ready' : `http ${r.status}`)
+    ])
+    systemHealth.value = {
+      api: a.status==='fulfilled' ? String(a.value) : 'error',
+      db: b.status==='fulfilled' ? String(b.value) : 'error'
+    }
+  } catch {
+    systemHealth.value = { api: 'error', db: 'error' }
+  } finally { systemHealthLoading.value = false }
+}
+
 async function loadBanners() {
   bannersLoading.value = true
   bannersError.value = ''
@@ -80,8 +99,26 @@ function openEdit(b: OpsBanner) {
   form.external_url = b.externalUrl ?? ''
   form.start_at = b.startAt ? b.startAt.slice(0,16) : ''
   form.end_at = b.endAt ? b.endAt.slice(0,16) : ''
+  form.image_asset_id = ''
   fieldErrors.value = {}
   editOpen.value = true
+}
+
+async function onEditFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  uploading.value = true
+  try {
+    const res = await uploadImage(file, 'IMAGE')
+    form.image_asset_id = res.id
+    toast.value = { show: true, msg: '图片已上传，保存后生效', color: 'success' }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : '上传失败'
+    toast.value = { show: true, msg, color: 'error' }
+  } finally {
+    uploading.value = false
+  }
 }
 
 async function savePatch() {
@@ -109,6 +146,7 @@ async function savePatch() {
     else payload.start_at = null
     if (form.end_at) payload.end_at = new Date(form.end_at).toISOString()
     else payload.end_at = null
+    if (form.image_asset_id) payload.image_asset_id = form.image_asset_id
 
     await patchOpsBanner(editing.value.id, payload as never)
     toast.value = { show: true, msg: '已更新 Banner', color: 'success' }
@@ -203,7 +241,7 @@ async function saveCreate() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadHealth(), loadBanners()])
+  await Promise.all([loadHealth(), loadBanners(), loadSystemHealth()])
 })
 </script>
 
@@ -252,8 +290,38 @@ onMounted(async () => {
       </div>
     </div>
 
+    <div class="rounded-lg border border-default bg-default p-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-highlighted">服务状态</h3>
+        <UButton
+          size="xs"
+          variant="ghost"
+          color="neutral"
+          icon="i-lucide-refresh-cw"
+          :loading="systemHealthLoading"
+          @click="loadSystemHealth"
+        >刷新</UButton>
+      </div>
+      <div class="mt-2 grid grid-cols-2 gap-3 text-sm">
+        <div class="rounded-md bg-muted p-3">
+          <p class="text-xs text-muted">API 健康</p>
+          <p class="mt-1 font-mono text-sm">{{ systemHealth?.api ?? '—' }}</p>
+          <p class="text-xs text-muted">GET /api/health</p>
+        </div>
+        <div class="rounded-md bg-muted p-3">
+          <p class="text-xs text-muted">就绪检查</p>
+          <p class="mt-1 font-mono text-sm">{{ systemHealth?.db ?? '—' }}</p>
+          <p class="text-xs text-muted">GET /api/ready（DB/迁移）</p>
+        </div>
+      </div>
+      <p class="mt-2 text-xs text-muted">详细负载（CPU/内存/响应率）走服务器 `htop / free -h / journalctl -u campus-innovation-hub-dev`，不进运营面板。</p>
+    </div>
+
     <!-- Banner PATCH 管理 -->
-    <div class="rounded-lg border border-default bg-default">
+    <div
+      id="banner"
+      class="rounded-lg border border-default bg-default"
+    >
       <div class="flex items-center justify-between border-b border-default px-4 py-3">
         <h3 class="text-sm font-semibold text-highlighted">
           首页 Banner（可编辑）
@@ -385,6 +453,29 @@ onMounted(async () => {
               maxlength="80"
               placeholder="轮播标题 1-80"
             />
+          </UFormField>
+          <UFormField
+            label="更换图片"
+            hint="留空不改，上传后保存生效"
+            :error="fieldErrors.image_asset_id"
+          >
+            <div class="flex items-center gap-2">
+              <UInput
+                v-model="form.image_asset_id"
+                placeholder="MediaAsset UUID 或上传"
+                class="flex-1"
+              />
+              <label class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-default px-2 py-1 text-xs">
+                <UIcon name="i-lucide-upload" class="size-3.5" />
+                {{ uploading ? '上传中…' : '上传' }}
+                <input
+                  type="file"
+                  accept="image/*"
+                  class="hidden"
+                  @change="onEditFileChange"
+                >
+              </label>
+            </div>
           </UFormField>
           <div class="grid grid-cols-2 gap-3">
             <UFormField label="排序" :error="fieldErrors.sort_order">

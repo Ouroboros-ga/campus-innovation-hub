@@ -48,6 +48,18 @@ const officialUrl = ref('')
 const descriptionMd = ref('')
 const collegeOrganized = ref(false)
 const cover = ref<MediaImage | null>(null)
+const suitableGradeMin = ref<number | null>(null)
+const suitableGradeMax = ref<number | null>(null)
+const direction = ref('')
+const summary = ref('')
+const suitableForMd = ref('')
+const preparationAdviceMd = ref('')
+const eventStartAt = ref('')
+const eventEndAt = ref('')
+const collegeContactName = ref('')
+const collegeContactText = ref('')
+const registrationUrl = ref('')
+const officialNoticeUrl = ref('')
 const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
 
@@ -80,6 +92,20 @@ watch(
     descriptionMd.value = competition?.descriptionMd ?? ''
     collegeOrganized.value = competition?.collegeOrganized ?? false
     cover.value = competition?.cover ? { id: null, src: competition.cover.src, alt: competition.cover.alt } : null
+    // 3B+ 新增字段回填（若后端返回则带上，否则留空）
+    const c = competition as unknown as Record<string, unknown>
+    suitableGradeMin.value = (c.suitable_grade_min as number | null) ?? null
+    suitableGradeMax.value = (c.suitable_grade_max as number | null) ?? null
+    direction.value = (c.direction as string) ?? ''
+    summary.value = (c.summary as string) ?? ''
+    suitableForMd.value = (c.suitable_for_md as string) ?? ''
+    preparationAdviceMd.value = (c.preparation_advice_md as string) ?? ''
+    eventStartAt.value = (c.event_start_at as string)?.slice(0, 16) ?? (c.eventStartAt as string)?.slice(0,16) ?? ''
+    eventEndAt.value = (c.event_end_at as string)?.slice(0, 16) ?? (c.eventEndAt as string)?.slice(0,16) ?? ''
+    collegeContactName.value = (c.college_contact_name as string) ?? ''
+    collegeContactText.value = (c.college_contact_text as string) ?? ''
+    registrationUrl.value = (c.registration_url as string) ?? ''
+    officialNoticeUrl.value = (c.official_notice_url as string) ?? ''
     errors.value = {}
   }
 )
@@ -94,7 +120,13 @@ const FIELD_MAP: Record<string, string> = {
   edition: 'edition',
   description_md: 'descriptionMd',
   registration_end_at: 'registrationEndAt',
-  cover_asset_id: 'cover'
+  cover_asset_id: 'cover',
+  suitable_grade_min: 'suitableGradeMin',
+  suitable_grade_max: 'suitableGradeMax',
+  registration_url: 'registrationUrl',
+  official_notice_url: 'officialNoticeUrl',
+  event_start_at: 'eventStartAt',
+  event_end_at: 'eventEndAt'
 }
 
 function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, string> {
@@ -117,7 +149,19 @@ async function save(publish = false) {
     officialUrl: officialUrl.value,
     descriptionMd: descriptionMd.value,
     collegeOrganized: collegeOrganized.value,
-    cover: cover.value
+    cover: cover.value,
+    suitableGradeMin: suitableGradeMin.value,
+    suitableGradeMax: suitableGradeMax.value,
+    direction: direction.value,
+    summary: summary.value,
+    suitableForMd: suitableForMd.value,
+    preparationAdviceMd: preparationAdviceMd.value,
+    eventStartAt: eventStartAt.value,
+    eventEndAt: eventEndAt.value,
+    collegeContactName: collegeContactName.value,
+    collegeContactText: collegeContactText.value,
+    registrationUrl: registrationUrl.value,
+    officialNoticeUrl: officialNoticeUrl.value
   }
   const formErrors = validateCompetition(draft)
   errors.value = formErrors
@@ -256,8 +300,34 @@ async function save(publish = false) {
             </FormSection>
 
             <FormSection
+              title="适合人群与方向"
+              description="年级、方向、简介与贴士（3B+ 新增，可选）"
+            >
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField label="适合年级下限" :error="errors.suitableGradeMin">
+                  <UInput v-model.number="suitableGradeMin" type="number" :min="1" :max="4" placeholder="1-4" class="w-full" />
+                </UFormField>
+                <UFormField label="适合年级上限" :error="errors.suitableGradeMax">
+                  <UInput v-model.number="suitableGradeMax" type="number" :min="1" :max="4" placeholder="1-4" class="w-full" />
+                </UFormField>
+              </div>
+              <UFormField label="方向">
+                <UInput v-model="direction" placeholder="如：人工智能/机器人" class="w-full" />
+              </UFormField>
+              <UFormField label="一句话简介">
+                <UInput v-model="summary" maxlength="300" placeholder="300 字内" class="w-full" />
+              </UFormField>
+              <UFormField label="适合人群说明">
+                <UTextarea v-model="suitableForMd" :rows="3" placeholder="适合人群 Markdown" class="w-full" />
+              </UFormField>
+              <UFormField label="备赛建议">
+                <UTextarea v-model="preparationAdviceMd" :rows="3" placeholder="备赛建议 Markdown" class="w-full" />
+              </UFormField>
+            </FormSection>
+
+            <FormSection
               title="报名与链接"
-              description="报名时间窗与官网"
+              description="报名时间窗、赛事日程与官网"
             >
               <div class="grid gap-4 sm:grid-cols-2">
                 <UFormField label="报名开始">
@@ -288,6 +358,33 @@ async function save(publish = false) {
                   class="w-full"
                 />
               </UFormField>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField label="报名入口链接" :error="errors.registrationUrl">
+                  <UInput v-model="registrationUrl" placeholder="https://报名入口" class="w-full" />
+                </UFormField>
+                <UFormField label="官方通知链接" :error="errors.officialNoticeUrl">
+                  <UInput v-model="officialNoticeUrl" placeholder="https://通知" class="w-full" />
+                </UFormField>
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField label="赛事开始" :error="errors.eventStartAt">
+                  <UInput v-model="eventStartAt" type="datetime-local" class="w-full" />
+                </UFormField>
+                <UFormField label="赛事结束" :error="errors.eventEndAt">
+                  <UInput v-model="eventEndAt" type="datetime-local" class="w-full" />
+                </UFormField>
+              </div>
+
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField label="校内联系人">
+                  <UInput v-model="collegeContactName" placeholder="如：张老师" class="w-full" />
+                </UFormField>
+                <UFormField label="联系方式">
+                  <UInput v-model="collegeContactText" placeholder="邮箱/电话" class="w-full" />
+                </UFormField>
+              </div>
             </FormSection>
 
             <FormSection

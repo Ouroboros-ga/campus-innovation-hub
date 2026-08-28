@@ -37,6 +37,19 @@ export interface CompetitionEditorDraft {
   collegeOrganized: boolean
   /** 封面图（`cover_asset_id` 前端态；无则空）。 */
   cover?: HomepageImage | null
+  // 新增可选字段 3B+（后端已支持，运营按需填写）
+  suitableGradeMin?: number | null
+  suitableGradeMax?: number | null
+  direction?: string
+  summary?: string
+  suitableForMd?: string
+  preparationAdviceMd?: string
+  eventStartAt?: string
+  eventEndAt?: string
+  collegeContactName?: string
+  collegeContactText?: string
+  registrationUrl?: string
+  officialNoticeUrl?: string
 }
 
 const blankCover: HomepageImage = { alt: '', src: null }

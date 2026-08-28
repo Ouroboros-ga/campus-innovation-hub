@@ -37,6 +37,18 @@ interface CompetitionWriteDto {
   registration_end_at: string | null
   official_url: string | null
   cover_asset_id: string | null
+  suitable_grade_min: number | null
+  suitable_grade_max: number | null
+  direction: string | null
+  summary: string | null
+  suitable_for_md: string | null
+  preparation_advice_md: string | null
+  event_start_at: string | null
+  event_end_at: string | null
+  college_contact_name: string | null
+  college_contact_text: string | null
+  registration_url: string | null
+  official_notice_url: string | null
 }
 
 interface MediaRefDto {
@@ -103,7 +115,19 @@ export function toCompetitionWriteDto(
     registration_start_at: draft.registrationStartAt || null,
     registration_end_at: draft.registrationEndAt || null,
     official_url: draft.officialUrl.trim() || null,
-    cover_asset_id: coverAssetId || null
+    cover_asset_id: coverAssetId || null,
+    suitable_grade_min: draft.suitableGradeMin ?? null,
+    suitable_grade_max: draft.suitableGradeMax ?? null,
+    direction: draft.direction?.trim() || null,
+    summary: draft.summary?.trim() || null,
+    suitable_for_md: draft.suitableForMd?.trim() || null,
+    preparation_advice_md: draft.preparationAdviceMd?.trim() || null,
+    event_start_at: draft.eventStartAt || null,
+    event_end_at: draft.eventEndAt || null,
+    college_contact_name: draft.collegeContactName?.trim() || null,
+    college_contact_text: draft.collegeContactText?.trim() || null,
+    registration_url: draft.registrationUrl?.trim() || null,
+    official_notice_url: draft.officialNoticeUrl?.trim() || null
   }
 }
 

@@ -2,7 +2,7 @@
 
 from django.urls import path
 
-from apps.ops_api import activity_views, analytics_views, competition_views, consultation_views, content_views, organization_views, overview_views, team_views
+from apps.ops_api import activity_views, analytics_views, competition_views, consultation_views, content_views, organization_views, overview_views, recruitment_views, team_views
 
 
 urlpatterns = [
@@ -48,6 +48,7 @@ urlpatterns = [
     path("ops/teams/<str:object_id>/close", team_views.TeamCloseView.as_view(), name="ops-team-close"),
     path("ops/organizations", organization_views.OrganizationCollectionView.as_view(), name="ops-organization-collection"),
     path("ops/organizations/stats", organization_views.OrganizationStatsView.as_view(), name="ops-organization-stats"),
+    path("ops/recruitment-applications", recruitment_views.OpsRecruitmentApplicationCollectionView.as_view(), name="ops-recruitment-application-collection"),
     path("ops/overview/workbench", overview_views.WorkbenchStatsView.as_view(), name="ops-workbench-stats"),
     path("ops/overview/competitions/health", overview_views.CompetitionHealthView.as_view(), name="ops-competition-health"),
     path("ops/overview/dynamics/stats", overview_views.DynamicsStatsView.as_view(), name="ops-dynamics-stats"),

@@ -304,11 +304,25 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '社团组织管理' }
           },
           {
+            path: 'recruitment-applications',
+            name: 'ops-recruitment-applications',
+            component: () =>
+              import('@/pages/ops/OpsRecruitmentApplicationsPage.vue'),
+            meta: { title: '招新审核' }
+          },
+          {
             path: 'guides',
             name: 'ops-guides',
             component: () =>
               import('@/pages/ops/OpsGuidesPage.vue'),
             meta: { title: '指南管理' }
+          },
+          {
+            path: 'faq',
+            name: 'ops-faq',
+            component: () =>
+              import('@/pages/ops/OpsFaqPage.vue'),
+            meta: { title: 'FAQ 管理' }
           },
           {
             path: 'analytics',
