@@ -65,8 +65,8 @@ def create_competition(*, actor: User, payload: dict[str, Any]) -> Competition:
 def update_competition(*, actor: User, competition: Competition, payload: dict[str, Any]) -> Competition:
     _require_operator(actor)
     locked = Competition.objects.select_for_update().get(pk=competition.pk)
-    if locked.publication_state != Competition.PublicationState.DRAFT:
-        raise InvalidState("已发布内容不可直接修改，请通过草稿编辑后发布。")
+    if locked.publication_state not in {Competition.PublicationState.DRAFT, Competition.PublicationState.PUBLISHED}:
+        raise InvalidState("仅草稿与已发布可直接编辑，已归档/已取消需重新创建。")
     values = dict(payload)
     if "cover_asset_id" in values:
         values["cover_asset_id"] = values.pop("cover_asset_id")

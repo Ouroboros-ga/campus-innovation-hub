@@ -171,24 +171,33 @@ async function save(publish = false) {
   try {
     const coverAssetId = cover.value?.id ?? null
     let targetId: string | null = props.competition?.id ?? null
+    const isPublishedEdit = isEdit.value && props.competition?.publicationState === 'PUBLISHED'
     if (isEdit.value && props.competition) {
-      if (props.competition.publicationState !== 'DRAFT') {
-        throw new AppError('已发布内容不可直接修改，请通过草稿编辑后发布。', { status: 409, code: 'INVALID_STATE' })
-      }
       await apiUpdateCompetition(props.competition.id, draft, coverAssetId)
+      if (publish && !isPublishedEdit && targetId) {
+        await publishCompetition(targetId)
+        toast.add({ title: '已发布', description: '竞赛已发布，学生可见。', color: 'success', icon: 'i-lucide-check-circle' })
+      } else {
+        toast.add({
+          title: publish ? (isPublishedEdit ? '已更新并保持发布' : '已发布') : isPublishedEdit ? '已更新' : '已保存草稿',
+          description: isPublishedEdit ? '已发布内容已更新，学生端实时可见。' : publish ? '已发布。' : '草稿已保存，需发布后才对学生可见。',
+          color: 'success',
+          icon: 'i-lucide-check-circle'
+        })
+      }
     } else {
       targetId = await createCompetition(draft, coverAssetId)
-    }
-    if (publish && targetId) {
-      await publishCompetition(targetId)
-      toast.add({ title: '已发布', description: '竞赛已发布，学生可见。', color: 'success', icon: 'i-lucide-check-circle' })
-    } else {
-      toast.add({
-        title: publish ? '已发布' : isEdit.value ? '已保存草稿' : '已创建草稿',
-        description: publish ? '已发布。' : '草稿已保存，需发布后才对学生可见。',
-        color: 'success',
-        icon: 'i-lucide-check-circle'
-      })
+      if (publish && targetId) {
+        await publishCompetition(targetId)
+        toast.add({ title: '已发布', description: '竞赛已发布，学生可见。', color: 'success', icon: 'i-lucide-check-circle' })
+      } else {
+        toast.add({
+          title: publish ? '已发布' : '已创建草稿',
+          description: publish ? '已发布。' : '草稿已保存，需发布后才对学生可见。',
+          color: 'success',
+          icon: 'i-lucide-check-circle'
+        })
+      }
     }
     close()
     emit('saved')
