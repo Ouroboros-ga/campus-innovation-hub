@@ -62,9 +62,6 @@ const entries = [
           <span class="block text-sm font-semibold text-highlighted">
             {{ item.label }}
           </span>
-          <span class="mt-0.5 block truncate text-xs text-muted">
-            {{ item.hint }}
-          </span>
         </span>
         <UIcon
           name="i-lucide-chevron-right"
