@@ -29,30 +29,30 @@ const display = computed(() => {
     return {
       displayName,
       collegeLabel: isTeacher.value ? department || '人工智能学院' : '人工智能学院',
-      gradeLabel: isTeacher.value ? academicTitle : grade || '2023级',
-      bio: bio || accountProfile.bio,
-      skills: (p.skills as string[] | undefined) ?? accountProfile.skills,
+      gradeLabel: isTeacher.value ? academicTitle || '' : grade || '',
+      bio: bio || '',
+      skills: (p.skills as string[] | undefined) ?? [],
       department,
       academicTitle,
     }
   }
   return {
-    displayName: accountProfile.nickname,
+    displayName: '',
     collegeLabel: '人工智能学院',
-    gradeLabel: accountProfile.grade,
-    bio: accountProfile.bio,
-    skills: accountProfile.skills,
+    gradeLabel: '',
+    bio: '',
+    skills: [] as string[],
     department: '',
     academicTitle: '',
   }
 })
 
 const stats = computed(() => {
-  // 原型数值 12 / 3 / 1（保持与设计稿一致）；生产由真实接口派生
-  const followsCount = follows.length >= 12 ? follows.length : 12
-  const teamsCount = 3
-  const teamsActive = 2
-  const orgsCount = isTeacher.value ? 1 : 1
+  // 真实数据派生；新注册学生不展示全局 fixture 的虚假 KPI，置 0
+  const followsCount = isFakePreviewEnabled.value ? follows.length : 0
+  const teamsCount = isFakePreviewEnabled.value ? teamPosts.length : 0
+  const teamsActive = isFakePreviewEnabled.value ? teamPosts.filter(item => item.status === 'RECRUITING').length : 0
+  const orgsCount = 0
   const orgLabel = isTeacher.value ? '指导老师' : '学生组织成员'
   return { follows: followsCount, teams: teamsCount, teamsActive, orgs: orgsCount, orgLabel }
 })
@@ -81,12 +81,21 @@ const settingsRowItems = [
   { to: '/me/settings', label: '绑定设置', description: '第三方账号绑定', icon: 'i-lucide-link-2' },
 ] as const
 
-// 预览数据（取前若干条，与原型数量一致，空态已处理）
-const appPreview = computed(() => applications.slice(0, 3))
-const followPreview = computed(() => follows.slice(0, 3))
-const teamPreview = computed(() => teamPosts.slice(0, 2))
-const activityPreview = computed(() => activities.slice(0, 3))
-const timelinePreview = computed(() => accountTimeline.slice(0, 4))
+// 预览数据：真实接口未接入前，新注册学生账号不展示全局 fixture 的虚假列表，空态为主
+const isFakePreviewEnabled = computed(() => auth.isSuperadmin || auth.isOperator)
+const appPreview = computed(() => (isFakePreviewEnabled.value ? applications.slice(0, 3) : []))
+const followPreview = computed(() => (isFakePreviewEnabled.value ? follows.slice(0, 3) : []))
+const teamPreview = computed(() => (isFakePreviewEnabled.value ? teamPosts.slice(0, 2) : []))
+const activityPreview = computed(() => (isFakePreviewEnabled.value ? activities.slice(0, 3) : []))
+const timelinePreview = computed(() => (isFakePreviewEnabled.value ? accountTimeline.slice(0, 4) : []))
+
+const heroProfile = computed(() => ({
+  ...accountProfile,
+  nickname: display.value.displayName,
+  bio: display.value.bio,
+  skills: display.value.skills,
+  grade: display.value.gradeLabel || null,
+}))
 
 function appStateLabel(state: string) {
   if (state === 'PENDING') return '审核中'
@@ -183,7 +192,7 @@ function teamBadgeLabel(team: { id: string; status: string }) {
         <!-- Hero -->
         <div class="mt-0 md:mt-4">
           <AccountHero
-            :profile="accountProfile"
+            :profile="heroProfile"
             :display-name="display.displayName"
             :college-label="display.collegeLabel"
             :grade-label="display.gradeLabel"
