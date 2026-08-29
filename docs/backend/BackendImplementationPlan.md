@@ -33,7 +33,7 @@
 | --- | --- | --- | --- |
 | BE-000 Backend Spec Freeze | 已冻结 | 认证、UUID、对象存储、Markdown、首页聚合、组织申请与路由命名已写入事实来源 | 停止 |
 | BE-001 Django Foundation | 已完成 | Django 5.2.17、DRF 3.18、PostgreSQL-only 配置、`GET /api/health` 与统一 API 错误基础已在服务器 Python 3.12.14 / PostgreSQL 16.2 test database 验证 | 已完成 |
-| BE-002 Accounts + Auth | 已完成 | `accounts.User` / `UserProfile`、Session / CSRF、待审核注册、登录登出、`/api/auth/me` 与最小账户审核 Admin 已在服务器 Python 3.12.14 / PostgreSQL 16.2 验证；Media Avatar 与组织身份关联按依赖留给 BE-003 | 停止；等待明确启动 BE-003 |
+| BE-002 Accounts + Auth | 已完成 | `accounts.User` / `UserProfile`、Session / CSRF、配置化注册启用策略、登录登出、`/api/auth/me` 与最小账户审核 Admin 已在服务器 Python 3.12.14 / PostgreSQL 16.2 验证；Media Avatar 与组织身份关联按依赖留给 BE-003 | 停止；等待明确启动 BE-003 |
 | BE-003 Domain Models | 已完成 | 25 张 V0.1 业务表、TextChoices、命名约束、索引、冻结的外键删除行为和全部 Migration 已在服务器 Python 3.12.14 / PostgreSQL 16.2 全新数据库迁移验证 | 停止；不创建业务 ViewSet |
 | BE-004 Django Admin | 已完成 | `/admin/` 已注册全域 ModelAdmin，且只允许 active staff SUPERADMIN；账号审核、组织启停、平台运营角色、组织 LEADER 和成员关系操作均经受审计 Service；全部 ModelAdmin 禁止物理删除，AuditLog 只读 | 停止；不创建独立超级管理员前端 |
 | BE-005 Domain Services | 已完成 | 平台角色、`orgId` 作用域、私有咨询过滤、审计、组队/招新接受和活动报名事务已实现；服务器 PostgreSQL 全套测试及活动/组队容量、跨 Recruitment Membership 双连接竞态测试通过 | 停止；不创建任何业务 API |
@@ -235,7 +235,7 @@ BE-001 完成后停止，不执行 BE-002。
 
 ## 目标
 
-建立从第一条 Migration 开始就正确的 Custom User、UserProfile、Django Session 与待审核注册流程。
+建立从第一条 Migration 开始就正确的 Custom User、UserProfile、Django Session 与配置化注册启用流程。
 
 ## 依赖
 
@@ -276,9 +276,9 @@ Django Admin 对 pending user 的审核启用操作
 ## 验收
 
 ~~~text
-注册创建 inactive User 和 Profile
-inactive 登录不能获得 Session
-SUPERADMIN 在 Django Admin 启用后可以登录
+自动启用时注册创建 active User 和 Profile，历史 inactive User 保持停用
+关闭自动启用时注册创建 inactive User 和 Profile，且不能获得 Session
+SUPERADMIN 在 Django Admin 启用待审核账号后可以登录
 GET /api/auth/me 仅返回当前用户允许查看的敏感字段
 CSRF 缺失写请求被拒绝
 PostgreSQL Migration、账户测试与 git diff --check 通过

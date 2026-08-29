@@ -129,7 +129,7 @@ async function submit() {
             to="/register"
             class="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
           >
-            注册并提交审核
+            学生注册
           </RouterLink>
         </p>
       </div>

@@ -120,7 +120,7 @@ async function submit() {
             注册
           </h1>
           <p class="mt-2 text-sm text-muted">
-            填写信息创建学生账号，注册成功后即可登录。
+            填写信息创建学生账号，提交后会显示账号状态。
           </p>
 
           <form

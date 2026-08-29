@@ -47,6 +47,13 @@ class SessionAuthTests(TestCase):
 
     @override_settings(STUDENT_REGISTRATION_AUTO_ACTIVATE=True)
     def test_register_auto_activates_student_and_allows_login_without_creating_session_first(self) -> None:
+        historical_user = get_user_model().objects.create_user(
+            username="20239999",
+            student_no="20239999",
+            real_name="历史停用账号",
+            password=self.password,
+            is_active=False,
+        )
         client, csrf_token = self.csrf_client()
 
         response = self.register(client, csrf_token)
@@ -63,6 +70,8 @@ class SessionAuthTests(TestCase):
         self.assertTrue(user.is_active)
         self.assertTrue(profile_model.objects.filter(user=user).exists())
         self.assertNotIn(settings.SESSION_COOKIE_NAME, client.cookies)
+        historical_user.refresh_from_db()
+        self.assertFalse(historical_user.is_active)
 
         login_response = client.post(
             "/api/auth/login",

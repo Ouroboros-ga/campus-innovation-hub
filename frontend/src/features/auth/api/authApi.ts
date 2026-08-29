@@ -3,7 +3,7 @@
  *
  * 映射 `docs/api/APIContract.md §3.1 Auth`（后端已冻结）：
  * - GET  /api/auth/csrf（PUBLIC，初始化 CSRF cookie）
- * - POST /api/auth/register（PUBLIC，提交审核）
+ * - POST /api/auth/register（PUBLIC，学生自助注册）
  * - POST /api/auth/login（PUBLIC，返回 /api/auth/me 结构）
  * - POST /api/auth/logout（LOGIN）
  * - GET  /api/auth/me（LOGIN，未登录 401）
@@ -41,7 +41,20 @@ export async function initCsrf(): Promise<void> {
 
 /** 学生自助注册（PUBLIC）；响应说明账号是否已经启用。 */
 export async function register(payload: RegisterPayload): Promise<RegisterResult> {
-  return http.post<RegisterResult>('/auth/register', payload, { skipAuthRedirect: true })
+  const result = await http.post<unknown>('/auth/register', payload, { skipAuthRedirect: true })
+  if (
+    typeof result !== 'object' ||
+    result === null ||
+    !(('status' in result) && (result.status === 'active' || result.status === 'pending_approval')) ||
+    !('message' in result) ||
+    typeof result.message !== 'string'
+  ) {
+    throw new AppError('服务器返回的注册结果无效，请稍后重试。', {
+      status: 502,
+      code: 'INVALID_RESPONSE'
+    })
+  }
+  return result as RegisterResult
 }
 
 /** 登录（PUBLIC），成功后后端 Set-Cookie session。 */

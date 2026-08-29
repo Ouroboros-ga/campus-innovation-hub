@@ -74,6 +74,13 @@ afterEach(() => {
 })
 
 describe('FE-105 登录页', () => {
+  it('注册入口不预判自动启用或人工审核策略', async () => {
+    const wrapper = await mountPage()
+
+    expect(wrapper.text()).toContain('学生注册')
+    expect(wrapper.text()).not.toContain('提交审核')
+  })
+
   it('空账号提交展示校验提示', async () => {
     const wrapper = await mountPage()
     await wrapper.get('button[type="submit"]').trigger('submit')

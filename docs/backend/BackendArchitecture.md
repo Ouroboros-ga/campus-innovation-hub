@@ -359,7 +359,7 @@ register_student_user()
 - 活动并同步公告：transaction.atomic 创建 Activity 与 `activity_id` 已绑定的 Announcement；按同一 `publish` 决策同时落为 DRAFT 或 PUBLISHED，任一失败整体回滚，并分别写 AuditLog；
 - 接受组队申请：锁定 TeamPost 和申请、重算已接受人数和岗位名额、更新 FULL 状态、创建通知；
 - 接受招新申请：锁定申请与岗位或招新、检查容量、创建或激活 Membership、创建通知；
-- 注册：一次创建 inactive User 和 Profile。
+- 注册：一次创建 User 和 Profile；新 User 的 `is_active` 由 `STUDENT_REGISTRATION_AUTO_ACTIVATE` 决定。
 
 Notification 只使用数据库记录；提醒任务若启用由 management command 生成，不依赖 WebSocket 或实时消息中间件。公开 Announcement 与按用户 `recipient` 存储的 Notification 分离：普通公告发布不广播到消息中心，活动取消、临近提醒和申请状态变化才向明确受影响人群创建 Notification。
 

@@ -82,6 +82,20 @@ describe('FE-105 认证 API 适配器', () => {
     )
   })
 
+  it('register 拒绝未知的账号状态', async () => {
+    vi.mocked(http.post).mockResolvedValue({
+      status: 'unknown',
+      message: 'unexpected'
+    })
+
+    await expect(
+      register({ student_no: '20240001', real_name: '张三', password: 'secret' })
+    ).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+      status: 502
+    })
+  })
+
   it('login 发送登录负载并返回当前用户', async () => {
     vi.mocked(http.post).mockResolvedValue(meResult)
 

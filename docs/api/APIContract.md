@@ -1904,7 +1904,7 @@ APIContract.md（本文件：传输契约）
 
 # 6. 已冻结的实施说明
 
-1. **认证**：同源 Django Session、HttpOnly cookie 与 CSRF；自助注册创建 inactive 待审核账号，Django Admin 审核启用；忘记密码固定联系管理员。
+1. **认证**：同源 Django Session、HttpOnly cookie 与 CSRF；自助注册按 `STUDENT_REGISTRATION_AUTO_ACTIVATE` 创建立即启用或待审核账号，关闭自动启用时由 Django Admin 审核；忘记密码固定联系管理员。
 2. **组织申请**：V0.1 只接受 Recruitment 下带 `position_id` 的申请；不存在直接申请组织端点。
 3. **首页**：`GET /api/home` 是唯一首屏聚合 Read Model；不得改用多个首屏模块请求。
 4. **媒体删除**：`media_asset` 的 PENDING_DELETE / DELETED 流转由运营或系统管理，V0.1 无公开删除端点。

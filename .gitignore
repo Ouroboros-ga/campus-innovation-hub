@@ -154,6 +154,9 @@ activemq-data/
 env/
 venv/
 ENV/
+!deploy/env/
+deploy/env/*
+!deploy/env/*.example
 env.bak/
 venv.bak/
 

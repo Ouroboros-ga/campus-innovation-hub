@@ -49,6 +49,14 @@ afterEach(() => {
 })
 
 describe('FE-105 注册页', () => {
+  it('提交前使用不预判启用策略的中性文案', async () => {
+    const wrapper = await mountPage()
+
+    expect(wrapper.text()).toContain('创建学生账号')
+    expect(wrapper.text()).not.toContain('注册成功后即可登录')
+    expect(wrapper.text()).not.toContain('等待管理员审核')
+  })
+
   it('空表单提交展示学号校验提示', async () => {
     const wrapper = await mountPage()
     await wrapper.get('button[type="submit"]').trigger('submit')

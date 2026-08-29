@@ -18,7 +18,7 @@ Internet -> Nginx :80/:443 -> Gunicorn 127.0.0.1:8000 -> PostgreSQL 内网或 lo
 
 1. 由受权人员从 `deploy/env/campus-innovation-hub.production.env.example` 创建权限为 `0640` 的环境文件；招新期如需新学生注册后立即登录，显式设置 `STUDENT_REGISTRATION_AUTO_ACTIVATE=true`，结束后可切回 `false` 恢复人工审核；
 2. 使用准确主机、TLS 证书、前端静态目录、媒体策略和 Admin allowlist 渲染 Nginx 模板；
-3. 安装受版本控制的 systemd unit，再用 `DEPLOY_PREFLIGHT_AUTHORIZED=1 deploy/scripts/preflight.sh --check-only` 校验已渲染文件；
+3. 安装受版本控制的 systemd unit；招新期用 `DEPLOY_PREFLIGHT_AUTHORIZED=1 EXPECTED_STUDENT_REGISTRATION_AUTO_ACTIVATE=true deploy/scripts/preflight.sh --check-only` 校验已渲染文件与注册策略；
 4. 单独授权后才可执行 `collectstatic`、migration、systemd reload/restart 或 Nginx reload；
 5. 记录 HTTPS 重定向、headers、登录、上传体积边界、静态资源、liveness/readiness 与公网端口暴露的脱敏证据。
 

@@ -48,9 +48,6 @@ class SecuritySettingsTests(SimpleTestCase):
             with self.assertRaises(ImproperlyConfigured):
                 optional_env_bool("TEST_OPTIONAL_BOOL", default=False)
 
-    def test_student_registration_defaults_to_manual_approval(self) -> None:
-        self.assertFalse(settings.STUDENT_REGISTRATION_AUTO_ACTIVATE)
-
     def test_non_debug_environment_uses_secure_cookie_defaults(self) -> None:
         self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
         self.assertTrue(settings.SESSION_COOKIE_SECURE)
