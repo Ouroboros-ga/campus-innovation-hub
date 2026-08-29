@@ -161,6 +161,8 @@ function stateTextClass(state: RegistrationState): string {
           size="sm"
           icon="i-lucide-arrow-right"
           trailing
+          class="shrink-0 whitespace-nowrap"
+          :ui="{ label: 'whitespace-nowrap' }"
         >
           查看详情
         </UButton>
