@@ -1634,6 +1634,88 @@ GET /api/search?q=&page=&page_size=
 
 ## 3.12 Ops（运营管理）
 
+### 发布型内容统一契约
+
+以下端点属于“发布型内容”，共享同一套创建、编辑、发布与元数据契约：
+
+```text
+/api/ops/competitions                                竞赛
+/api/ops/activities                                  活动
+/api/ops/announcements                               公告
+/api/ops/guides                                      指南
+/api/ops/faq                                         FAQ
+/api/ops/documents                                   站点文档
+/api/manage/organizations/{orgId}/recruitments       招新
+```
+
+#### 创建意图（Create Intent）
+
+所有发布型 collection 的 `POST` 额外接受：
+
+```json
+{ "publish": false }
+```
+
+- `publish` 缺省为 `false`：创建 `DRAFT`，`201` 返回管理详情。
+- `publish: true`：在**一个数据库事务内**创建、校验并直接发布，`201` 返回 `PUBLISHED` 管理详情。
+- 已存在的草稿继续通过 `POST /{id}/publish` 发布。
+- `publication_state` 禁止客户端直接写入；状态只走 action endpoint 或 create intent。
+- 创建或发布校验失败一律**整体回滚**，不得留下“已创建但未发布”的半成品。前端不得用“先 POST 创建、再 POST publish”两次请求模拟原子发布。
+
+#### 管理响应元数据
+
+发布型管理详情（`GET` / `PATCH` / `POST` 的响应）至少包含：
+
+```json
+{
+  "id": "uuid",
+  "publication_state": "DRAFT | PUBLISHED | CANCELLED | ARCHIVED",
+  "allowed_actions": ["EDIT", "PUBLISH"],
+  "created_at": "2026-08-18T09:24:00+08:00",
+  "updated_at": "2026-08-29T16:40:00+08:00",
+  "published_at": null
+}
+```
+
+- `allowed_actions` 由后端按“当前用户 + 当前状态 + 当前数据约束”计算，取值来自 `EDIT`、`PUBLISH`、`ARCHIVE`、`DELETE_DRAFT`、`CANCEL`、`COMPLETE`、`FEATURE`。
+- 不同领域只返回适用动作（FAQ 无 `CANCEL`，招新才有 `COMPLETE`）。它不是状态常量映射，同一状态在不同数据下可以返回不同动作。
+- 前端按 `allowed_actions` 渲染按钮，不得自行推断权限。隐藏按钮不是权限控制，后端仍必须独立校验。
+
+#### 可编辑状态
+
+`PATCH` 只在 `DRAFT` 与 `PUBLISHED` 下允许：
+
+- `DRAFT`：可自由修改。
+- `PUBLISHED`：可直接修改，**保存后立即对学生生效**，并写入 AuditLog。V0.1 不引入修订表或审核流。
+- `CANCELLED` / `ARCHIVED`：只读，返回 `409 INVALID_STATE`。
+
+#### 关联数组语义
+
+`competition_ids`、`positions` 等关联数组遵循：
+
+- 字段省略 = 保持不变；
+- `[]` = 明确清空；
+- 招新 `positions` 为全量数组，按元素 `id` 局部更新，未出现的已有岗位删除（存在申请时受保护，见 `EndpointReference.md`）。
+
+前端 Draft 必须完整回填后才可发送全量数组，不得以空数组覆盖未加载的关联。
+
+#### 发布完整性
+
+发布（含 `publish: true` 与 `POST /{id}/publish`）校验不通过时返回 `422 PUBLICATION_INCOMPLETE`：
+
+```json
+{
+  "code": "PUBLICATION_INCOMPLETE",
+  "message": "发布前缺少必填内容",
+  "fieldErrors": {
+    "cover_asset_id": ["发布前必须上传封面图"],
+    "registration_end_at": ["发布前必须设置报名截止时间"]
+  }
+}
+```
+
+前端保留草稿并展示缺失项列表，不重复创建记录。
+
 ### 竞赛管理
 
 ```text
@@ -1740,10 +1822,20 @@ POST /api/ops/dynamics/activity-with-announcement
 GET  /api/ops/consultations?page=&page_size=&status=&visibility=&q=
 GET  /api/ops/consultations/{id}
 POST /api/ops/consultations/{id}/replies
+POST /api/ops/consultations/{id}/close
 权限：OPERATOR / SUPERADMIN
 ```
 
-回复 body：`{"body_md": "……"}`（1-10000）。回复后咨询 `status -> ANSWERED`。PRIVATE 咨询仅运营可见。
+**咨询是正式答疑记录，不是聊天窗口。**
+
+- 回复 **append-only**：`POST /{id}/replies` 只追加，不提供编辑或删除回复的端点。答复有误时追加“更正说明”，保留完整可追溯历史。
+- 回复 body：`{"body_md": "……"}`（1-10000）。首次回复后咨询 `status -> ANSWERED`。
+- `POST /{id}/close`：仅允许 `OPEN / ANSWERED -> CLOSED`，其他状态返回 `409 INVALID_STATE`。关闭后禁止再回复（`409 INVALID_STATE`）。默认**不**开放 `CLOSED -> OPEN`。
+- 状态流转与回复均写 AuditLog 并定向通知提问者。
+
+管理详情 `GET /{id}` 返回运营视角 DTO，包含问题正文、作者必要信息、`visibility`、关联竞赛、**完整回复历史**、`status` 与 `allowed_actions`；不得复用面向公开展示的 `ConsultQaPost`（后者会压扁回复历史并暴露隐私判断给前端）。
+
+PRIVATE 咨询仅运营与作者可见，运营端需明确标识但不以颜色作为唯一信息载体。
 
 ### 指南 / FAQ / 公告 / 轮播管理
 
@@ -1877,6 +1969,7 @@ CANNOT_APPLY_OWN       422  不能申请自己的组队
 CAPACITY_FULL          422  容量已满
 TIME_WINDOW_CLOSED     422  不在报名 / 申请时间窗
 INVALID_STATE          409  状态机不允许的转移
+PUBLICATION_INCOMPLETE 422  发布前缺少必填内容（含 fieldErrors，列出缺失项）
 NO_ACTIVE_RECRUITMENT  422  组织当前无开放招新
 UNSUPPORTED_MEDIA      400  文件类型 / 大小不符合
 INTERNAL_ERROR         500  未预期错误

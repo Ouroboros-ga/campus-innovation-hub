@@ -877,6 +877,67 @@ API 层将后端错误转换为前端错误模型。
 
 UI 错误必须可操作（actionable）。
 
+字段错误映射统一由 `shared/lib/form-errors.ts` 处理：
+
+```ts
+export type FieldErrors = Record<string, string[]>
+
+export function firstFieldErrors(
+  errors: FieldErrors | null,
+  aliases?: Readonly<Record<string, string>>
+): Record<string, string>
+```
+
+- 后端 `fieldErrors` 的值恒为数组。`AppError.fieldErrors` 必须保留数组形态；`readErrorPayload()` 禁止宽泛 cast 成 `Record<string, string>`。
+- `firstFieldErrors()` 取每个字段的第一条消息，并按调用方提供的 alias 把 `snake_case` 映射到表单字段名（如 `registration_end_at -> registrationEndAt`）。
+- `non_field_errors` 不作为字段错误，改由页面级 inline alert 承载。
+- 各编辑器只提供 alias，不再各自复制映射循环。
+
+`409 INVALID_STATE` 重新加载权威状态并刷新动作；`422 PUBLICATION_INCOMPLETE` 保留草稿、展示缺失项列表，不重复创建记录。
+
+---
+
+# 编辑任务架构（Editor Task Architecture）
+
+运营端与组织管理端的编辑界面共享一套领域无关的任务底座，但每个 feature 保留自己的 DTO、Draft、表单与业务动作。
+
+共享层提供：
+
+```text
+shared/types/editor.ts                  EditorIntent / EditorPhase / EditorAdapter
+shared/composables/useEditorTask.ts     phase、dirty 快照、client/server 错误、重试、提交保护
+shared/components/editor/EditorTaskShell.vue / EditorStatusBanner.vue / EditorActionBar.vue
+shared/components/editor/UnsavedChangesDialog.vue
+```
+
+约束：
+
+- 共享层只能 import shared；不得出现领域 DTO、router 或 toast。
+- 页面不得 import `@/shared/http/client`；调用链固定为 `page -> feature view/composable -> feature api -> shared HTTP`。
+- 发布能力、可编辑状态与可执行动作一律以后端 `allowed_actions` 为准，前端不推断权限。隐藏按钮不是权限控制。
+- 创建并发布只发一次请求（携带 `publish: true`），不得用“先创建草稿、再调用发布”两次请求模拟。
+- 复杂表单使用独立任务页，不塞进 Modal。
+- 未保存离开保护由 feature view 集成 `onBeforeRouteLeave`；共享组件只提供确认 UI，不直接 import router。
+
+## 编辑任务壳布局
+
+```text
+┌ 返回列表 / 对象标题 ─────────────── 状态与影响 ─ 最后保存 ┐
+│ [草稿：学生不可见] 或 [已发布：保存后立即生效]           │
+├─────────────┬──────────────────────────┬──────────────────┤
+│ 小节导航     │ 语义化 form              │ 学生端预览        │
+│ 200–220px    │ 640–760px                │ 320–380px         │
+└─────────────┴──────────────────────────┴──────────────────┘
+┌ 取消/返回              保存草稿              发布/保存更新 ┐
+```
+
+- 右栏固定为学生端预览，不做“上下文 / 预览”切换。预览按约 360px 的手机宽度渲染：窄栏放不下真实的桌面端布局，而手机宽度是该栏唯一能达到 1:1 保真度的形态，也是学生浏览的主入口。
+- 预览面板视为一个设备框，其内部独立滚动是合理的，不违反“页面单一纵向滚动容器”——该规则约束的是编辑区与页面主体。
+- 预览必须复用 `RichContent.vue` 与公开详情页的同一套渲染管线，不得手写近似，否则必然与学生端漂移。同时提供“在学生端查看”外链，用于核对桌面端渲染。
+- 页面只保留一个主动作：草稿时“发布”，已发布时“保存更新”，咨询时“发送正式回复”。
+- 整张表单是一个 surface，小节用分隔线区分，不使用卡片套卡片。
+- 完整性校验不常驻右栏；仅在动作被阻断时以可操作 inline alert 出现。`allowed_actions` 是契约而非 UI，其界面体现只是“当前存在的按钮”，不把动作名渲染给运营看。
+
 ---
 
 # 领域类型（Domain Types）

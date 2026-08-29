@@ -718,14 +718,24 @@ IMAGE 仅接受 jpg/jpeg/png/webp/avif，单文件 <= 5 MB；DOCUMENT 在 V0.1 �
 
 所有本节端点均需要 OPERATOR 或 SUPERADMIN Session 和 CSRF（GET 除外）。管理读取可以看 DRAFT/ARCHIVED 和内部创建/更新时间，但不得输出密码、会话、SENSITIVE 联系方式或完整 AuditLog。
 
+## 6.0 发布型内容统一契约
+
+§6.1 / §6.2 / §6.4 / §7 的发布型 collection 共享 `APIContract.md` §3.12「发布型内容统一契约」：
+
+- `POST` 额外接受 `publish?: boolean`（缺省 `false`）。`publish=true` 在单事务内创建并直接发布，校验失败整体回滚。
+- `PATCH` 仅在 `DRAFT` / `PUBLISHED` 允许；`PUBLISHED` 下保存立即对学生生效并写 AuditLog；`CANCELLED` / `ARCHIVED` 返回 `409 INVALID_STATE`。
+- 管理详情统一返回 `publication_state`、`published_at`、`allowed_actions`。
+- 关联数组遵循「省略保持不变、`[]` 明确清空」。
+- 发布资料不完整返回 `422 PUBLICATION_INCOMPLETE` + `fieldErrors`。
+
 ## 6.1 Competition 管理
 
 | 端点 | Request | Success | 错误 / 副作用 |
 |---|---|---|---|
 | `GET /api/ops/competitions` | `q,status=DRAFT|PUBLISHED|CANCELLED|ARCHIVED,category,level,page,page_size` | `200 Page<CompetitionManagementDetail>` | 管理排序可按 `created_at`、`registration_end_at`；非法筛选 400 |
-| `POST /api/ops/competitions` | `CompetitionWrite` | `201 CompetitionManagementDetail` | 初始 DRAFT，写 AuditLog CREATE |
+| `POST /api/ops/competitions` | `CompetitionWrite` + `publish?: boolean` | `201 CompetitionManagementDetail` | `publish` 缺省 `false` 创建 DRAFT；`publish=true` 单事务创建并直接发布为 PUBLISHED，校验失败整体回滚；写 AuditLog CREATE |
 | `GET /api/ops/competitions/{id}` | 无 | `200 CompetitionManagementDetail` | 不存在 404 |
-| `PATCH /api/ops/competitions/{id}` | `CompetitionWrite` 的部分字段 | `200 CompetitionManagementDetail` | 不接受 `publication_state`、审计字段；字段合法性 400，写 AuditLog UPDATE |
+| `PATCH /api/ops/competitions/{id}` | `CompetitionWrite` 的部分字段 | `200 CompetitionManagementDetail` | 仅 DRAFT / PUBLISHED 可改，CANCELLED / ARCHIVED `409 INVALID_STATE`；PUBLISHED 下保存立即对学生生效；不接受 `publication_state`、审计字段；字段合法性 400，写 AuditLog UPDATE |
 | `POST /api/ops/competitions/{id}/publish` | 无 | `204` | 仅 DRAFT -> PUBLISHED；缺少必填发布资料 422；其他状态 409 INVALID_STATE，审计 |
 | `POST /api/ops/competitions/{id}/cancel` | 无 | `204` | PUBLISHED -> CANCELLED，审计 |
 | `POST /api/ops/competitions/{id}/archive` | 无 | `204` | PUBLISHED 或 CANCELLED -> ARCHIVED，审计 |
@@ -734,16 +744,18 @@ IMAGE 仅接受 jpg/jpeg/png/webp/avif，单文件 <= 5 MB；DOCUMENT 在 V0.1 �
 | `PATCH /api/ops/competitions/{id}/timeline-events/{eid}` | 上一对象部分字段 | `200 TimelineEvent` | 节点不属于该竞赛 404；审计 |
 | `DELETE /api/ops/competitions/{id}/timeline-events/{eid}` | 无 | `204` | 节点不属于该竞赛 404；审计 |
 
-`CompetitionManagementDetail` 是公开详情加 `publication_state`、`is_featured`、`featured_order`、`created_at`、`updated_at`、`created_by_id`、`updated_by_id`；它仍不返回 User 的 SENSITIVE 字段。
+`CompetitionManagementDetail` 是公开详情加 `publication_state`、`published_at`、`allowed_actions`、`is_featured`、`featured_order`、`created_at`、`updated_at`、`created_by_id`、`updated_by_id`；它仍不返回 User 的 SENSITIVE 字段。
+
+`allowed_actions` 取值来自 `EDIT`、`PUBLISH`、`ARCHIVE`、`DELETE_DRAFT`、`CANCEL`、`FEATURE`，由后端按「当前用户 + 当前状态 + 当前数据约束」计算：草稿返回 `EDIT` / `PUBLISH` / `DELETE_DRAFT`，已发布返回 `EDIT` / `ARCHIVE` / `CANCEL` / `FEATURE`，已取消返回 `ARCHIVE`，已归档返回空数组。
 
 ## 6.2 Activity 与报名管理
 
 | 端点 | Request | Success | 错误 / 副作用 |
 |---|---|---|---|
 | `GET /api/ops/activities` | `q,status=DRAFT|PUBLISHED|CANCELLED|ARCHIVED,activity_type,page,page_size` | `200 Page<ActivityManagementDetail>` | 管理列表含所有发布状态 |
-| `POST /api/ops/activities` | `ActivityWrite` | `201 ActivityManagementDetail` | 初始 DRAFT，审计 CREATE |
+| `POST /api/ops/activities` | `ActivityWrite` + `publish?: boolean` | `201 ActivityManagementDetail` | `publish=true` 单事务创建并直接发布，校验失败整体回滚；审计 CREATE |
 | `GET /api/ops/activities/{id}` | 无 | `200 ActivityManagementDetail` | 不存在 404 |
-| `PATCH /api/ops/activities/{id}` | `ActivityWrite` 的部分字段 | `200 ActivityManagementDetail` | 不接受 publication_state；已开始活动修改时间/容量须满足现有报名约束；审计 UPDATE |
+| `PATCH /api/ops/activities/{id}` | `ActivityWrite` 的部分字段 | `200 ActivityManagementDetail` | 仅 DRAFT / PUBLISHED 可改，CANCELLED / ARCHIVED `409 INVALID_STATE`；不接受 publication_state；PUBLISHED 下保存立即对学生生效；容量不得小于已确认报名人数，否则 `fieldErrors.capacity`；已开始活动修改时间须满足现有报名约束；审计 UPDATE |
 | `POST /api/ops/activities/{id}/publish` | 无 | `204` | DRAFT -> PUBLISHED，发布资料缺失 422；审计 |
 | `POST /api/ops/activities/{id}/cancel` | 无 | `204` | PUBLISHED -> CANCELLED；向 REGISTERED 用户创建定向 ACTIVITY Notification；审计 |
 | `POST /api/ops/activities/{id}/archive` | 无 | `204` | PUBLISHED 或 CANCELLED -> ARCHIVED；审计 |
@@ -777,7 +789,9 @@ IMAGE 仅接受 jpg/jpeg/png/webp/avif，单文件 <= 5 MB；DOCUMENT 在 V0.1 �
 | FAQ | `GET /api/ops/faq?q=&status=&category=&page=&page_size=`；`GET /api/ops/faq/{id}` | `POST /api/ops/faq`、`PATCH /api/ops/faq/{id}`，body 为 `FaqWrite` | `POST /api/ops/faq/{id}/publish`、`POST /api/ops/faq/{id}/archive`、`PATCH /api/ops/faq/{id}/featured` body `{is_featured}` |
 | Banner | `GET /api/ops/banners?active=true|false&page=&page_size=`；`GET /api/ops/banners/{id}` | `POST /api/ops/banners`、`PATCH /api/ops/banners/{id}`，body 为 `BannerWrite` | `PATCH` 的 is_active、时间窗和 sort_order 是唯一启停/排序写法 |
 
-所有表中 `status` 只接受资源的 `publication_state` 枚举（Announcement/Guide/FAQ：DRAFT/PUBLISHED/ARCHIVED；Banner 使用 `is_active`，无 publication_state）。创建默认 DRAFT，只有 `/publish` 可置 PUBLISHED，`/archive` 可置 ARCHIVED；PATCH 不接受 `publication_state`。成功状态：创建 `201` 返回管理详情、读取/编辑/featured `200`、publish/archive `204`。不存在 `404`，状态冲突 `409 INVALID_STATE`，字段非法 `400`；每次写操作审计。
+所有表中 `status` 只接受资源的 `publication_state` 枚举（Announcement/Guide/FAQ：DRAFT/PUBLISHED/ARCHIVED；Banner 使用 `is_active`，无 publication_state）。创建默认 DRAFT；`POST` 携带 `publish=true` 时单事务创建并直接发布，失败整体回滚。PATCH 不接受 `publication_state`，且仅 DRAFT / PUBLISHED 可改，ARCHIVED 返回 `409 INVALID_STATE`；PUBLISHED 下保存立即对学生生效并审计。`PUBLISHED` 的 SiteDocument 其 `slug` 不可修改（其他内容可更新），修改请求返回 `400 VALIDATION_ERROR` + `fieldErrors.slug`。成功状态：创建 `201` 返回管理详情、读取/编辑/featured `200`、publish/archive `204`。不存在 `404`，状态冲突 `409 INVALID_STATE`，发布资料缺失 `422 PUBLICATION_INCOMPLETE`，字段非法 `400`；每次写操作审计。
+
+`competition_ids` 等关联数组遵循「省略保持不变、`[]` 明确清空」。前端 Draft 必须完整回填后再提交全量数组；固定提交空数组会清空原有管理端关联。
 
 `AnnouncementManagementDetail` 为公开详情加 `publication_state`、`created_at`、`updated_at`、`created_by_id`、`updated_by_id`；Guide/FAQ/Banner 管理详情同理增加内部生命周期与审计字段。Banner 永不进入公开通用列表，只通过 `GET /api/home` 暴露当前有效项。
 
@@ -788,8 +802,11 @@ IMAGE 仅接受 jpg/jpeg/png/webp/avif，单文件 <= 5 MB；DOCUMENT 在 V0.1 �
 | `GET /api/ops/consultations` | `q,status=OPEN|ANSWERED|CLOSED,visibility=PUBLIC|PRIVATE,category,page,page_size` | `200 Page<ConsultationManagementDetail>` | 可读取 PRIVATE；分页/enum 非法 400 |
 | `GET /api/ops/consultations/{id}` | 无 | `200 ConsultationManagementDetail` | 不存在 404 |
 | `POST /api/ops/consultations/{id}/replies` | `ConsultationReplyWrite` | `201 ConsultationReply` | 仅 OPEN/ANSWERED 可追加；CLOSED `409 INVALID_STATE`；写 Reply、answered_at、status=ANSWERED、定向通知作者、审计 |
+| `POST /api/ops/consultations/{id}/close` | 无 | `204` | 仅 OPEN/ANSWERED -> CLOSED；已 CLOSED `409 INVALID_STATE`；审计。关闭后禁止再回复 |
 
-`ConsultationManagementDetail` 仅对运营输出作者 `ActorSummary`、visibility、全文和正式回复；不输出学生的学号、班级或联系方式。
+**回复是 append-only。** 本组端点不提供编辑或删除 Reply 的接口；答复有误时追加一条「更正说明」，保留完整可追溯历史。默认不开放 `CLOSED -> OPEN`。
+
+`ConsultationManagementDetail` 仅对运营输出作者 `ActorSummary`、visibility、全文、**完整回复历史**、`status` 与 `allowed_actions`；不输出学生的学号、班级或联系方式。它不得复用面向公开展示的 `ConsultQaPost`（后者压扁回复历史，且把隐私判断交给前端）。
 
 ---
 
@@ -811,15 +828,17 @@ IMAGE 仅接受 jpg/jpeg/png/webp/avif，单文件 <= 5 MB；DOCUMENT 在 V0.1 �
 | 端点 | Request | Success | 错误 / 副作用 |
 |---|---|---|---|
 | `GET /api/manage/organizations/{orgId}/recruitments` | `status` 可选，page/page_size | `200 Page<RecruitmentManagementDetail>` | 只限当前 org |
-| `POST /api/manage/organizations/{orgId}/recruitments` | `RecruitmentWrite` | `201 RecruitmentManagementDetail` | 初始 DRAFT，审计 CREATE |
+| `POST /api/manage/organizations/{orgId}/recruitments` | `RecruitmentWrite` + `publish?: boolean` | `201 RecruitmentManagementDetail` | `publish=true` 单事务创建并直接发布（须至少一个岗位和完整时间窗，否则 `422 PUBLICATION_INCOMPLETE`），失败整体回滚；审计 CREATE |
 | `GET /api/manage/organizations/{orgId}/recruitments/{rid}` | 无 | `200 RecruitmentManagementDetail` | rid 不属于 org 404 |
-| `PATCH /api/manage/organizations/{orgId}/recruitments/{rid}` | `RecruitmentWrite` 的部分字段 | `200 RecruitmentManagementDetail` | 不接受 publication_state/completed_at；岗位数组规则见 §0.6；审计 |
+| `PATCH /api/manage/organizations/{orgId}/recruitments/{rid}` | `RecruitmentWrite` 的部分字段 | `200 RecruitmentManagementDetail` | 仅 DRAFT / PUBLISHED 可改，CANCELLED / COMPLETED / ARCHIVED `409 INVALID_STATE`；PUBLISHED 下保存立即对学生生效；不接受 publication_state/completed_at；岗位数组规则见 §0.6；审计 |
 | `POST /api/manage/organizations/{orgId}/recruitments/{rid}/publish` | 无 | `204` | DRAFT -> PUBLISHED，必须至少有一个岗位和完整时间窗；否则 422 |
 | `POST /api/manage/organizations/{orgId}/recruitments/{rid}/cancel` | 无 | `204` | PUBLISHED -> CANCELLED；不改变既有申请历史，审计 |
 | `POST /api/manage/organizations/{orgId}/recruitments/{rid}/complete` | 无 | `204` | PUBLISHED、申请窗口结束后可写 completed_at；之后申请拒绝，审计 |
 | `POST /api/manage/organizations/{orgId}/recruitments/{rid}/archive` | 无 | `204` | PUBLISHED/CANCELLED/COMPLETED -> ARCHIVED；审计 |
 
-`RecruitmentManagementDetail` 为公开详情加 `publication_state`、`completed_at`、申请统计 `{pending_count,accepted_count,rejected_count,withdrawn_count}`、`created_at`、`updated_at`。统计不是独立持久字段。
+`RecruitmentManagementDetail` 为公开详情加 `publication_state`、`published_at`、`allowed_actions`、`completed_at`、申请统计 `{pending_count,accepted_count,rejected_count,withdrawn_count}`、`created_at`、`updated_at`。统计不是独立持久字段。
+
+`allowed_actions` 由后端计算：草稿返回 `EDIT` / `PUBLISH` / `DELETE_DRAFT`，已发布返回 `EDIT` / `CANCEL` / `COMPLETE` / `ARCHIVE`（`COMPLETE` 仅在申请窗口结束后出现），已结束返回 `ARCHIVE`，已归档返回空数组。有 PENDING / ACCEPTED 申请的岗位不可删除。
 
 ## 7.3 招新申请处理
 

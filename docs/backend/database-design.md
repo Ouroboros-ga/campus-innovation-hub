@@ -1309,6 +1309,22 @@ CANCELLED
 ARCHIVED
 ```
 
+可编辑性对竞赛、活动、公告、指南、FAQ、站点文档、招新统一适用：
+
+| 状态 | `PATCH` | 说明 |
+|---|---|---|
+| `DRAFT` | 允许 | 可自由修改；可发布，也可删除 |
+| `PUBLISHED` | 允许 | 保存后立即对学生生效，写 AuditLog UPDATE |
+| `CANCELLED` | 拒绝 | 只读，仅可归档 |
+| `ARCHIVED` | 拒绝 | 只读，不可物理删除，可复制为新草稿 |
+
+约束：
+
+- `publication_state` 禁止客户端直接写入。状态只通过 action endpoint 或 `POST` 的 `publish` 意图变更。
+- 创建即发布必须在一个事务内完成，校验失败整体回滚，不留下“已创建但未发布”的半成品。
+- 所有状态变更，以及 `PUBLISHED` 下的内容修改，都写 AuditLog。
+- `allowed_actions` **不在数据库持久化**，由服务层按「当前用户 + 当前状态 + 当前数据约束」实时计算后随管理响应返回。
+
 ### Unique
 
 ```text

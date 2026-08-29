@@ -68,25 +68,63 @@
 ├── /manage/organizations/:organizationId
 │   ├── 组织管理概览
 │   ├── /profile
+│   │   └── 组织资料编辑（资料配置，非发布流程）
 │   ├── /recruitments
+│   │   ├── 招新列表
+│   │   ├── /new
+│   │   │   └── 新建招新（编辑任务页）
+│   │   └── /:recruitmentId/edit
+│   │       └── 编辑招新（编辑任务页）
 │   └── /applications
+│       └── 招新申请队列（工作队列，非编辑器）
 │
 └── /ops
     ├── 运营中心
     ├── /competitions
+    │   ├── 竞赛列表
+    │   ├── /new                 编辑任务页
+    │   └── /:id/edit            编辑任务页
     ├── /activities（校园动态管理：活动 / 公告）
-    ├── /questions
+    │   ├── /new                 活动编辑任务页
+    │   └── /:id/edit            活动编辑任务页
+    ├── /announcements
+    │   ├── /new                 公告编辑任务页
+    │   └── /:id/edit            公告编辑任务页
     ├── /guides
-    └── 其余运营任务
+    │   ├── /new                 指南编辑任务页
+    │   └── /:id/edit            指南编辑任务页
+    ├── /faq
+    │   ├── /new                 FAQ 编辑任务页
+    │   └── /:id/edit            FAQ 编辑任务页
+    ├── /documents
+    │   ├── /new                 站点文档编辑任务页
+    │   └── /:id/edit            站点文档编辑任务页
+    ├── /questions
+    │   ├── 咨询队列（工作队列）
+    │   └── /:id                 咨询答疑任务页
+    ├── /homepage                首页编排（编排任务）
+    └── /system                  系统配置（配置任务）
 ```
 
 系统级管理：
 
 ```text
-Django Admin
+Django Admin（/admin）
 ```
 
 不重复开发一套完整超级管理员前端。
+
+## 管理面职责边界
+
+```text
+/admin    SUPERADMIN：用户、权限、审计与底层数据维护
+/ops      平台运营：公共内容、咨询、审核、首页编排
+/manage   组织负责人：本组织资料、招新、招新申请
+```
+
+编辑任务页一律嵌套在对应 Shell 内（`/ops/**` 继承运营导航，`/manage/**` 继承组织管理导航），不得作为脱离导航的孤立路由。复杂表单使用独立任务页，不塞进 Modal。
+
+---
 
 ---
 
