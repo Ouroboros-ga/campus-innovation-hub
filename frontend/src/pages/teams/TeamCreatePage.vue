@@ -5,9 +5,9 @@ import { useToast } from '@nuxt/ui/composables'
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
 import FormSection from '@/shared/components/form/FormSection.vue'
 
+import { useTeamCompetitionOptions } from '@/features/teams/composables/useTeamCompetitionOptions'
 import {
   submitTeamPost,
-  teamPostCompetitionOptions,
   teamPostTypeOptions,
   validateTeamPostDraft
 } from '@/features/teams/lib/teamPost'
@@ -44,7 +44,16 @@ const submitting = ref(false)
 const submitted = ref(false)
 const createdPost = ref<TeamPost | null>(null)
 
-const competitionOptions = teamPostCompetitionOptions()
+const {
+  options: competitionOptions,
+  loading: competitionLoading,
+  error: competitionError,
+  reload: reloadCompetitions
+} = useTeamCompetitionOptions()
+
+const competitionNameMap = computed(
+  () => new Map(competitionOptions.value.map(option => [option.value, option.label] as const))
+)
 
 /** 技能 / 岗位输入以逗号分隔，实时生成 chip 预览。 */
 const roleChips = computed(() => splitTags(rolesText.value))
@@ -81,7 +90,7 @@ async function submit() {
 
   submitting.value = true
   try {
-    const post = await submitTeamPost(draft)
+    const post = await submitTeamPost(draft, competitionNameMap.value)
     createdPost.value = post
     submitted.value = true
     toast.add({
@@ -151,13 +160,40 @@ async function submit() {
                 name="competitionId"
                 required
                 :error="errors.competitionId"
+                :help="
+                  competitionError
+                    ? '竞赛列表加载失败，请重试'
+                    : competitionLoading
+                      ? '正在加载竞赛列表…'
+                      : competitionOptions.length === 0
+                        ? '暂无可关联的竞赛'
+                        : undefined
+                "
               >
                 <USelect
                   v-model="competitionId"
                   :items="competitionOptions"
+                  :loading="competitionLoading"
+                  :disabled="competitionLoading || !!competitionError"
                   placeholder="请选择关联竞赛"
                   class="w-full"
                 />
+                <div
+                  v-if="competitionError"
+                  class="mt-2 flex items-center gap-2"
+                >
+                  <span class="text-xs text-error">加载失败，请检查网络后重试</span>
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    icon="i-lucide-refresh-cw"
+                    :loading="competitionLoading"
+                    @click="reloadCompetitions"
+                  >
+                    重试
+                  </UButton>
+                </div>
               </UFormField>
 
               <UFormField

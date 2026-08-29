@@ -1,7 +1,8 @@
 /**
  * 创建组队帖子（FE-032）mock-first 逻辑。
  *
- * - teamPostTypeOptions / teamPostCompetitionOptions：表单选项；
+ * - teamPostTypeOptions：表单选项；
+ * - teamPostCompetitionOptions：已弃用，仅为单测兼容保留（fixture 派生），新代码请用 useTeamCompetitionOptions 动态拉取；
  * - validateTeamPostDraft：字段级校验（必填 + 人数逻辑 + 岗位非空）；
  * - submitTeamPost：异步 mock 提交（延迟），内存记录，返回创建成功的帖子；
  * - 无真实后端；创建成功后写入内存，不修改广场 fixture。
@@ -19,12 +20,22 @@ export const teamPostTypeOptions: Array<{ label: string; value: string }> = [
   { label: '个人找队', value: 'PERSON_LOOKING' }
 ]
 
-/** 关联竞赛选项（由竞赛 fixture 派生）。 */
+/**
+ * 关联竞赛选项（fixture 派生，已弃用）。
+ * @deprecated 改用 `useTeamCompetitionOptions` 动态拉取 `GET /api/competitions`
+ */
 export function teamPostCompetitionOptions(): Array<{ label: string; value: string }> {
   return competitions.map(competition => ({
     label: competition.name,
     value: competition.id
   }))
+}
+
+/** 将竞赛列表映射为下拉选项（供动态数据使用）。 */
+export function toCompetitionOptions(
+  items: Array<{ id: string; name: string }>
+): Array<{ label: string; value: string }> {
+  return items.map(item => ({ label: item.name, value: item.id }))
 }
 
 /** 校验发布组队表单：返回字段级错误，无错误返回 `{}`。 */
@@ -66,9 +77,15 @@ export function validateTeamPostDraft(
 /** 内存中的已创建组队记录。 */
 const createdPosts: TeamPost[] = []
 
-/** 由草稿组装一条队伍帖子。 */
-function buildTeamPost(draft: TeamPostDraft): TeamPost {
-  const competition = competitions.find(item => item.id === draft.competitionId)
+/** 由草稿组装一条队伍帖子（不依赖 fixture，动态竞赛名由调用方注入或回退为 ID）。 */
+function buildTeamPost(
+  draft: TeamPostDraft,
+  competitionNameMap?: Map<string, string>
+): TeamPost {
+  const resolvedName =
+    competitionNameMap?.get(draft.competitionId) ??
+    competitions.find(item => item.id === draft.competitionId)?.name ??
+    draft.competitionId
   const id = `team-create-${Date.now()}`
   return {
     id,
@@ -76,7 +93,7 @@ function buildTeamPost(draft: TeamPostDraft): TeamPost {
     postType: draft.postType,
     status: 'RECRUITING',
     competitionId: draft.competitionId,
-    competitionName: competition?.name ?? '未知竞赛',
+    competitionName: resolvedName,
     baseMemberCount: draft.baseMemberCount,
     targetMemberCount: draft.targetMemberCount,
     roles: draft.roles,
@@ -92,8 +109,11 @@ function buildTeamPost(draft: TeamPostDraft): TeamPost {
 }
 
 /** 提交组队（mock 延迟后成功），返回创建成功的帖子。 */
-export function submitTeamPost(draft: TeamPostDraft): Promise<TeamPost> {
-  const post = buildTeamPost(draft)
+export function submitTeamPost(
+  draft: TeamPostDraft,
+  competitionNameMap?: Map<string, string>
+): Promise<TeamPost> {
+  const post = buildTeamPost(draft, competitionNameMap)
   return new Promise(resolve => {
     setTimeout(() => {
       createdPosts.push(post)
