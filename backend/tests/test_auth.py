@@ -13,7 +13,7 @@ class CsrfInitializationTests(SimpleTestCase):
     def test_csrf_endpoint_issues_readable_cookie(self) -> None:
         client = Client(enforce_csrf_checks=True)
 
-        response = client.get("/api/auth/csrf")
+        response = client.get("/api/auth/csrf", secure=True)
 
         self.assertEqual(response.status_code, 204)
         self.assertIn("csrftoken", client.cookies)
@@ -25,7 +25,7 @@ class SessionAuthTests(TestCase):
 
     def csrf_client(self) -> tuple[Client, str]:
         client = Client(enforce_csrf_checks=True)
-        response = client.get("/api/auth/csrf")
+        response = client.get("/api/auth/csrf", secure=True)
         self.assertEqual(response.status_code, 204)
         return client, client.cookies["csrftoken"].value
 
@@ -35,6 +35,7 @@ class SessionAuthTests(TestCase):
             data={"student_no": student_no, "real_name": "张三", "password": self.password},
             content_type="application/json",
             HTTP_X_CSRFTOKEN=csrf_token,
+            secure=True,
         )
 
     def test_register_requires_csrf(self) -> None:
@@ -78,6 +79,7 @@ class SessionAuthTests(TestCase):
             data={"username": "20240001", "password": self.password},
             content_type="application/json",
             HTTP_X_CSRFTOKEN=csrf_token,
+            secure=True,
         )
         self.assertEqual(login_response.status_code, 200)
         self.assertIn(settings.SESSION_COOKIE_NAME, client.cookies)
@@ -128,6 +130,7 @@ class SessionAuthTests(TestCase):
             data={"username": "20240002", "password": self.password},
             content_type="application/json",
             HTTP_X_CSRFTOKEN=csrf_token,
+            secure=True,
         )
 
         self.assertEqual(response.status_code, 403)
