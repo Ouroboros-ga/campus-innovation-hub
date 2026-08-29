@@ -23,6 +23,7 @@ import CoverUpload from '@/shared/components/upload/CoverUpload.vue'
 import FormSection from '@/shared/components/form/FormSection.vue'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 import RichContent from '@/shared/components/reader/RichContent.vue'
+import { firstFieldErrors } from '@/shared/lib/form-errors'
 import type {
   CompetitionCategory,
   CompetitionLevel,
@@ -129,14 +130,6 @@ const FIELD_MAP: Record<string, string> = {
   event_end_at: 'eventEndAt'
 }
 
-function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, string> {
-  const result: Record<string, string> = {}
-  for (const [key, value] of Object.entries(fieldErrors)) {
-    result[FIELD_MAP[key] ?? key] = value
-  }
-  return result
-}
-
 async function save(publish = false) {
   const draft: CompetitionEditorDraft = {
     name: name.value,
@@ -203,7 +196,7 @@ async function save(publish = false) {
     emit('saved')
   } catch (err) {
     if (err instanceof AppError && err.fieldErrors) {
-      errors.value = { ...errors.value, ...mapFieldErrors(err.fieldErrors) }
+      errors.value = { ...errors.value, ...firstFieldErrors(err.fieldErrors, FIELD_MAP) }
     } else {
       const message = err instanceof AppError ? err.message : '保存失败，请稍后重试。'
       toast.add({

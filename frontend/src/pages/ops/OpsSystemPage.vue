@@ -6,6 +6,8 @@ import { createOpsBanner, listOpsBanners, patchOpsBanner } from '@/features/ops/
 import type { OpsBanner } from '@/features/ops/api/opsBannerApi'
 import { http } from '@/shared/http/client'
 import { uploadImage } from '@/shared/http/media'
+import type { FieldErrors } from '@/shared/http/types'
+import { firstFieldErrors } from '@/shared/lib/form-errors'
 
 const health = ref<{ featured: number; featured_limit: number } | null>(null)
 const loading = ref(false)
@@ -156,8 +158,8 @@ async function savePatch() {
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : '保存失败'
     // 尝试解析 fieldErrors 若为 AppError
-    const err = e as { fieldErrors?: Record<string, string> }
-    if (err.fieldErrors) fieldErrors.value = err.fieldErrors
+    const err = e as { fieldErrors?: FieldErrors }
+    if (err.fieldErrors) fieldErrors.value = firstFieldErrors(err.fieldErrors)
     toast.value = { show: true, msg, color: 'error' }
   } finally {
     saving.value = false
@@ -232,8 +234,8 @@ async function saveCreate() {
     createOpen.value = false
     await loadBanners()
   } catch (e: unknown) {
-    const err = e as { fieldErrors?: Record<string, string> }
-    if (err.fieldErrors) createFieldErrors.value = err.fieldErrors
+    const err = e as { fieldErrors?: FieldErrors }
+    if (err.fieldErrors) createFieldErrors.value = firstFieldErrors(err.fieldErrors)
     const msg = e instanceof Error ? e.message : '创建失败'
     if (!createFieldErrors.value.image_asset_id) toast.value = { show: true, msg, color: 'error' }
   } finally {

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { AppError } from '@/shared/http/types'
 import {
   clearCsrfToken,
   http,
@@ -88,7 +89,12 @@ describe('FE-100 共享 HTTP 客户端', () => {
     mockFetch(async (_input: RequestInfo | URL) => {
       void _input
       return jsonResponse(
-        { code: 'VALIDATION_ERROR', message: '参数错误', fieldErrors: { title: '必填' }, requestId: 'req-1' },
+        {
+          code: 'VALIDATION_ERROR',
+          message: '参数错误',
+          fieldErrors: { title: ['标题不能为空'] },
+          requestId: 'req-1'
+        },
         422
       )
     })
@@ -98,9 +104,61 @@ describe('FE-100 共享 HTTP 客户端', () => {
       status: 422,
       code: 'VALIDATION_ERROR',
       message: '参数错误',
-      fieldErrors: { title: '必填' },
+      fieldErrors: { title: ['标题不能为空'] },
       requestId: 'req-1'
     })
+  })
+
+  it('fieldErrors 保留数组形态，不把数组压成字符串', async () => {
+    mockFetch(async (_input: RequestInfo | URL) => {
+      void _input
+      return jsonResponse(
+        {
+          code: 'PUBLICATION_INCOMPLETE',
+          message: '发布前缺少必填内容',
+          fieldErrors: {
+            cover_asset_id: ['发布前必须上传封面图'],
+            registration_end_at: ['发布前必须设置报名截止时间', '必须晚于报名开始时间']
+          }
+        },
+        422
+      )
+    })
+
+    const error = await http.post('/items', {}).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(AppError)
+    const appError = error as AppError
+    expect(appError.code).toBe('PUBLICATION_INCOMPLETE')
+    expect(appError.fieldErrors).toEqual({
+      cover_asset_id: ['发布前必须上传封面图'],
+      registration_end_at: ['发布前必须设置报名截止时间', '必须晚于报名开始时间']
+    })
+    // 每条消息仍是数组，不是被拼接或首元素取值的字符串
+    expect(Array.isArray(appError.fieldErrors?.registration_end_at)).toBe(true)
+    expect(appError.fieldErrors?.registration_end_at).toHaveLength(2)
+  })
+
+  it('异常形状的 fieldErrors 回退为空，不做宽泛断言', async () => {
+    mockFetch(async (_input: RequestInfo | URL) => {
+      void _input
+      return jsonResponse({ code: 'VALIDATION_ERROR', fieldErrors: 'not-an-object' }, 400)
+    })
+
+    const error = await http.post('/items', {}).catch((e: unknown) => e)
+    expect((error as AppError).fieldErrors).toBeNull()
+  })
+
+  it('fieldErrors 内的非法值被丢弃，保留合法数组项', async () => {
+    mockFetch(async (_input: RequestInfo | URL) => {
+      void _input
+      return jsonResponse(
+        { code: 'VALIDATION_ERROR', fieldErrors: { title: ['必填'], bogus: 42, empty: '字符串不是数组' } },
+        400
+      )
+    })
+
+    const error = await http.post('/items', {}).catch((e: unknown) => e)
+    expect((error as AppError).fieldErrors).toEqual({ title: ['必填'] })
   })
 
   it('网络 / 取消错误归一化为 AppError', async () => {

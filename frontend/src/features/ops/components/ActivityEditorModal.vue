@@ -21,6 +21,7 @@ import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 import RichContent from '@/shared/components/reader/RichContent.vue'
 import type { DynamicsActivity } from '@/features/dynamics/types'
 import type { ActivityType, MediaImage } from '@/shared/types/homepage'
+import { firstFieldErrors } from '@/shared/lib/form-errors'
 
 /** 活动编辑 / 发布（FE-090 /ops/activities）。
  *  结构化字段分组 + 正文所见即所得 + 实时预览（桌面双栏 / 移动 编辑↔预览），封面走媒体上传。
@@ -99,14 +100,6 @@ const FIELD_MAP: Record<string, string> = {
   cover_asset_id: 'cover'
 }
 
-function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, string> {
-  const result: Record<string, string> = {}
-  for (const [key, value] of Object.entries(fieldErrors)) {
-    result[FIELD_MAP[key] ?? key] = value
-  }
-  return result
-}
-
 async function save(publish = false) {
   const draft: ActivityEditorDraft = {
     title: title.value,
@@ -176,7 +169,7 @@ async function save(publish = false) {
     emit('saved')
   } catch (err) {
     if (err instanceof AppError && err.fieldErrors) {
-      errors.value = { ...errors.value, ...mapFieldErrors(err.fieldErrors) }
+      errors.value = { ...errors.value, ...firstFieldErrors(err.fieldErrors, FIELD_MAP) }
     } else {
       const message = err instanceof AppError ? err.message : '保存失败，请稍后重试。'
       toast.add({

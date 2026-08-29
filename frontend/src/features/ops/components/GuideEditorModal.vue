@@ -17,6 +17,7 @@ import ContentEditorShell from '@/shared/components/editor/ContentEditorShell.vu
 import FormSection from '@/shared/components/form/FormSection.vue'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 import RichContent from '@/shared/components/reader/RichContent.vue'
+import { firstFieldErrors } from '@/shared/lib/form-errors'
 
 /** 指南编辑 / 发布（FE-090 /ops/guides）。
  *  结构化字段分组 + 正文所见即所得 + 实时预览（桌面双栏 / 移动 编辑↔预览）。
@@ -68,14 +69,6 @@ const FIELD_MAP: Record<string, string> = {
   is_featured: 'isFeatured'
 }
 
-function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, string> {
-  const result: Record<string, string> = {}
-  for (const [key, value] of Object.entries(fieldErrors)) {
-    result[FIELD_MAP[key] ?? key] = value
-  }
-  return result
-}
-
 async function save(publish = false) {
   const draft: GuideEditorDraft = {
     title: title.value,
@@ -115,7 +108,7 @@ async function save(publish = false) {
     emit('saved')
   } catch (err) {
     if (err instanceof AppError && err.fieldErrors) {
-      errors.value = { ...errors.value, ...mapFieldErrors(err.fieldErrors) }
+      errors.value = { ...errors.value, ...firstFieldErrors(err.fieldErrors, FIELD_MAP) }
     } else {
       const message = err instanceof AppError ? err.message : '保存失败，请稍后重试。'
       toast.add({

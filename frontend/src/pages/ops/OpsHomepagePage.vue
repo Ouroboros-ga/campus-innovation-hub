@@ -9,6 +9,8 @@ import type { HomepageCuration, PickerOption } from '@/features/ops/api/opsHomep
 import HomePage from '@/pages/home/HomePage.vue'
 import { uploadImage } from '@/shared/http/media'
 import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
+import type { FieldErrors } from '@/shared/http/types'
+import { firstFieldErrors } from '@/shared/lib/form-errors'
 
 // --- State ---
 const router = useRouter()
@@ -294,8 +296,8 @@ async function savePatch() {
     editOpen.value = false
     await loadBanners()
   } catch (e: unknown) {
-    const err = e as { fieldErrors?: Record<string, string>; message?: string }
-    if (err.fieldErrors) fieldErrors.value = err.fieldErrors
+    const err = e as { fieldErrors?: FieldErrors; message?: string }
+    if (err.fieldErrors) fieldErrors.value = firstFieldErrors(err.fieldErrors)
     showToast(err.message ?? '保存失败', 'error')
   } finally {
     saving.value = false
@@ -333,8 +335,8 @@ async function saveCreate() {
     createOpen.value = false
     await loadBanners()
   } catch (e: unknown) {
-    const err = e as { fieldErrors?: Record<string, string>; message?: string }
-    if (err.fieldErrors) createFieldErrors.value = err.fieldErrors
+    const err = e as { fieldErrors?: FieldErrors; message?: string }
+    if (err.fieldErrors) createFieldErrors.value = firstFieldErrors(err.fieldErrors)
     showToast(err.message ?? '创建失败', 'error')
   } finally {
     createSaving.value = false

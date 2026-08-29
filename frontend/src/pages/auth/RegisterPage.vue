@@ -45,7 +45,8 @@ function messageFor(errorValue: unknown): string {
     }
     if (errorValue.status === 429) return '提交过于频繁，请稍后再试。'
     if (errorValue.fieldErrors) {
-      const first = Object.values(errorValue.fieldErrors)[0]
+      // fieldErrors 的每个字段是一组消息，取第一条展示。
+      const first = Object.values(errorValue.fieldErrors)[0]?.[0]
       if (first) return first
     }
   }

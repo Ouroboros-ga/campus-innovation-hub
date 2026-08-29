@@ -7,7 +7,16 @@
  * - 认证：HttpOnly session cookie + 写请求携带 `X-CSRFToken`（§1.2）。
  */
 
-/** 字段级错误。 */
+/**
+ * 字段级错误。
+ *
+ * 与 `docs/api/APIContract.md` §1.8 一致：每个字段对应**一组**消息，
+ * 而不是单条字符串。各编辑器通过 `firstFieldErrors()` 取第一条并映射字段名，
+ * 不应直接把这里的值当字符串使用。
+ */
+export type FieldErrors = Record<string, string[]>
+
+/** 字段级错误项。 */
 export interface FieldError {
   field: string
   message: string
@@ -19,8 +28,8 @@ export class AppError extends Error {
   readonly status: number
   /** 契约错误码，如 AUTH_REQUIRED / PERMISSION_DENIED / VALIDATION_ERROR。 */
   readonly code: string
-  /** 字段级错误（若后端返回）。 */
-  readonly fieldErrors: Record<string, string> | null
+  /** 字段级错误（若后端返回）；值为消息数组。 */
+  readonly fieldErrors: FieldErrors | null
   /** 请求追踪 id（若后端返回）。 */
   readonly requestId: string | null
 
@@ -29,7 +38,7 @@ export class AppError extends Error {
     options: {
       status: number
       code: string
-      fieldErrors?: Record<string, string> | null
+      fieldErrors?: FieldErrors | null
       requestId?: string | null
     }
   ) {

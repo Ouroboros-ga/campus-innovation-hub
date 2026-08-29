@@ -15,6 +15,7 @@ import ContentEditorShell from '@/shared/components/editor/ContentEditorShell.vu
 import FormSection from '@/shared/components/form/FormSection.vue'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 import RichContent from '@/shared/components/reader/RichContent.vue'
+import { firstFieldErrors } from '@/shared/lib/form-errors'
 
 /** 招新编辑器 — 真实事务接入 DRAFT→PUBLISHED，岗位 sort_order 稳定 */
 const props = defineProps<{
@@ -104,12 +105,6 @@ const FIELD_MAP: Record<string, string> = {
   name: 'positions'
 }
 
-function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, string> {
-  const res: Record<string, string> = {}
-  for (const [k, v] of Object.entries(fieldErrors)) res[FIELD_MAP[k] ?? k] = v
-  return res
-}
-
 async function save(publish = false) {
   const draft = {
     title: title.value,
@@ -184,7 +179,7 @@ async function save(publish = false) {
     emit('saved')
   } catch (err) {
     if (err instanceof AppError && err.fieldErrors) {
-      errors.value = { ...errors.value, ...mapFieldErrors(err.fieldErrors) }
+      errors.value = { ...errors.value, ...firstFieldErrors(err.fieldErrors, FIELD_MAP) }
     } else {
       const msg = err instanceof AppError ? err.message : '保存失败，请稍后重试。'
       toast.add({ title: '保存失败', description: msg, color: 'error', icon: 'i-lucide-alert-circle' })

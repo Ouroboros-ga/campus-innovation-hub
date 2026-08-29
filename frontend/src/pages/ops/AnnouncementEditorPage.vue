@@ -7,6 +7,8 @@ import { useToast } from '@nuxt/ui/composables'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 import RichContent from '@/shared/components/reader/RichContent.vue'
 import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
+import type { FieldErrors } from '@/shared/http/types'
+import { firstFieldErrors } from '@/shared/lib/form-errors'
 
 const route = useRoute()
 const router = useRouter()
@@ -161,8 +163,8 @@ async function save(publish = false) {
     const msg = e instanceof Error ? e.message : '保存失败'
     toast.add({ title: publish ? '发布失败' : '保存失败', description: msg, color: 'error' })
     // 尝试解析 fieldErrors
-    const err = e as { fieldErrors?: Record<string, string> }
-    if (err.fieldErrors) errors.value = { ...errors.value, ...err.fieldErrors }
+    const err = e as { fieldErrors?: FieldErrors }
+    if (err.fieldErrors) errors.value = { ...errors.value, ...firstFieldErrors(err.fieldErrors, { body_md: 'bodyMd' }) }
   } finally {
     saving.value = false
     publishing.value = false

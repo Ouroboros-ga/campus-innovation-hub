@@ -9,6 +9,7 @@ import CoverUpload from '@/shared/components/upload/CoverUpload.vue'
 import FormSection from '@/shared/components/form/FormSection.vue'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 import type { MediaImage, OrganizationType } from '@/shared/types/homepage'
+import { firstFieldErrors } from '@/shared/lib/form-errors'
 
 const props = defineProps<{ open: boolean; organizationId?: string | null }>()
 const emit = defineEmits<{ 'update:open': [open: boolean]; saved: [] }>()
@@ -161,14 +162,6 @@ const FIELD_MAP: Record<string, string> = {
   advisor_title: 'advisorTitle'
 }
 
-function mapFieldErrors(fieldErrors: Record<string, string>): Record<string, string> {
-  const result: Record<string, string> = {}
-  for (const [key, value] of Object.entries(fieldErrors)) {
-    result[FIELD_MAP[key] ?? key] = value
-  }
-  return result
-}
-
 function validateLocal(): Record<string, string> {
   const e: Record<string, string> = {}
   if (!name.value.trim() || name.value.trim().length < 2) e.name = '组织名称至少 2 个字符'
@@ -296,7 +289,7 @@ async function save() {
     emit('saved')
   } catch (err) {
     if (err instanceof AppError && err.fieldErrors) {
-      errors.value = { ...errors.value, ...mapFieldErrors(err.fieldErrors) }
+      errors.value = { ...errors.value, ...firstFieldErrors(err.fieldErrors, FIELD_MAP) }
     } else {
       const message = err instanceof AppError ? err.message : (isEdit.value ? '保存失败，请稍后重试。' : '创建失败，请稍后重试。')
       toast.add({ title: isEdit.value ? '保存失败' : '创建失败', description: message, color: 'error', icon: 'i-lucide-alert-circle' })

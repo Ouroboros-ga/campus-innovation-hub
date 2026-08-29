@@ -11,7 +11,9 @@
  * 架构：pages -> features -> shared；页面不得直接 `fetch`（FrontendArchitecture）。
  */
 
-import { AppError, type HttpMethod, type RequestOptions } from './types'
+import { normalizeFieldErrors } from '@/shared/lib/form-errors'
+
+import { AppError, type FieldErrors, type HttpMethod, type RequestOptions } from './types'
 
 export type { AppError, Paginated, RequestOptions } from './types'
 
@@ -104,7 +106,7 @@ function fallbackCode(status: number): string {
 interface ErrorPayload {
   code?: string
   message?: string
-  fieldErrors?: Record<string, string> | null
+  fieldErrors?: FieldErrors | null
   requestId?: string | null
 }
 
@@ -114,10 +116,9 @@ function readErrorPayload(body: unknown): ErrorPayload {
     return {
       code: typeof record.code === 'string' ? record.code : undefined,
       message: typeof record.message === 'string' ? record.message : undefined,
-      fieldErrors:
-        record.fieldErrors && typeof record.fieldErrors === 'object'
-          ? (record.fieldErrors as Record<string, string>)
-          : undefined,
+      // 契约是 `Record<string, string[]>`。非法形状交给 normalizeFieldErrors 收敛，
+      // 不做 `as Record<string, string>` 这类宽泛断言。
+      fieldErrors: normalizeFieldErrors(record.fieldErrors),
       requestId:
         typeof record.requestId === 'string' ? record.requestId : undefined
     }
