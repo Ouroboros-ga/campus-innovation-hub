@@ -4,18 +4,36 @@ import { useRouter } from 'vue-router'
 
 import NotificationPanel from '@/features/notifications/components/NotificationPanel.vue'
 import { useBreakpoint } from '@/shared/composables/useBreakpoint'
+import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 
 const router = useRouter()
+const auth = useAuthStore()
 const store = useNotificationsStore()
 const { isPhone } = useBreakpoint()
 
 const open = ref(false)
 
+function maybeStartPolling(): void {
+  if (auth.isAuthenticated) {
+    void store.fetchUnreadCount()
+    store.startPolling()
+  } else {
+    store.stopPolling()
+  }
+}
+
 onMounted(() => {
-  void store.fetchUnreadCount()
-  store.startPolling()
+  maybeStartPolling()
 })
+
+watch(
+  () => auth.isAuthenticated,
+  isAuthed => {
+    if (isAuthed) maybeStartPolling()
+    else store.stopPolling()
+  }
+)
 
 watch(open, value => {
   if (value && !store.initialized) void store.fetchList()
