@@ -164,6 +164,7 @@ class SessionAuthTests(TestCase):
             data={"username": "20240003", "password": self.password},
             content_type="application/json",
             HTTP_X_CSRFTOKEN=csrf_token,
+            secure=True,
         )
 
         self.assertEqual(login_response.status_code, 200)
@@ -172,7 +173,7 @@ class SessionAuthTests(TestCase):
         self.assertEqual(login_response.json()["permissions"]["organization_memberships"], [])
         self.assertIsNone(login_response.json()["user"]["profile"]["avatar"])
 
-        current_user_response = client.get("/api/auth/me")
+        current_user_response = client.get("/api/auth/me", secure=True)
         self.assertEqual(current_user_response.status_code, 200)
         current_user_json = current_user_response.json()
         self.assertEqual(current_user_json["user"]["student_no"], "20240003")
@@ -182,7 +183,12 @@ class SessionAuthTests(TestCase):
         self.assertNotIn("password", json.dumps(current_user_json, ensure_ascii=False))
 
         csrf_token = client.cookies["csrftoken"].value
-        csrf_failure = client.post("/api/auth/logout", data={}, content_type="application/json")
+        csrf_failure = client.post(
+            "/api/auth/logout",
+            data={},
+            content_type="application/json",
+            secure=True,
+        )
         self.assertEqual(csrf_failure.status_code, 403)
         self.assertEqual(csrf_failure.json()["code"], "PERMISSION_DENIED")
 
@@ -191,9 +197,10 @@ class SessionAuthTests(TestCase):
             data={},
             content_type="application/json",
             HTTP_X_CSRFTOKEN=csrf_token,
+            secure=True,
         )
         self.assertEqual(logout_response.status_code, 204)
-        self.assertEqual(client.get("/api/auth/me").status_code, 401)
+        self.assertEqual(client.get("/api/auth/me", secure=True).status_code, 401)
 
     def test_current_user_exposes_only_active_organization_permission_context(self) -> None:
         user_model = get_user_model()
@@ -218,7 +225,7 @@ class SessionAuthTests(TestCase):
         client = Client()
         self.assertTrue(client.login(username=user.username, password=self.password))
 
-        response = client.get("/api/auth/me")
+        response = client.get("/api/auth/me", secure=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
