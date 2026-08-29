@@ -75,8 +75,8 @@ export interface RegisterPayload {
   password: string
 }
 
-/** 注册响应（`201`，待审核）。 */
+/** 注册响应（`201`，由服务端策略决定立即启用或待审核）。 */
 export interface RegisterResult {
-  status: 'pending_approval'
+  status: 'active' | 'pending_approval'
   message: string
 }

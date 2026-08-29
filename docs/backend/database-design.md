@@ -665,10 +665,10 @@ OPERATOR 不自动拥有 Django Admin 权限。
 
 ### 规则
 
-- 学生注册必须提供 `student_no` 和 `real_name`；自助注册时 `username = student_no`，创建 `identity_type = STUDENT`、`platform_role = USER`、`is_active = false` 的 User，并在同一事务创建 UserProfile；
+- 学生注册必须提供 `student_no` 和 `real_name`；自助注册时 `username = student_no`，创建 `identity_type = STUDENT`、`platform_role = USER` 的 User，并在同一事务创建 UserProfile；新账号的 `is_active` 由服务端 `STUDENT_REGISTRATION_AUTO_ACTIVATE` 决定，招新期 production 显式设为 `true` 时立即启用，关闭时仍进入人工审核；
 - 教师账号不得使用学生自助注册页创建；仅 SUPERADMIN 通过 Django Admin / 受控导入创建 `identity_type = TEACHER` 账号；
 - `is_active = false` 表示账号不可登录，可能是待审核或被停用；公开认证错误不得区分两种内部原因；
-- 仅 Django Admin 中的 SUPERADMIN 启用待审核账号；V0.1 不建立注册审核表、学生名单校验、学校统一认证或自助密码重置；
+- 自动启用关闭时，仅 Django Admin 中的 SUPERADMIN 启用待审核账号；V0.1 不建立注册审核表、学生名单校验、学校统一认证或自助密码重置；
 - 系统维护账号可以 `student_no = null`、`employee_no = null`；
 - 禁用账号不删除历史业务数据。
 - 账号注销采用“用户申请 → SUPERADMIN 确认 → `is_active=false` → 最小匿名化”流程，不做 `DELETE CASCADE`：保留 User UUID 与关联业务历史，移除学号、真实姓名、账号名、密码、邮箱及 Profile 的直接身份字段；超级管理员不适用该批量流程。

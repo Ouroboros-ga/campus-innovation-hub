@@ -13,7 +13,16 @@ class AccountAlreadyExists(Exception):
     """注册标识触发唯一性约束时抛出。"""
 
 
-def register_pending_user(*, student_no: str, real_name: str, password: str, major: str | None = None, grade: int | None = None, class_name: str | None = None) -> User:
+def register_student_user(
+    *,
+    student_no: str,
+    real_name: str,
+    password: str,
+    activate_immediately: bool,
+    major: str | None = None,
+    grade: int | None = None,
+    class_name: str | None = None,
+) -> User:
     try:
         with transaction.atomic():
             user = User(
@@ -23,7 +32,7 @@ def register_pending_user(*, student_no: str, real_name: str, password: str, maj
                 employee_no=None,
                 real_name=real_name,
                 platform_role=User.PlatformRole.USER,
-                is_active=False,
+                is_active=activate_immediately,
             )
             user.set_password(password)
             user.save()

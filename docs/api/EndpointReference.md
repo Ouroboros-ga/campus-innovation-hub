@@ -355,9 +355,9 @@ Content-Disposition: attachment; filename="activity-<id>-registrations.csv"
 |---|---|
 | 权限 | PUBLIC + CSRF |
 | Body | `{student_no, real_name, password}`；长度分别 2–32、1–80、使用 Django password validator |
-| Success | `201 {"status":"pending_approval","message":"注册已提交，请等待管理员审核。"}` |
+| Success | 自动启用时 `201 {"status":"active","message":"注册成功，现在可以登录。"}`；关闭时返回 `pending_approval` |
 | Error | `400 VALIDATION_ERROR`、`409 ACCOUNT_EXISTS`、`429 RATE_LIMITED` + `Retry-After` |
-| 副作用 | 单一事务创建 `User(username=student_no, platform_role=STUDENT, is_active=false)` 与空 `UserProfile`；不登录，不发送审核原因或已有账号资料 |
+| 副作用 | 单一事务创建 `User(username=student_no, platform_role=USER)` 与空 `UserProfile`；`is_active` 由 `STUDENT_REGISTRATION_AUTO_ACTIVATE` 决定；不登录，不发送审核原因或已有账号资料 |
 
 ## 1.3 `POST /api/auth/login` 与 `POST /api/auth/logout`
 

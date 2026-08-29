@@ -70,7 +70,21 @@ describe('FE-105 注册页', () => {
     expect(wrapper.text()).toContain('两次输入的密码不一致')
   })
 
-  it('注册成功展示待审核提示', async () => {
+  it('自动启用注册成功后提示可以立即登录', async () => {
+    vi.mocked(authApi.register).mockResolvedValue({
+      status: 'active',
+      message: '注册成功，现在可以登录。'
+    })
+    const wrapper = await mountPage()
+    await fillAndSubmit(wrapper)
+
+    expect(wrapper.text()).toContain('注册成功')
+    expect(wrapper.text()).toContain('现在可以登录')
+    expect(wrapper.text()).toContain('立即登录')
+    expect(wrapper.text()).not.toContain('等待管理员审核')
+  })
+
+  it('关闭自动启用时仍展示待审核提示', async () => {
     vi.mocked(authApi.register).mockResolvedValue({
       status: 'pending_approval',
       message: '注册已提交，请等待管理员审核。'

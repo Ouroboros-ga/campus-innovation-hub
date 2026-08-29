@@ -1,3 +1,6 @@
+import os
+from unittest.mock import patch
+
 from django.core.exceptions import ImproperlyConfigured
 from django.conf import settings
 from django.db.migrations.loader import MigrationLoader
@@ -28,6 +31,26 @@ class DatabaseUrlTests(SimpleTestCase):
 
 
 class SecuritySettingsTests(SimpleTestCase):
+    def test_optional_env_bool_parses_explicit_values_and_uses_default(self) -> None:
+        from config.settings.base import optional_env_bool
+
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertTrue(optional_env_bool("TEST_OPTIONAL_BOOL", default=True))
+        with patch.dict(os.environ, {"TEST_OPTIONAL_BOOL": "true"}):
+            self.assertTrue(optional_env_bool("TEST_OPTIONAL_BOOL", default=False))
+        with patch.dict(os.environ, {"TEST_OPTIONAL_BOOL": "off"}):
+            self.assertFalse(optional_env_bool("TEST_OPTIONAL_BOOL", default=True))
+
+    def test_optional_env_bool_rejects_invalid_value(self) -> None:
+        from config.settings.base import optional_env_bool
+
+        with patch.dict(os.environ, {"TEST_OPTIONAL_BOOL": "sometimes"}):
+            with self.assertRaises(ImproperlyConfigured):
+                optional_env_bool("TEST_OPTIONAL_BOOL", default=False)
+
+    def test_student_registration_defaults_to_manual_approval(self) -> None:
+        self.assertFalse(settings.STUDENT_REGISTRATION_AUTO_ACTIVATE)
+
     def test_non_debug_environment_uses_secure_cookie_defaults(self) -> None:
         self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
         self.assertTrue(settings.SESSION_COOKIE_SECURE)

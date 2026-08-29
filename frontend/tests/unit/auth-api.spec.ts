@@ -65,8 +65,8 @@ describe('FE-105 认证 API 适配器', () => {
 
   it('register 发送注册负载', async () => {
     vi.mocked(http.post).mockResolvedValue({
-      status: 'pending_approval',
-      message: '注册已提交，请等待管理员审核。'
+      status: 'active',
+      message: '注册成功，现在可以登录。'
     })
 
     await register({ student_no: '20240001', real_name: '张三', password: 'secret' })

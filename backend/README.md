@@ -83,13 +83,13 @@ API 路由的非 2xx 响应使用冻结错误结构：
 
 ```text
 GET  /api/auth/csrf      204，确保浏览器获得可读取的 csrftoken
-POST /api/auth/register  {student_no, real_name, password}，201 pending_approval，不登录
+POST /api/auth/register  {student_no, real_name, password}，201 active 或 pending_approval，不登录
 POST /api/auth/login     {username, password}，200 CurrentUser + HttpOnly Session cookie
 POST /api/auth/logout    登录 + CSRF，204，清理 Session
 GET  /api/auth/me        登录，200 CurrentUser
 ```
 
-注册在同一事务创建 `accounts.User(is_active=false)` 和空 `UserProfile`；inactive 账号登录始终返回 `403 ACCOUNT_UNAVAILABLE`，不会建立 Session。Custom User 采用 UUID primary key、`student_no` PostgreSQL partial unique 与 `platform_role` / `is_active` 索引。
+注册在同一事务创建 `accounts.User` 和空 `UserProfile`；`is_active` 由 `STUDENT_REGISTRATION_AUTO_ACTIVATE` 决定。inactive 账号登录始终返回 `403 ACCOUNT_UNAVAILABLE`，不会建立 Session。Custom User 采用 UUID primary key、`student_no` PostgreSQL partial unique 与 `platform_role` / `is_active` 索引。
 
 `/api/auth/me` 只返回当前用户的 `student_no` 与 `real_name`，不返回 password、email、class_name、password hash、Session 或 CSRF 值。`organization_memberships` 现在只返回当前用户的 active Membership（`organization_id`、`MEMBER|LEADER`、展示 title）；已配置且可用的 `profile.avatar` 将以 MediaRef 返回。认证在用户名与 IP 维度使用 PostgreSQL 行锁节流，响应仅为 `429 RATE_LIMITED` + `Retry-After`，且 30 天后由 management command 清理摘要记录。
 

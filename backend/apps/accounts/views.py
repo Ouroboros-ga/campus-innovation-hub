@@ -2,6 +2,7 @@ import json
 from functools import wraps
 from typing import Callable
 
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
@@ -9,7 +10,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from apps.accounts.models import User
 from apps.accounts.serializers import LoginSerializer, RegisterSerializer, current_user_payload
-from apps.accounts.services import AccountAlreadyExists, register_pending_user
+from apps.accounts.services import AccountAlreadyExists, register_student_user
 from apps.accounts.throttling import (
     clear_login_throttle,
     enforce_auth_throttles,
@@ -106,10 +107,11 @@ def register(request: HttpRequest) -> JsonResponse:
 
     try:
         data = serializer.validated_data
-        register_pending_user(
+        user = register_student_user(
             student_no=data["student_no"],
             real_name=data["real_name"],
             password=data["password"],
+            activate_immediately=settings.STUDENT_REGISTRATION_AUTO_ACTIVATE,
             major=(data.get("major") or None),
             grade=data.get("grade"),
             class_name=(data.get("class_name") or None),
@@ -122,8 +124,13 @@ def register(request: HttpRequest) -> JsonResponse:
             status=409,
         )
     record_registration_attempt(client_ip=origin_ip)
+    response_payload = (
+        {"status": "active", "message": "注册成功，现在可以登录。"}
+        if user.is_active
+        else {"status": "pending_approval", "message": "注册已提交，请等待管理员审核。"}
+    )
     return JsonResponse(
-        {"status": "pending_approval", "message": "注册已提交，请等待管理员审核。"},
+        response_payload,
         status=201,
         json_dumps_params={"ensure_ascii": False},
     )

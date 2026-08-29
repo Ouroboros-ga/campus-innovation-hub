@@ -165,7 +165,7 @@ GET  /api/auth/me
 
 GET /api/auth/csrf 必须确保浏览器取得 CSRF cookie，并返回 204。未登录写请求统一返回 401；CSRF 校验失败使用统一 API 错误结构返回 403。
 
-## 4.2 自助注册与审核
+## 4.2 自助注册与启用策略
 
 注册请求固定使用：
 
@@ -181,20 +181,20 @@ GET /api/auth/csrf 必须确保浏览器取得 CSRF cookie，并返回 204。未
 
 1. 校验学号、姓名与密码；
 2. 创建 Custom User，username 固定等于 student_no；
-3. 设置 platform_role=STUDENT 与 is_active=false；
+3. 设置 `platform_role=USER`，并按 `STUDENT_REGISTRATION_AUTO_ACTIVATE` 决定 `is_active`；
 4. 创建空的 UserProfile；
-5. 返回 pending_approval。
+5. 返回与实际激活状态一致的 `active` 或 `pending_approval`。
 
-注册成功并不登录，也不创建 Session。响应固定为：
+注册成功并不登录，也不创建 Session。招新期 production 开启自动启用时返回：
 
 ~~~json
 {
-  "status": "pending_approval",
-  "message": "注册已提交，请等待管理员审核。"
+  "status": "active",
+  "message": "注册成功，现在可以登录。"
 }
 ~~~
 
-SUPERADMIN 只通过 Django Admin 审核并启用账号；V0.1 不建立独立审核工作流、邮件、短信验证码、学生目录校验或学校统一身份认证。
+自动启用关闭时返回 `pending_approval`，SUPERADMIN 只通过 Django Admin 审核并启用账号。V0.1 不建立独立审核工作流、邮件、短信验证码、学生目录校验或学校统一身份认证。
 
 任何 inactive 账号登录都返回相同的 403 ACCOUNT_UNAVAILABLE 与“账号尚未启用，请联系管理员。”，不向外区分待审核、被停用或其他内部状态。重复注册使用 409 ACCOUNT_EXISTS，且不泄露已有账号的额外资料。忘记密码固定显示“请联系管理员”，不实现自助重置端点。
 
@@ -350,7 +350,7 @@ cancel_activity_registration()
 create_activity_with_announcement()
 publish_competition()
 grant_organization_leader()
-register_pending_user()
+register_student_user()
 ~~~
 
 事务要求：

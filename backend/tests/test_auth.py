@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
-from django.test import Client, SimpleTestCase, TestCase
+from django.test import Client, SimpleTestCase, TestCase, override_settings
 
 
 class CsrfInitializationTests(SimpleTestCase):
@@ -45,7 +45,36 @@ class SessionAuthTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["code"], "PERMISSION_DENIED")
 
-    def test_register_creates_pending_user_and_profile_without_session(self) -> None:
+    @override_settings(STUDENT_REGISTRATION_AUTO_ACTIVATE=True)
+    def test_register_auto_activates_student_and_allows_login_without_creating_session_first(self) -> None:
+        client, csrf_token = self.csrf_client()
+
+        response = self.register(client, csrf_token)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json(),
+            {"status": "active", "message": "注册成功，现在可以登录。"},
+        )
+        user = get_user_model().objects.get(student_no="20240001")
+        profile_model = apps.get_model("accounts", "UserProfile")
+        self.assertEqual(user.username, "20240001")
+        self.assertEqual(user.platform_role, "USER")
+        self.assertTrue(user.is_active)
+        self.assertTrue(profile_model.objects.filter(user=user).exists())
+        self.assertNotIn(settings.SESSION_COOKIE_NAME, client.cookies)
+
+        login_response = client.post(
+            "/api/auth/login",
+            data={"username": "20240001", "password": self.password},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn(settings.SESSION_COOKIE_NAME, client.cookies)
+
+    @override_settings(STUDENT_REGISTRATION_AUTO_ACTIVATE=False)
+    def test_register_can_keep_pending_approval_mode_without_session(self) -> None:
         client, csrf_token = self.csrf_client()
 
         response = self.register(client, csrf_token)

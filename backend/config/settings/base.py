@@ -27,6 +27,18 @@ def env_bool(name: str) -> bool:
     raise ImproperlyConfigured(f"环境变量 {name} 必须是布尔值")
 
 
+def optional_env_bool(name: str, *, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ImproperlyConfigured(f"环境变量 {name} 必须是布尔值")
+
+
 def database_config_from_url(value: str) -> dict[str, Any]:
     parsed = urlparse(value)
     if parsed.scheme not in {"postgres", "postgresql"}:
@@ -57,6 +69,10 @@ DEBUG = env_bool("DJANGO_DEBUG")
 ALLOWED_HOSTS = [host.strip() for host in required_env("DJANGO_ALLOWED_HOSTS").split(",") if host.strip()]
 # development/CI 可复用 Django SECRET_KEY；production.py 强制要求独立 HMAC key。
 AUTH_THROTTLE_HMAC_KEY = os.environ.get("AUTH_THROTTLE_HMAC_KEY", SECRET_KEY)
+STUDENT_REGISTRATION_AUTO_ACTIVATE = optional_env_bool(
+    "STUDENT_REGISTRATION_AUTO_ACTIVATE",
+    default=False,
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",

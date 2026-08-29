@@ -104,7 +104,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /** 注册并提交审核（PUBLIC）。 */
+  /** 学生自助注册（PUBLIC）；注册成功仍不创建 Session。 */
   async function register(payload: RegisterPayload): Promise<RegisterResult> {
     return apiRegister(payload)
   }

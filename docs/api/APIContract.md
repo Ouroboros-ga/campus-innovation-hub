@@ -107,8 +107,8 @@ HttpOnly secure session cookie
 - 前端对写请求（POST / PATCH / DELETE）必须附带 `X-CSRFToken`；
 - 未登录写请求返回 `401`；
 - `GET /api/auth/csrf` 负责确保浏览器获得 CSRF cookie；
-- `POST /api/auth/register` 只创建 `is_active=false` 的待审核账号，注册成功不创建 Session；
-- Django Admin 中的 SUPERADMIN 启用账号后才可登录；
+- `POST /api/auth/register` 按服务端 `STUDENT_REGISTRATION_AUTO_ACTIVATE` 创建立即启用或待审核账号，注册成功不创建 Session；
+- 自动启用关闭时，Django Admin 中的 SUPERADMIN 启用账号后才可登录；
 - 所有 inactive 账号登录统一返回 `403 ACCOUNT_UNAVAILABLE`，不暴露待审核、停用或其他内部原因；
 - 禁止在 localStorage / sessionStorage / Pinia 持久化认证密钥。
 
@@ -351,7 +351,7 @@ GET  /api/search                                    全站搜索
 
 ```text
 GET  /api/auth/csrf                                 初始化 CSRF cookie（PUBLIC）
-POST /api/auth/register                             注册并提交审核（PUBLIC）
+POST /api/auth/register                             学生自助注册（PUBLIC）
 POST /api/auth/login                                登录（PUBLIC）
 POST /api/auth/logout                               登出（LOGIN）
 GET  /api/auth/me                                   当前用户 + 权限上下文
@@ -524,7 +524,7 @@ GET /api/auth/csrf
 
 Response `204`：通过 `Set-Cookie` 确保浏览器具有 CSRF cookie。前端从 cookie 读取值，并在后续 `POST` / `PATCH` / `DELETE` 请求中以 `X-CSRFToken` 发送；该 cookie 不是登录凭据。
 
-### 注册并提交审核
+### 学生自助注册
 
 ```text
 POST /api/auth/register
@@ -570,18 +570,18 @@ employee_no required
 platform_role default USER
 ```
 
-注册成功后的激活策略按项目当前认证配置执行；无论采用直接启用还是管理员审核，都不得允许用户自行把 STUDENT 升级为 TEACHER。
+注册成功后的激活策略由 `STUDENT_REGISTRATION_AUTO_ACTIVATE` 执行；招新期 production 显式设为 `true` 时直接启用，关闭时进入管理员审核。无论采用直接启用还是管理员审核，都不得允许用户自行把 STUDENT 升级为 TEACHER。
 
 Response `201`：
 
 ```json
 {
-  "status": "pending_approval",
-  "message": "注册已提交，请等待管理员审核。"
+  "status": "active",
+  "message": "注册成功，现在可以登录。"
 }
 ```
 
-错误：`400`（字段校验）、`409 ACCOUNT_EXISTS`（学号或用户名已存在）。响应不得泄露已有账号的审核状态、真实姓名或其他资料。SUPERADMIN 仅通过 Django Admin 启用账号；V0.1 不提供邮件、短信、验证码、学生名单校验或自助密码重置 API。
+自动启用关闭时仍返回 `{"status":"pending_approval","message":"注册已提交，请等待管理员审核。"}`。错误：`400`（字段校验）、`409 ACCOUNT_EXISTS`（学号或用户名已存在）。响应不得泄露已有账号的审核状态、真实姓名或其他资料。待审核账号仅由 SUPERADMIN 通过 Django Admin 启用；V0.1 不提供邮件、短信、验证码、学生名单校验或自助密码重置 API。
 
 注册端点按来源 IP 执行短时节流；被节流时返回 `429 RATE_LIMITED` 与 `Retry-After`。该行为不改变 `409 ACCOUNT_EXISTS` 的既有语义。
 

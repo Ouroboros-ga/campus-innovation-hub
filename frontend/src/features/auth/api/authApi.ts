@@ -39,7 +39,7 @@ export async function initCsrf(): Promise<void> {
   if (token) setCsrfToken(token)
 }
 
-/** 注册并提交审核（PUBLIC）。 */
+/** 学生自助注册（PUBLIC）；响应说明账号是否已经启用。 */
 export async function register(payload: RegisterPayload): Promise<RegisterResult> {
   return http.post<RegisterResult>('/auth/register', payload, { skipAuthRedirect: true })
 }

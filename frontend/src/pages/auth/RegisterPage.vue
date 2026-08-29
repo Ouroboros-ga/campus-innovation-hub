@@ -6,8 +6,8 @@ import { AppError } from '@/shared/http/types'
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
 import { useAuthStore } from '@/stores/auth'
 
-/** 注册并提交审核（FE-105）— /register。
- *  仅提交学号 / 姓名 / 密码；注册成功不创建 Session，等待管理员审核。
+/** 学生自助注册（FE-105）— /register。
+ *  仅提交学号 / 姓名 / 密码；注册成功不创建 Session，按服务端激活状态显示结果。
  */
 const toast = useToast()
 const auth = useAuthStore()
@@ -21,8 +21,10 @@ const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
 const submitted = ref(false)
 const submittedMessage = ref('')
+const submittedStatus = ref<'active' | 'pending_approval' | null>(null)
 
 const passwordValid = computed(() => password.value.length >= 6)
+const accountIsActive = computed(() => submittedStatus.value === 'active')
 
 function validate(): Record<string, string> {
   const result: Record<string, string> = {}
@@ -64,9 +66,11 @@ async function submit() {
     })
     submitted.value = true
     submittedMessage.value = result.message
+    submittedStatus.value = result.status
     toast.add({
-      title: '注册已提交',
-      description: '请等待管理员审核后登录。',
+      title: result.status === 'active' ? '注册成功' : '注册已提交',
+      description:
+        result.status === 'active' ? '现在可以使用学号和密码登录。' : '请等待管理员审核后登录。',
       color: 'success',
       icon: 'i-lucide-check-circle'
     })
@@ -94,16 +98,19 @@ async function submit() {
               />
             </span>
             <h1 class="text-lg font-semibold text-highlighted">
-              注册已提交
+              {{ accountIsActive ? '注册成功' : '注册已提交' }}
             </h1>
             <p class="text-sm text-muted">
-              {{ submittedMessage || '注册已提交，请等待管理员审核。' }}
+              {{
+                submittedMessage ||
+                  (accountIsActive ? '注册成功，现在可以登录。' : '注册已提交，请等待管理员审核。')
+              }}
             </p>
             <RouterLink
               to="/login"
               class="mt-2 inline-flex min-h-9 items-center text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
             >
-              返回登录
+              {{ accountIsActive ? '立即登录' : '返回登录' }}
             </RouterLink>
           </div>
         </template>
@@ -113,7 +120,7 @@ async function submit() {
             注册
           </h1>
           <p class="mt-2 text-sm text-muted">
-            提交后将进入审核，审核通过后方可登录。
+            填写信息创建学生账号，注册成功后即可登录。
           </p>
 
           <form
@@ -190,7 +197,7 @@ async function submit() {
               icon="i-lucide-user-plus"
               :loading="submitting"
             >
-              注册并提交审核
+              注册并创建账号
             </UButton>
           </form>
 

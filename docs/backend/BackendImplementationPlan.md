@@ -132,7 +132,7 @@ Authentication
   POST /api/auth/login
   POST /api/auth/logout
   GET /api/auth/me
-  register -> is_active=false -> Django Admin 审核启用
+  register -> 配置化自动启用或 Django Admin 审核启用
   inactive 登录统一返回 ACCOUNT_UNAVAILABLE
 
 Identity
@@ -266,8 +266,8 @@ Django Admin 对 pending user 的审核启用操作
 
 - 注册 body 只接受 student_no、real_name、password；
 - username 恒等于 student_no；
-- 注册在同一事务内创建 inactive User 与空 UserProfile；
-- 注册成功不登录，返回 pending_approval；
+- 注册在同一事务内创建 User 与空 UserProfile，`is_active` 由 `STUDENT_REGISTRATION_AUTO_ACTIVATE` 决定；
+- 注册成功不登录，返回与实际激活状态一致的 `active` 或 `pending_approval`；
 - inactive 登录统一返回 403 ACCOUNT_UNAVAILABLE；
 - 忘记密码仅返回联系管理员指引；
 - Session cookie 不可被 JavaScript 读取，CSRF cookie 只用于 X-CSRFToken；
@@ -409,7 +409,7 @@ BE-004
 ## 必须实现
 
 ~~~text
-register_pending_user()
+register_student_user()
 accept_team_application()
 accept_recruitment_application()
 register_activity()
