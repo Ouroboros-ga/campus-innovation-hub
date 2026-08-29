@@ -1,10 +1,11 @@
 ﻿<script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
 
 import { listFaqs, publishFaq, type OpsFaq } from '@/features/ops/api/opsFaqApi'
 import { faqCategoryLabel } from '@/shared/lib/domain-labels'
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 const router = useRouter()
 const toast = useToast()
@@ -32,6 +33,10 @@ async function load() {
 }
 
 onMounted(load)
+
+// 懒搜索：输入停顿 300ms 后自动回到第 1 页并加载
+const debouncedQ = useDebouncedValue(q, 300)
+watch(debouncedQ, () => { page.value = 1; load() })
 
 function openCreate() {
   router.push({ name: 'ops-faq-new' })
@@ -62,7 +67,6 @@ async function onPublish(f: OpsFaq) {
           placeholder="搜索问题"
           size="sm"
           icon="i-lucide-search"
-          @keyup.enter="() => { page=1; load() }"
         />
         <UButton
           color="primary"

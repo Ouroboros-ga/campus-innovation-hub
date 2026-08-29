@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 import {
   competitionCategoryOptions,
@@ -25,9 +27,16 @@ const emit = defineEmits<{
 
 const drawerOpen = ref(false)
 
-function onSearchInput(value: string) {
-  emit('change', { q: value })
-}
+// 懒搜索：输入停顿 300ms 后才 emit，避免每次按键触发 URL 更新与列表请求
+const searchInput = ref(props.query.q ?? '')
+watch(
+  () => props.query.q,
+  value => {
+    searchInput.value = value ?? ''
+  }
+)
+const debouncedQ = useDebouncedValue(searchInput, 300)
+watch(debouncedQ, value => emit('change', { q: value }))
 
 /** 手机端状态快捷 chip：仅作快捷设置状态，清除走「已选条件」/重置。 */
 function onStatusQuick(value: string) {
@@ -40,12 +49,11 @@ function onStatusQuick(value: string) {
     <!-- 桌面筛选栏：搜索 + 带标签下拉 + 重置 -->
     <div class="hidden flex-wrap items-end gap-3 md:flex">
       <UInput
-        :model-value="props.query.q ?? ''"
+        v-model="searchInput"
         icon="i-lucide-search"
         placeholder="搜索竞赛名称、关键词"
         aria-label="搜索竞赛"
         class="w-64"
-        @update:model-value="onSearchInput"
       />
       <div>
         <p class="mb-1 text-xs text-muted">
@@ -97,12 +105,11 @@ function onStatusQuick(value: string) {
     <!-- 手机：搜索 + 状态快捷筛选 + 筛选按钮（§34.5） -->
     <div class="md:hidden">
       <UInput
-        :model-value="props.query.q ?? ''"
+        v-model="searchInput"
         icon="i-lucide-search"
         placeholder="搜索竞赛名称、关键词"
         aria-label="搜索竞赛"
         class="w-full"
-        @update:model-value="onSearchInput"
       />
 
       <div class="mt-3 flex items-start gap-2">

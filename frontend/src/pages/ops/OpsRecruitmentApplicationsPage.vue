@@ -6,6 +6,7 @@ import { listOpsRecruitmentApplications, type OpsRecruitmentApplication } from '
 import { listOpsOrganizations } from '@/features/ops/api/opsOrganizationApi'
 import { AppError } from '@/shared/http/types'
 import { formatCompactDate } from '@/shared/lib/date'
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 const route = useRoute()
 const router = useRouter()
@@ -77,6 +78,12 @@ async function load() {
 }
 
 watch(() => route.query, () => { syncFromRoute(); load() })
+
+// 懒搜索：关键词 / 招新 ID 停顿 300ms 后自动写入 URL 触发加载
+const debouncedQ = useDebouncedValue(q, 300)
+const debouncedRecruitmentId = useDebouncedValue(recruitmentId, 300)
+watch([debouncedQ, debouncedRecruitmentId], () => pushRoute({}, true))
+
 onMounted(() => { syncFromRoute(); load(); loadOrganizationOptions() })
 
 function onSearch() { pushRoute({}, true) }
@@ -114,7 +121,6 @@ function onReset() { q.value=''; status.value='ALL'; organizationId.value='ALL';
         icon="i-lucide-search"
         size="sm"
         class="w-64"
-        @keyup.enter="onSearch"
       />
       <USelect
         v-model="status"
@@ -136,7 +142,6 @@ function onReset() { q.value=''; status.value='ALL'; organizationId.value='ALL';
         placeholder="招新ID（可选）"
         size="sm"
         class="w-44"
-        @keyup.enter="onSearch"
       />
       <UButton
         size="sm"

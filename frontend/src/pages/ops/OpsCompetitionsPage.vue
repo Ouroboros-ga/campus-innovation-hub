@@ -9,6 +9,7 @@ import { useToast } from '@nuxt/ui/composables'
 import type { CompetitionHealth, WorkbenchStats } from '@/features/ops/api/opsOverviewApi'
 import { competitionLevelLabel } from '@/shared/lib/domain-labels'
 import { formatCompactDate } from '@/shared/lib/date'
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 const route = useRoute()
 const router = useRouter()
@@ -107,14 +108,15 @@ watch(
   }
 )
 
+// 懒搜索：输入停顿 300ms 后自动写入 URL 触发加载
+const debouncedQuery = useDebouncedValue(query, 300)
+watch(debouncedQuery, () => pushRoute({}, true))
+
 onMounted(() => {
   syncFromRoute()
   load()
 })
 
-function onSearch() {
-  pushRoute({}, true)
-}
 function onFilterChange() {
   pushRoute({}, true)
 }
@@ -333,7 +335,6 @@ async function onImport() {
             icon="i-lucide-search"
             size="sm"
             class="w-48"
-            @keyup.enter="onSearch"
           />
           <USelect
             v-model="status"

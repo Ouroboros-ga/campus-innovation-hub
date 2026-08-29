@@ -6,6 +6,7 @@ import { closeOpsTeam, listOpsTeams, type OpsTeam } from '@/features/ops/api/ops
 import { listCompetitions } from '@/features/competitions/api/competitionApi'
 import { formatCompactDate } from '@/shared/lib/date'
 import { AppError } from '@/shared/http/types'
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 const route = useRoute()
 const router = useRouter()
@@ -73,6 +74,11 @@ async function loadCompetitionOptions() {
 }
 
 watch(() => route.query, () => { syncFromRoute(); load() })
+
+// 懒搜索：输入停顿 300ms 后自动写入 URL 触发加载
+const debouncedQ = useDebouncedValue(q, 300)
+watch(debouncedQ, () => pushRoute({}, true))
+
 onMounted(() => { syncFromRoute(); load(); loadCompetitionOptions() })
 
 function onSearch() { pushRoute({}, true) }
@@ -130,7 +136,6 @@ const statusOptions = [
         icon="i-lucide-search"
         size="sm"
         class="w-64"
-        @keyup.enter="onSearch"
       />
       <USelect
         v-model="postType"

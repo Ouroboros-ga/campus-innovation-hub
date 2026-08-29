@@ -7,6 +7,7 @@ import { listOpsOrganizations, type OpsOrganization } from '@/features/ops/api/o
 import { getOrganizationStats, type OrganizationStats } from '@/features/ops/api/opsOverviewApi'
 import { formatCompactDate } from '@/shared/lib/date'
 import { organizationTypeLabel } from '@/shared/lib/domain-labels'
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 const route = useRoute()
 const router = useRouter()
@@ -75,9 +76,13 @@ async function load() {
 }
 
 watch(() => route.query, () => { syncFromRoute(); load() })
+
+// 懒搜索：输入停顿 300ms 后自动写入 URL 触发加载
+const debouncedQuery = useDebouncedValue(query, 300)
+watch(debouncedQuery, () => pushRoute({}, true))
+
 onMounted(() => { syncFromRoute(); load() })
 
-function onSearch() { pushRoute({}, true) }
 function onFilterChange() { pushRoute({}, true) }
 function onPageChange(p: number) { pushRoute({ page: String(p) }) }
 function onReset() {
@@ -197,7 +202,6 @@ const recruitingOptions = [
         icon="i-lucide-search"
         size="sm"
         class="w-64"
-        @keyup.enter="onSearch"
       />
       <USelect
         v-model="orgType"

@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { createOpsBanner, listOpsBanners, patchOpsBanner } from '@/features/ops/api/opsBannerApi'
@@ -8,6 +8,7 @@ import { fetchTitlesByIds, getHomepageCuration, patchHomepageCuration, searchAnn
 import type { HomepageCuration, PickerOption } from '@/features/ops/api/opsHomepageApi'
 import HomePage from '@/pages/home/HomePage.vue'
 import { uploadImage } from '@/shared/http/media'
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 // --- State ---
 const router = useRouter()
@@ -420,6 +421,12 @@ async function onPickerSearch() {
     pickerSearching.value = false
   }
 }
+
+// 懒搜索：精选搜索输入停顿 300ms 后自动搜索
+const debouncedPickerSearch = useDebouncedValue(pickerSearch, 300)
+watch(debouncedPickerSearch, value => {
+  if (value.trim()) void onPickerSearch()
+})
 
 function addPickerOption(opt: PickerOption) {
   if (pickerItems.value.includes(opt.id)) {
@@ -868,7 +875,7 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
           <div class="rounded-lg border border-dashed border-default p-3">
             <p class="text-sm font-medium">添加{{ pickerType==='competition' ? '竞赛' : pickerType==='announcement' ? '公告' : pickerType==='guide' ? '指南' : 'FAQ' }}</p>
             <div class="mt-2 flex gap-2">
-              <UInput v-model="pickerSearch" placeholder="搜索..." class="flex-1" @keydown.enter="onPickerSearch" />
+              <UInput v-model="pickerSearch" placeholder="搜索..." class="flex-1" />
               <UButton :loading="pickerSearching" @click="onPickerSearch">搜索</UButton>
             </div>
             <div v-if="pickerOptions.length>0" class="mt-2 max-h-48 space-y-1 overflow-auto">

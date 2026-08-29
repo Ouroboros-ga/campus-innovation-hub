@@ -7,6 +7,7 @@ import { listConsultations } from '@/features/ops/api/opsConsultationApi'
 import { qaStatusMeta } from '@/features/consultation/lib/consultationLabels'
 import type { ConsultQaPost } from '@/features/consultation/types'
 import { formatDateTimeCompact } from '@/shared/lib/date'
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 const route = useRoute()
 const router = useRouter()
@@ -59,10 +60,14 @@ async function loadQuestions() {
 }
 
 watch(() => route.query, () => { syncFromRoute(); loadQuestions() })
+
+// 懒搜索：输入停顿 300ms 后自动写入 URL 触发加载
+const debouncedQ = useDebouncedValue(q, 300)
+watch(debouncedQ, () => pushRoute({}, true))
+
 onMounted(() => { syncFromRoute(); loadQuestions() })
 
 function onFilter(v: 'ALL'|'PENDING'|'ANSWERED') { filter.value = v; pushRoute({ status: v }, true) }
-function onSearch() { pushRoute({}, true) }
 function onPageChange(p:number) { pushRoute({ page: String(p) }) }
 function onReset() {
   filter.value='ALL'; q.value=''; page.value=1; router.replace({ query: {} })
@@ -111,7 +116,6 @@ const filters = [
         icon="i-lucide-search"
         size="sm"
         class="w-64"
-        @keyup.enter="onSearch"
       />
       <div
         role="group"

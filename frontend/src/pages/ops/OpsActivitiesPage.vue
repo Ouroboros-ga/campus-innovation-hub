@@ -11,6 +11,7 @@ import type { DynamicsStats } from '@/features/ops/api/opsOverviewApi'
 import type { DynamicsActivity, DynamicsAnnouncement } from '@/features/dynamics/types'
 import { formatCompactDate } from '@/shared/lib/date'
 import { useToast } from '@nuxt/ui/composables'
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 const route = useRoute()
 const router = useRouter()
@@ -117,10 +118,14 @@ async function load() {
 }
 
 watch(() => route.query, () => { syncFromRoute(); load() })
+
+// 懒搜索：输入停顿 300ms 后自动写入 URL 触发加载
+const debouncedQuery = useDebouncedValue(query, 300)
+watch(debouncedQuery, () => pushRoute({}, true))
+
 onMounted(() => { syncFromRoute(); load() })
 
 function onTabChange(v: 'all'|'activities'|'announcements') { tab.value = v; pushRoute({ tab: v }, true) }
-function onSearch() { pushRoute({}, true) }
 function onFilterChange() { pushRoute({}, true) }
 function onReset() {
   query.value=''; activityType.value='ALL'; activityStatus.value='ALL'; announcementScope.value='ALL'; announcementStatus.value='ALL'
@@ -207,7 +212,6 @@ const scopeOptions = [
         icon="i-lucide-search"
         size="sm"
         class="w-64"
-        @keyup.enter="onSearch"
       />
       <template v-if="tab==='all' || tab==='activities'">
         <USelect

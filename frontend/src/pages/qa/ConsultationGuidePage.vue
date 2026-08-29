@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 import ConsultFaqSection from '@/features/consultation/components/ConsultFaqSection.vue'
 import ConsultGuideSection from '@/features/consultation/components/ConsultGuideSection.vue'
@@ -18,12 +19,15 @@ import { consultFaqs, consultGuides, consultQaPosts } from '@/mocks/fixtures/con
  */
 const q = ref('')
 
+// 懒搜索：输入停顿 300ms 后才应用本地过滤
+const debouncedQ = useDebouncedValue(q, 300)
+
 const filteredFaqs = computed(() => filterBy(consultFaqs, item => item.question))
 const filteredGuides = computed(() => filterBy(consultGuides, item => item.title))
 const filteredQa = computed(() => filterBy(consultQaPosts, item => item.question))
 
 function filterBy<T>(items: readonly T[], toSearch: (item: T) => string): T[] {
-  const keyword = q.value.trim().toLowerCase()
+  const keyword = debouncedQ.value.trim().toLowerCase()
   if (!keyword) return [...items]
   return items.filter(item => toSearch(item).toLowerCase().includes(keyword))
 }

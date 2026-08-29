@@ -6,6 +6,7 @@ import { http } from '@/shared/http/client'
 import { useToast } from '@nuxt/ui/composables'
 import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
 import RichContent from '@/shared/components/reader/RichContent.vue'
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 const route = useRoute()
 const router = useRouter()
@@ -67,6 +68,12 @@ async function load() {
 
 onMounted(load)
 watch(() => route.params.id, load)
+
+// 懒搜索：输入停顿 300ms 后自动搜索关联内容
+const debouncedSearch = useDebouncedValue(searchQuery, 300)
+watch(debouncedSearch, value => {
+  if (value.trim()) void onSearch()
+})
 
 async function onSearch() {
   const q = searchQuery.value.trim()
@@ -276,7 +283,7 @@ async function save(publish = false) {
             <div class="flex flex-wrap items-center gap-2">
               <USelect v-model="linkedKind" :items="[{label:'竞赛',value:'COMPETITION'},{label:'活动',value:'ACTIVITY'},{label:'组织',value:'ORGANIZATION'},{label:'招新',value:'RECRUITMENT'}]" class="w-32" />
               <div class="flex flex-1 items-center gap-2">
-                <UInput v-model="searchQuery" placeholder="搜索标题…" class="flex-1" @keyup.enter="onSearch" />
+                <UInput v-model="searchQuery" placeholder="搜索标题…" class="flex-1" />
                 <UButton :loading="searching" @click="onSearch">搜索</UButton>
               </div>
             </div>

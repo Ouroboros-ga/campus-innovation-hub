@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
+import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 import MyOrganizationsSection from '@/features/organizations/components/MyOrganizationsSection.vue'
 import OrganizationCard from '@/features/organizations/components/OrganizationCard.vue'
@@ -57,6 +58,13 @@ const myOrganizations = computed<MyOrganization[]>(() => {
 })
 
 const q = computed(() => (typeof route.query.q === 'string' ? route.query.q : ''))
+// 懒搜索：输入停顿 300ms 后才写入 URL 并过滤，避免每次按键更新 URL 历史
+const searchInput = ref(q.value)
+watch(q, value => {
+  searchInput.value = value
+})
+const debouncedQ = useDebouncedValue(searchInput, 300)
+watch(debouncedQ, value => applyQuery({ q: value }))
 const type = computed(() => normalizeOrgType(route.query.type))
 const status = computed(() => normalizeOrgStatus(route.query.status))
 const sort = computed(() => normalizeOrgSort(route.query.sort))
@@ -116,12 +124,11 @@ function applyQuery(patch: {
           </p>
         </div>
         <UInput
-          :model-value="q"
+          v-model="searchInput"
           icon="i-lucide-search"
           placeholder="搜索组织名称、关键词"
           aria-label="搜索组织"
           class="w-full md:w-72"
-          @update:model-value="v => applyQuery({ q: v })"
         />
       </div>
 
