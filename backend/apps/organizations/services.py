@@ -444,6 +444,103 @@ def set_membership_active(*, actor: User, membership: OrganizationMembership, is
     return locked_membership
 
 
+def _assign_organization_roles(
+    *,
+    organization: Organization,
+    leader_user_id: object | None,
+    advisor_user_id: object | None,
+    leader_title: str | None,
+    advisor_title: str | None,
+    actor: User,
+) -> None:
+    """在同一事务内为组织指派负责人/指导老师，复用 membership 唯一约束。"""
+
+    # 防止同一人双重角色（serializer 已拦，但 service 为权威）
+    if leader_user_id is not None and advisor_user_id is not None and str(leader_user_id) == str(advisor_user_id):
+        raise InvalidState("负责人与指导老师不能为同一账号。")
+
+    # 辅助：通过 user_id 获取并校验用户、创建或更新 membership
+    def _upsert_role(user_id: object, desired_role: str, title: str | None) -> None:
+        if user_id is None:
+            return
+        user = User.objects.select_related("profile").filter(id=user_id, is_active=True).first()
+        if user is None:
+            raise NotFound("指定的用户不存在或已停用。")
+        if desired_role == OrganizationMembership.Role.ADVISOR:
+            if getattr(user, "identity_type", None) != User.IdentityType.TEACHER:
+                raise InvalidState("只有教师账号可以被授予指导老师。")
+            profile = getattr(user, "profile", None)
+            if profile is None:
+                from apps.accounts.models import UserProfile
+
+                profile = UserProfile.objects.filter(user=user).first()
+            if profile is None or not getattr(profile, "public_name", None):
+                raise InvalidState("教师的公开姓名必填后才能担任指导老师。")
+        # 尝试锁定已有 membership
+        membership = OrganizationMembership.objects.select_for_update().filter(
+            organization=organization, user=user
+        ).first()
+        if membership is None:
+            OrganizationMembership.objects.create(
+                organization=organization,
+                user=user,
+                role=desired_role,
+                title=title,
+                is_active=True,
+            )
+            record_audit(
+                actor=actor,
+                action="ORGANIZATION_LEADER_GRANTED" if desired_role == OrganizationMembership.Role.LEADER else "ORGANIZATION_ADVISOR_GRANTED",
+                target=organization,
+                changes={"user_id": str(user_id), "role": desired_role},
+            )
+        else:
+            previous_role = membership.role
+            membership.role = desired_role
+            if title is not None:
+                membership.title = title
+            membership.is_active = True
+            membership.left_at = None
+            # joined_at 保持原值或若曾离开则刷新
+            if not membership.is_active or membership.left_at is not None:
+                membership.joined_at = timezone.now()
+            membership.save(update_fields=["role", "title", "is_active", "left_at", "joined_at", "updated_at"])
+            if previous_role != desired_role:
+                record_audit(
+                    actor=actor,
+                    action="ORGANIZATION_LEADER_GRANTED" if desired_role == OrganizationMembership.Role.LEADER else "ORGANIZATION_ADVISOR_GRANTED",
+                    target=membership,
+                    changes={"role": {"from": previous_role, "to": desired_role}},
+                )
+
+    # 显式传 None 表示清空：若 leader_user_id == None 且调用方明确传入该 key，则移除旧负责人
+    # 调用方通过 payload 区分“未传”与“传 null”；此 helper 由上层决定是否调用清空
+    if leader_user_id is not None:
+        _upsert_role(leader_user_id, OrganizationMembership.Role.LEADER, leader_title)
+    if advisor_user_id is not None:
+        _upsert_role(advisor_user_id, OrganizationMembership.Role.ADVISOR, advisor_title)
+
+
+def _clear_organization_role(*, organization: Organization, role: str, actor: User) -> None:
+    """降级指定角色的现任者为 MEMBER（保留成员关系，避免历史丢失）。"""
+
+    memberships = list(
+        OrganizationMembership.objects.select_for_update().filter(
+            organization=organization, role=role, is_active=True
+        )
+    )
+    for membership in memberships:
+        previous_role = membership.role
+        membership.role = OrganizationMembership.Role.MEMBER
+        membership.save(update_fields=["role", "updated_at"])
+        record_audit(
+            actor=actor,
+            action="ORGANIZATION_LEADER_REVOKED" if role == OrganizationMembership.Role.LEADER else "ORGANIZATION_ADVISOR_REVOKED",
+            target=membership,
+            changes={"role": {"from": previous_role, "to": OrganizationMembership.Role.MEMBER}},
+        )
+
+
 @transaction.atomic
 def create_organization(*, actor: User, payload: Mapping[str, object]) -> Organization:
     """运营创建组织；仅 OPERATOR/SUPERADMIN，名称唯一由数据库约束保证。"""
@@ -451,6 +548,15 @@ def create_organization(*, actor: User, payload: Mapping[str, object]) -> Organi
     if not is_operator(actor):
         raise PermissionDenied
     values = dict(payload)
+    leader_user_id = values.pop("leader_user_id", None)
+    advisor_user_id = values.pop("advisor_user_id", None)
+    leader_title = values.pop("leader_title", None)
+    advisor_title = values.pop("advisor_title", None)
+    # 空字符串转 None（serializer 已处理，但兼容直接调用）
+    if leader_user_id == "":
+        leader_user_id = None
+    if advisor_user_id == "":
+        advisor_user_id = None
     try:
         organization = Organization.objects.create(
             created_by=actor,
@@ -459,6 +565,16 @@ def create_organization(*, actor: User, payload: Mapping[str, object]) -> Organi
         )
     except IntegrityError as error:
         raise InvalidState("组织名称已存在。") from error
+    # 在同一事务内指派人员
+    if leader_user_id is not None or advisor_user_id is not None:
+        _assign_organization_roles(
+            organization=organization,
+            leader_user_id=leader_user_id,
+            advisor_user_id=advisor_user_id,
+            leader_title=leader_title,
+            advisor_title=advisor_title,
+            actor=actor,
+        )
     record_audit(
         actor=actor,
         action="ORGANIZATION_CREATED",
@@ -466,6 +582,91 @@ def create_organization(*, actor: User, payload: Mapping[str, object]) -> Organi
         changes={"name": organization.name, "organization_type": organization.organization_type},
     )
     return organization
+
+
+@transaction.atomic
+def update_organization(*, actor: User, organization: Organization, payload: Mapping[str, object]) -> Organization:
+    """运营更新组织；仅 OPERATOR/SUPERADMIN，可同时指派负责人/指导老师。"""
+
+    if not is_operator(actor):
+        raise PermissionDenied
+    locked = Organization.objects.select_for_update().get(pk=organization.pk)
+    values = dict(payload)
+    leader_user_id = values.pop("leader_user_id", "__not_provided__")
+    advisor_user_id = values.pop("advisor_user_id", "__not_provided__")
+    leader_title = values.pop("leader_title", None)
+    advisor_title = values.pop("advisor_title", None)
+    changed_fields: list[str] = []
+    for field, value in values.items():
+        setattr(locked, field, value)
+        changed_fields.append(field)
+    if changed_fields:
+        locked.updated_by = actor
+        locked.save(update_fields=sorted({*changed_fields, "updated_by", "updated_at"}))
+    # 处理人员指派：显式传 None 表示清空该角色；未传则不改
+    if leader_user_id != "__not_provided__":
+        if leader_user_id is None:
+            _clear_organization_role(organization=locked, role=OrganizationMembership.Role.LEADER, actor=actor)
+        else:
+            # 若已有 LEADER 且与新用户不同，先降级所有旧的（兼容历史多条）
+            old_leaders = list(
+                OrganizationMembership.objects.select_for_update().filter(
+                    organization=locked, role=OrganizationMembership.Role.LEADER, is_active=True
+                ).exclude(user_id=leader_user_id)
+            )
+            for old in old_leaders:
+                prev = old.role
+                old.role = OrganizationMembership.Role.MEMBER
+                old.save(update_fields=["role", "updated_at"])
+                record_audit(
+                    actor=actor,
+                    action="ORGANIZATION_LEADER_REVOKED",
+                    target=old,
+                    changes={"role": {"from": prev, "to": OrganizationMembership.Role.MEMBER}},
+                )
+            _assign_organization_roles(
+                organization=locked,
+                leader_user_id=leader_user_id,
+                advisor_user_id=None,
+                leader_title=leader_title,
+                advisor_title=None,
+                actor=actor,
+            )
+    if advisor_user_id != "__not_provided__":
+        if advisor_user_id is None:
+            _clear_organization_role(organization=locked, role=OrganizationMembership.Role.ADVISOR, actor=actor)
+        else:
+            old_advisors = list(
+                OrganizationMembership.objects.select_for_update().filter(
+                    organization=locked, role=OrganizationMembership.Role.ADVISOR, is_active=True
+                ).exclude(user_id=advisor_user_id)
+            )
+            for old in old_advisors:
+                prev = old.role
+                old.role = OrganizationMembership.Role.MEMBER
+                old.save(update_fields=["role", "updated_at"])
+                record_audit(
+                    actor=actor,
+                    action="ORGANIZATION_ADVISOR_REVOKED",
+                    target=old,
+                    changes={"role": {"from": prev, "to": OrganizationMembership.Role.MEMBER}},
+                )
+            _assign_organization_roles(
+                organization=locked,
+                leader_user_id=None,
+                advisor_user_id=advisor_user_id,
+                leader_title=None,
+                advisor_title=advisor_title,
+                actor=actor,
+            )
+    if changed_fields:
+        record_audit(
+            actor=actor,
+            action="ORGANIZATION_UPDATED",
+            target=locked,
+            changes={"fields": sorted(changed_fields)},
+        )
+    return locked
 
 
 @transaction.atomic

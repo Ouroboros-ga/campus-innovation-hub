@@ -23,6 +23,7 @@ const recruiting = ref((route.query.recruiting as string) ?? 'ALL')
 const page = ref(Number(route.query.page ?? 1) || 1)
 const pageSize = 20
 const editorOpen = ref(false)
+const editingOrgId = ref<string | null>(null)
 
 function syncFromRoute() {
   query.value = (route.query.q as string) ?? ''
@@ -83,7 +84,9 @@ function onReset() {
   query.value = ''; orgType.value = 'ALL'; recruiting.value = 'ALL'; page.value = 1
   router.replace({ query: {} })
 }
-function openCreate() { editorOpen.value = true }
+function openCreate() { editingOrgId.value = null; editorOpen.value = true }
+function openEdit(org: OpsOrganization) { editingOrgId.value = org.id; editorOpen.value = true }
+function onEditorClose(open: boolean) { editorOpen.value = open; if (!open) editingOrgId.value = null }
 
 const typeOptions = [
   { label: '组织类型', value: 'ALL' },
@@ -400,6 +403,15 @@ const recruitingOptions = [
                 </UButton>
                 <UButton
                   size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  icon="i-lucide-pencil"
+                  @click="openEdit(org)"
+                >
+                  编辑
+                </UButton>
+                <UButton
+                  size="xs"
                   color="primary"
                   variant="soft"
                   :to="`/manage/organizations/${org.id}`"
@@ -472,6 +484,7 @@ const recruitingOptions = [
             <span>更新 {{ formatCompactDate(org.updated_at) }}</span>
             <div class="flex gap-1">
               <UButton size="xs" variant="ghost" color="neutral" :to="`/organizations/${org.id}`">查看</UButton>
+              <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-pencil" @click="openEdit(org)">编辑</UButton>
               <UButton size="xs" variant="soft" color="primary" :to="`/manage/organizations/${org.id}`">Studio</UButton>
             </div>
           </div>
@@ -491,7 +504,7 @@ const recruitingOptions = [
       />
     </div>
 
-    <OrganizationEditorModal :open="editorOpen" @update:open="editorOpen = $event" @saved="load" />
+    <OrganizationEditorModal :open="editorOpen" :organization-id="editingOrgId" @update:open="onEditorClose" @saved="load" />
   </div>
 </template>
 

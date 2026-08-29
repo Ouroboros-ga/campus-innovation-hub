@@ -24,8 +24,18 @@ function authMemberships(): Array<{ organization_id: string; role: string; title
   }
 }
 
-/** 是否可管理指定组织（LEADER 或 ADVISOR），优先真实会话，其次 Mock。 */
+function isSuperadmin(): boolean {
+  try {
+    const auth = useAuthStore()
+    return !!auth.isSuperadmin
+  } catch {
+    return false
+  }
+}
+
+/** 是否可管理指定组织（LEADER 或 ADVISOR 或 SUPERADMIN），优先真实会话，其次 Mock。 */
 export function canManageOrganization(orgId: string): boolean {
+  if (isSuperadmin()) return true
   const real = authMemberships()
   if (real.length) {
     return real.some(entry => entry.organization_id === orgId && (entry.role === 'LEADER' || entry.role === 'ADVISOR'))
@@ -35,8 +45,43 @@ export function canManageOrganization(orgId: string): boolean {
   )
 }
 
-/** 可管理组织的当前成员关系；不可管理则返回 null。 */
+/** 可管理组织的当前成员关系；不可管理则返回 null。超管返回合成身份。 */
 export function managedMembership(orgId: string): MyOrganization | null {
+  if (isSuperadmin()) {
+    const mock = myOrganizations.find(entry => entry.organization.id === orgId)
+    if (mock) return { organization: mock.organization, membership: 'LEADER' as MyOrganization['membership'], roleLabel: '超级管理员' }
+    const real = authMemberships().find(entry => entry.organization_id === orgId)
+    if (real) {
+      return {
+        organization: {
+          id: orgId,
+          name: '未知组织',
+          type: 'STUDENT_CLUB',
+          description: null,
+          logo: { alt: 'logo', src: null },
+          recruitment: null,
+          detailPath: `/organizations/${orgId}`,
+          recruitmentPath: null,
+        },
+        membership: real.role as MyOrganization['membership'],
+        roleLabel: real.title || '超级管理员',
+      }
+    }
+    return {
+      organization: {
+        id: orgId,
+        name: '未知组织',
+        type: 'STUDENT_CLUB',
+        description: null,
+        logo: { alt: 'logo', src: null },
+        recruitment: null,
+        detailPath: `/organizations/${orgId}`,
+        recruitmentPath: null,
+      },
+      membership: 'LEADER' as MyOrganization['membership'],
+      roleLabel: '超级管理员',
+    }
+  }
   const real = authMemberships()
   if (real.length) {
     const m = real.find(entry => entry.organization_id === orgId && (entry.role === 'LEADER' || entry.role === 'ADVISOR'))

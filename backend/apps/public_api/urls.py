@@ -30,5 +30,7 @@ urlpatterns = [
     path("announcements", views.AnnouncementListView.as_view(), name="public-announcement-list"),
     path("announcements/<str:object_id>", views.AnnouncementDetailView.as_view(), name="public-announcement-detail"),
     path("qa/public", views.QaPublicListView.as_view(), name="public-qa-public"),
+    path("documents", views.SiteDocumentListView.as_view(), name="public-document-list"),
+    path("documents/<str:slug>", views.SiteDocumentDetailView.as_view(), name="public-document-detail"),
     path("search", views.SearchView.as_view(), name="public-search"),
 ]

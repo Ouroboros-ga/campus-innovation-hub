@@ -29,6 +29,12 @@ class AccountsUserAdmin(AuditedAdminMixin, UserAdmin):
         ("平台信息", {"fields": ("platform_role", "is_active")}),
     )
 
+    def get_readonly_fields(self, request, obj=None):
+        # 新增时需允许选择身份与学号/工号，否则 Admin 仅显示 “学生/-”（你截图的现象）
+        if obj is None:
+            return []
+        return super().get_readonly_fields(request, obj)
+
     def has_add_permission(self, request):
         # 仅 SUPERADMIN 可经 Admin 创建教师账号（database-design.md §8.1）
         return bool(request.user and request.user.is_authenticated and request.user.is_superuser)

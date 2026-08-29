@@ -203,3 +203,60 @@ class FaqItem(UUIDTimestampedModel):
         add_min_length_error(errors, field="answer_md", value=self.answer_md, minimum=1, label="常见问题答案")
         if errors:
             raise ValidationError(errors)
+
+
+class SiteDocument(UUIDTimestampedModel):
+    """文档中心：隐私政策、服务条款、关于我们、联系我们、使用帮助等站点文档。
+
+    每个 slug 唯一对应一篇文档，通过 publication_state 控制公开可见性。
+    body_md 为 Markdown canonical source，前端通过 RichContent 渲染。
+    """
+
+    PublicationState = PublicationState
+
+    class Category(models.TextChoices):
+        ABOUT = "ABOUT", "关于我们"
+        CONTACT = "CONTACT", "联系我们"
+        HELP = "HELP", "使用帮助"
+        PRIVACY = "PRIVACY", "隐私政策"
+        TERMS = "TERMS", "服务条款"
+        OTHER = "OTHER", "其他"
+
+    slug = models.SlugField(max_length=80, unique=True, help_text="唯一标识，如 privacy / terms / about / contact / help")
+    title = models.CharField(max_length=160)
+    category = models.CharField(max_length=20, choices=Category.choices)
+    summary = models.CharField(max_length=300, null=True, blank=True)
+    body_md = models.TextField(validators=[MaxLengthValidator(50000)])
+    publication_state = models.CharField(max_length=20, choices=PublicationState.choices, default=PublicationState.DRAFT)
+    published_at = models.DateTimeField(null=True, blank=True)
+    sort_order = models.IntegerField(default=0)
+    version = models.CharField(max_length=20, default="1.0", help_text="展示版本号，如 1.0 / 2026-08")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_site_documents")
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="updated_site_documents")
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=Q(sort_order__gte=0), name="site_document_sort_nonnegative"),
+        ]
+        indexes = [
+            models.Index(fields=["publication_state", "category"], name="site_doc_state_category_idx"),
+            models.Index(fields=["slug", "publication_state"], name="site_doc_slug_state_idx"),
+            models.Index(fields=["publication_state", "published_at"], name="site_doc_state_pub_idx"),
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        errors: dict[str, str] = {}
+        add_min_length_error(errors, field="slug", value=self.slug, minimum=2, label="文档标识")
+        add_min_length_error(errors, field="title", value=self.title, minimum=2, label="文档标题")
+        add_min_length_error(errors, field="body_md", value=self.body_md, minimum=1, label="文档正文")
+        if self.slug:
+            normalized = self.slug.strip().lower()
+            if normalized != self.slug:
+                errors["slug"] = "文档标识必须为小写字母、数字或连字符，且不能包含空格。"
+            import re
+
+            if not re.match(r"^[a-z0-9]+(?:-[a-z0-9]+)*$", self.slug):
+                errors["slug"] = "文档标识格式不合法，仅允许小写字母、数字与连字符。"
+        if errors:
+            raise ValidationError(errors)

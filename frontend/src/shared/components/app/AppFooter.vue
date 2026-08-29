@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
 
-const footerItems = ['关于我们', '联系我们', '使用帮助', '隐私政策']
+const footerLinks = [
+  { label: '关于我们', to: '/docs/about' },
+  { label: '联系我们', to: '/docs/contact' },
+  { label: '使用帮助', to: '/docs/help' },
+  { label: '隐私政策', to: '/docs/privacy' },
+  { label: '服务条款', to: '/docs/terms' }
+] as const
 </script>
 
 <template>
@@ -13,13 +19,18 @@ const footerItems = ['关于我们', '联系我们', '使用帮助', '隐私政�
       <div
         class="flex min-h-16 flex-col items-center justify-center gap-x-7 gap-y-1 py-3 text-center text-xs text-muted sm:flex-row"
       >
-        <p>© 2026 人工智能学院科创与就业服务平台</p>
+        <p>© 2026 SIT 人工智能学院·科创与就业服务平台</p>
         <ul class="flex flex-wrap items-center justify-center gap-x-5 gap-y-1">
           <li
-            v-for="item in footerItems"
-            :key="item"
+            v-for="item in footerLinks"
+            :key="item.to"
           >
-            <span>{{ item }}</span>
+            <RouterLink
+              :to="item.to"
+              class="transition-colors hover:text-highlighted hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              {{ item.label }}
+            </RouterLink>
           </li>
         </ul>
         <a

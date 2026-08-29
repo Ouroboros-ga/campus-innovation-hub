@@ -15,7 +15,7 @@ from rest_framework.request import Request
 
 from apps.activities.models import Activity, Registration
 from apps.competitions.models import Competition, Follow, TimelineEvent
-from apps.content.models import Announcement, FaqItem, GuideArticle, HomepageBanner
+from apps.content.models import Announcement, FaqItem, GuideArticle, HomepageBanner, SiteDocument
 from apps.media.models import MediaAsset
 from apps.media.storage import get_object_storage
 from apps.organizations.models import Organization, OrganizationMembership, Recruitment, RecruitmentPosition
@@ -577,4 +577,23 @@ def serialize_competition_detail(competition: Competition, request: Request) -> 
             "team_posts": [serialize_team_post(team, request) for team in teams],
         }
     )
+    return payload
+
+
+def serialize_site_document(document: SiteDocument, request: Request) -> dict[str, Any]:
+    return {
+        "id": str(document.id),
+        "slug": document.slug,
+        "title": document.title,
+        "category": document.category,
+        "summary": document.summary,
+        "published_at": document.published_at,
+        "version": document.version,
+        "updated_at": document.updated_at,
+    }
+
+
+def serialize_site_document_detail(document: SiteDocument, request: Request) -> dict[str, Any]:
+    payload = serialize_site_document(document, request)
+    payload.update({"body_md": document.body_md})
     return payload

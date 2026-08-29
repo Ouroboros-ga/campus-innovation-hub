@@ -175,30 +175,34 @@ describe('FE-004 公开应用外壳', () => {
     expect(wrapper.find('[aria-label="底部主导航"]').exists()).toBe(false)
   })
 
-  it('手机端 tab 页使用紧凑居中标题头（居中标题 + 右侧搜索），而非完整桌面栏', async () => {
+  it('手机端组织列表使用详情返回头（与详情一致），隐藏底部导航', async () => {
     setViewportWidth(390)
     const { wrapper } = await mountAt('/organizations')
 
     const header = wrapper.get('header')
     expect(header.attributes('role')).toBe('banner')
     expect(header.text()).toContain('社团与组织')
-    // 紧凑头不应包含桌面主导航 / 用户菜单 / 外观切换
+    // 详情壳不应包含桌面主导航 / 用户菜单 / 外观切换
     expect(wrapper.find('[aria-label="主导航"]').exists()).toBe(false)
     expect(wrapper.find('button[aria-label="打开用户菜单"]').exists()).toBe(false)
     expect(wrapper.find('button[aria-label="切换外观"]').exists()).toBe(false)
-    // 右侧保留全局搜索入口，底部保留主导航
-    expect(wrapper.get('button[aria-label="搜索"]')).toBeTruthy()
-    expect(wrapper.get('[aria-label="底部主导航"]')).toBeTruthy()
+    // 详情壳：展示返回按钮，隐藏底部主导航（与 /qa 详情一致）
+    expect(wrapper.get('button[aria-label="返回"]')).toBeTruthy()
+    expect(wrapper.find('[aria-label="底部主导航"]').exists()).toBe(false)
   })
 
   it('在 Footer 中提供平台说明入口', async () => {
     const { wrapper } = await mountAt('/')
     const footer = wrapper.get('footer')
 
-    expect(footer.text()).toContain('© 2026 人工智能学院科创与就业服务平台')
+    expect(footer.text()).toContain('© 2026 SIT 人工智能学院·科创与就业服务平台')
     expect(footer.text()).toContain('关于我们')
     expect(footer.text()).toContain('联系我们')
     expect(footer.text()).toContain('使用帮助')
     expect(footer.text()).toContain('隐私政策')
+    expect(footer.text()).toContain('服务条款')
+    // 页脚项应为可点击的 RouterLink
+    expect(footer.find('a[href="/docs/privacy"]').exists()).toBe(true)
+    expect(footer.find('a[href="/docs/terms"]').exists()).toBe(true)
   })
 })

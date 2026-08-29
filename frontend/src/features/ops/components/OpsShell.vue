@@ -67,18 +67,62 @@ const drawerOpen = ref(false)
       <template #content>
         <div class="flex h-full flex-col">
           <div class="flex h-14 items-center gap-3 border-b border-default px-4">
-            <span class="grid size-8 place-items-center rounded-lg bg-primary-600 text-white">
-              <UIcon
-                name="i-lucide-graduation-cap"
-                class="size-5"
-              />
+            <span class="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-primary-200 bg-white">
+              <svg
+                viewBox="0 0 100 100"
+                class="size-7"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="48"
+                  fill="white"
+                  stroke="#0F6FE8"
+                  stroke-width="3"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="39"
+                  fill="none"
+                  stroke="#0F6FE8"
+                  stroke-width="1.4"
+                />
+                <text
+                  x="50"
+                  y="78"
+                  font-family="'PingFang SC','Microsoft YaHei',sans-serif"
+                  font-size="6"
+                  fill="#0B3EA8"
+                  font-weight="700"
+                  text-anchor="middle"
+                >
+                  人工智能学院
+                </text>
+                <g transform="translate(50 50)">
+                  <path
+                    d="M -18 14 L -2 -20 L 20 10 L 4 13 Z"
+                    fill="#0B3EA8"
+                  />
+                  <path
+                    d="M -21 14 Q 0 7 26 11 L 20 18 Q 0 20 -16 16 Z"
+                    fill="#0B3EA8"
+                  />
+                  <path
+                    d="M -30 20 Q -12 12 10 20 Q 26 24 36 20 Q 22 26 0 24 Q -15 23 -30 20 Z"
+                    fill="#0B3EA8"
+                  />
+                </g>
+              </svg>
             </span>
             <div>
               <p class="text-sm font-semibold text-highlighted">
                 运营管理中心
               </p>
               <p class="text-xs text-muted">
-                科创与就业服务平台
+                SIT 人工智能学院
               </p>
             </div>
           </div>

@@ -640,10 +640,13 @@ class SiteDocumentListView(PublicReadView):
     def get(self, request: Request) -> Response:
         validate_query_keys(request, {"category"})
         category = parse_optional_enum(request, "category", SiteDocument.Category.values)
-        queryset = published_site_documents()
-        if category:
-            queryset = queryset.filter(category=category)
-        items = list(queryset)
+        try:
+            queryset = published_site_documents()
+            if category:
+                queryset = queryset.filter(category=category)
+            items = list(queryset)
+        except Exception:
+            items = []
         # 若数据库尚无已发布文档，回退至内置静态文档，保证首屏与页脚可用
         if not items:
             fallbacks = list(FALLBACK_SITE_DOCUMENTS.values())
@@ -674,7 +677,10 @@ class SiteDocumentDetailView(PublicReadView):
     def get(self, request: Request, slug: str) -> Response:
         validate_query_keys(request, set())
         normalized = slug.strip().lower()
-        document = SiteDocument.objects.filter(slug=normalized, publication_state=SiteDocument.PublicationState.PUBLISHED).first()
+        try:
+            document = SiteDocument.objects.filter(slug=normalized, publication_state=SiteDocument.PublicationState.PUBLISHED).first()
+        except Exception:
+            document = None
         if document is not None:
             return Response(serialize_site_document_detail(document, request))
         fallback = FALLBACK_SITE_DOCUMENTS.get(normalized)

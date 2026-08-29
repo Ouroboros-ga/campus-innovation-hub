@@ -21,7 +21,8 @@ const contentChildren = [
   { name: 'ops-competitions', label: '竞赛管理', icon: 'i-lucide-trophy' },
   { name: 'ops-activities', label: '校园动态', icon: 'i-lucide-calendar-days' },
   { name: 'ops-guides', label: '指南管理', icon: 'i-lucide-book-open' },
-  { name: 'ops-faq', label: 'FAQ 管理', icon: 'i-lucide-help-circle' }
+  { name: 'ops-faq', label: 'FAQ 管理', icon: 'i-lucide-help-circle' },
+  { name: 'ops-documents', label: '文档中心', icon: 'i-lucide-files' }
 ]
 </script>
 

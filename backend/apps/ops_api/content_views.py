@@ -7,24 +7,28 @@ from typing import Any
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from apps.content.models import Announcement, FaqItem, GuideArticle, HomepageBanner
+from apps.content.models import Announcement, FaqItem, GuideArticle, HomepageBanner, SiteDocument
 from apps.content.services import (
     archive_announcement,
     archive_faq,
     archive_guide,
+    archive_site_document,
     create_announcement,
     create_banner,
     create_faq,
     create_guide,
+    create_site_document,
     publish_announcement,
     publish_faq,
     publish_guide,
+    publish_site_document,
     set_faq_featured,
     set_guide_featured,
     update_announcement,
     update_banner,
     update_faq,
     update_guide,
+    update_site_document,
 )
 from apps.domain_errors import NotFound
 from apps.ops_api.base import OperatorAPIView, require_empty_body
@@ -42,6 +46,9 @@ from apps.ops_api.serializers import (
     serialize_banner_management,
     serialize_faq_management,
     serialize_guide_management,
+    serialize_site_document_management,
+    SiteDocumentCreateSerializer,
+    SiteDocumentPatchSerializer,
 )
 from apps.public_api.query import (
     filter_text,
@@ -308,3 +315,75 @@ class BannerDetailView(OperatorAPIView):
         serializer.is_valid(raise_exception=True)
         updated = update_banner(actor=request.user, banner=banner, payload=serializer.validated_data)
         return Response(serialize_banner_management(self._get(str(updated.id)), request))
+
+
+class SiteDocumentCollectionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"content:read"}, "POST": {"content:write"}}
+
+    def get(self, request: Request) -> Response:
+        validate_query_keys(request, {"q", "category", "status", "page", "page_size"})
+        queryset = SiteDocument.objects.all().order_by("sort_order", "slug")
+        q = request.query_params.get("q")
+        if q:
+            queryset = filter_text(queryset, q, ("title", "slug", "summary"))
+        status = parse_optional_enum(request, "status", SiteDocument.PublicationState.values)
+        category = parse_optional_enum(request, "category", SiteDocument.Category.values)
+        if status is not None:
+            queryset = queryset.filter(publication_state=status)
+        if category is not None:
+            queryset = queryset.filter(category=category)
+        return paginated_response(
+            request, queryset, lambda item: serialize_site_document_management(item, request), default_page_size=30
+        )
+
+    def post(self, request: Request) -> Response:
+        serializer = SiteDocumentCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # slug 唯一性在 model FullClean 与 DB 约束层保证；提前检测便于返回 400 而非 500
+        if SiteDocument.objects.filter(slug=serializer.validated_data["slug"]).exists():
+            from rest_framework.exceptions import ValidationError as DRFValidationError
+
+            raise DRFValidationError({"slug": ["该标识已存在。"]})
+        document = create_site_document(actor=request.user, payload=serializer.validated_data)
+        return Response(serialize_site_document_management(document, request), status=201)
+
+
+class SiteDocumentDetailView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"GET": {"content:read"}, "PATCH": {"content:write"}}
+
+    def get(self, request: Request, object_id: str) -> Response:
+        doc = _get_or_404(SiteDocument, object_id, "文档")
+        return Response(serialize_site_document_management(doc, request))
+
+    def patch(self, request: Request, object_id: str) -> Response:
+        doc = _get_or_404(SiteDocument, object_id, "文档")
+        serializer = SiteDocumentPatchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if "slug" in serializer.validated_data and SiteDocument.objects.filter(slug=serializer.validated_data["slug"]).exclude(id=doc.id).exists():
+            from rest_framework.exceptions import ValidationError as DRFValidationError
+
+            raise DRFValidationError({"slug": ["该标识已存在。"]})
+        updated = update_site_document(actor=request.user, document=doc, payload=serializer.validated_data)
+        return Response(serialize_site_document_management(updated, request))
+
+
+class _SiteDocumentActionView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"POST": {"content:publish"}}
+    service = None
+
+    def post(self, request: Request, object_id: str) -> Response:
+        require_empty_body(request)
+        assert self.service is not None
+        self.service(actor=request.user, document=_get_or_404(SiteDocument, object_id, "文档"))
+        return Response(status=204)
+
+
+class SiteDocumentPublishView(_SiteDocumentActionView):
+    service = staticmethod(publish_site_document)
+
+
+class SiteDocumentArchiveView(_SiteDocumentActionView):
+    service = staticmethod(archive_site_document)

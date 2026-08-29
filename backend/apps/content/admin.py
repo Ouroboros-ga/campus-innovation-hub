@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.content.models import Announcement, FaqItem, GuideArticle, GuideCompetition, HomepageBanner
+from apps.content.models import Announcement, FaqItem, GuideArticle, GuideCompetition, HomepageBanner, SiteDocument
 from apps.core.admin import AuditedAdminMixin
 
 
@@ -42,3 +42,12 @@ class FaqItemAdmin(AuditedAdminMixin, admin.ModelAdmin):
     search_fields = ["question"]
     raw_id_fields = ["created_by", "updated_by"]
     readonly_fields = ["publication_state"]
+
+
+@admin.register(SiteDocument)
+class SiteDocumentAdmin(AuditedAdminMixin, admin.ModelAdmin):
+    list_display = ["slug", "title", "category", "publication_state", "version", "published_at"]
+    list_filter = ["category", "publication_state"]
+    search_fields = ["slug", "title", "summary"]
+    raw_id_fields = ["created_by", "updated_by"]
+    readonly_fields = ["publication_state", "published_at"]

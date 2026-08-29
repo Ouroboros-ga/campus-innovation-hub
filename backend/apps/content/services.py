@@ -10,7 +10,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.audit.services import record_audit
 from apps.competitions.models import Competition
-from apps.content.models import Announcement, FaqItem, GuideArticle, GuideCompetition, HomepageBanner
+from apps.content.models import Announcement, FaqItem, GuideArticle, GuideCompetition, HomepageBanner, SiteDocument
 from apps.domain_errors import InvalidState, NotFound, PermissionDenied
 from apps.permissions import is_operator
 
@@ -403,4 +403,55 @@ def update_banner(*, actor: User, banner: HomepageBanner, payload: dict[str, Any
     locked.full_clean()
     locked.save(update_fields=[*values.keys(), "updated_by", "updated_at"])
     record_audit(actor=actor, action="BANNER_UPDATED", target=locked, changes={"fields": sorted(values)})
+    return locked
+
+
+@transaction.atomic
+def create_site_document(*, actor: User, payload: dict[str, Any]) -> SiteDocument:
+    _require_operator(actor)
+    doc = SiteDocument.objects.create(**payload, publication_state=SiteDocument.PublicationState.DRAFT, created_by=actor, updated_by=actor)
+    doc.full_clean()
+    record_audit(actor=actor, action="SITE_DOCUMENT_CREATED", target=doc, changes={"slug": doc.slug, "publication_state": "DRAFT"})
+    return doc
+
+
+@transaction.atomic
+def update_site_document(*, actor: User, document: SiteDocument, payload: dict[str, Any]) -> SiteDocument:
+    _require_operator(actor)
+    locked = SiteDocument.objects.select_for_update().get(pk=document.pk)
+    if locked.publication_state != SiteDocument.PublicationState.DRAFT:
+        raise InvalidState("已发布文档不可直接修改，请先归档为草稿。")
+    for field, value in payload.items():
+        setattr(locked, field, value)
+    locked.updated_by = actor
+    locked.full_clean()
+    locked.save(update_fields=[*payload.keys(), "updated_by", "updated_at"])
+    record_audit(actor=actor, action="SITE_DOCUMENT_UPDATED", target=locked, changes={"fields": sorted(payload)})
+    return locked
+
+
+@transaction.atomic
+def publish_site_document(*, actor: User, document: SiteDocument) -> SiteDocument:
+    _require_operator(actor)
+    locked = SiteDocument.objects.select_for_update().get(pk=document.pk)
+    if locked.publication_state != SiteDocument.PublicationState.DRAFT:
+        raise InvalidState
+    locked.publication_state = SiteDocument.PublicationState.PUBLISHED
+    locked.published_at = locked.published_at or timezone.now()
+    locked.updated_by = actor
+    locked.save(update_fields=["publication_state", "published_at", "updated_by", "updated_at"])
+    record_audit(actor=actor, action="SITE_DOCUMENT_PUBLISHED", target=locked, changes={"publication_state": "PUBLISHED"})
+    return locked
+
+
+@transaction.atomic
+def archive_site_document(*, actor: User, document: SiteDocument) -> SiteDocument:
+    _require_operator(actor)
+    locked = SiteDocument.objects.select_for_update().get(pk=document.pk)
+    if locked.publication_state != SiteDocument.PublicationState.PUBLISHED:
+        raise InvalidState
+    locked.publication_state = SiteDocument.PublicationState.ARCHIVED
+    locked.updated_by = actor
+    locked.save(update_fields=["publication_state", "updated_by", "updated_at"])
+    record_audit(actor=actor, action="SITE_DOCUMENT_ARCHIVED", target=locked, changes={"publication_state": "ARCHIVED"})
     return locked
