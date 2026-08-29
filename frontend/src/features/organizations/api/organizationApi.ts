@@ -69,6 +69,7 @@ interface AdvisorDto {
 }
 
 interface OrganizationDetailDto extends OrganizationListItemDto {
+  banner?: ImageDto | null
   description_md?: string | null
   direction?: string | null
   founded_at?: string | null
@@ -211,21 +212,25 @@ function toDetail(dto: OrganizationDetailDto): OrganizationDetail {
     user_id: '',
     membership_id: ''
   } as AdvisorDto] : [])
+  const leadersRaw = dto.leaders ?? []
   const relatedRaw = dto.related_links ?? dto.related_links_json ?? []
+  // 负责人优先取 leaders[0]，回退旧字段
+  const primaryLeader = leadersRaw[0]
   return {
     ...summary,
+    banner: dto.banner ? { alt: `${dto.name}横幅`, src: dto.banner.url ?? null } : null,
     descriptionMd: dto.description_md ?? '',
     direction: dto.direction ?? '',
     foundedAt: dto.founded_at ?? null,
     memberCount: dto.member_count ?? null,
     college: dto.college ?? null,
     advisors: advisorsRaw.map(toAdvisor),
-    leaders: (dto.leaders ?? []).map(toAdvisor),
+    leaders: leadersRaw.map(toAdvisor),
     currentUserOrganizationRole: (dto.current_user_organization_role as OrganizationDetail['currentUserOrganizationRole']) ?? null,
     canManage: dto.can_manage ?? null,
     isLeader: dto.is_leader ?? null,
-    leaderName: dto.leader_name ?? '',
-    leaderTitle: dto.leader_title ?? '',
+    leaderName: dto.leader_name ?? primaryLeader?.display_name ?? primaryLeader?.public_name ?? '',
+    leaderTitle: dto.leader_title ?? primaryLeader?.title ?? '',
     leaderGrade: dto.leader_grade ?? null,
     contactEmail: dto.contact_email ?? null,
     contactPhone: dto.contact_phone ?? null,

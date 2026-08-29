@@ -221,18 +221,35 @@ function phaseColor(
           </span>
         </nav>
 
-        <!-- Identity 蓝色横幅 -->
+        <!-- Identity 横幅：优先展示上传 Banner，兜底蓝底 -->
         <div class="overflow-hidden rounded-card bg-primary-900 text-white">
-          <div class="p-5 sm:p-7">
+          <div v-if="detail.banner?.src" class="relative h-40 sm:h-48">
+            <img :src="detail.banner.src" :alt="detail.banner.alt" class="absolute inset-0 size-full object-cover" loading="lazy" />
+            <div class="absolute inset-0 bg-gradient-to-t from-primary-900/70 via-primary-900/30 to-transparent" />
+            <div class="absolute bottom-0 flex items-end gap-3 p-5 sm:p-7">
+              <span class="grid size-16 shrink-0 place-items-center overflow-hidden rounded-card bg-white shadow">
+                <img v-if="detail.logo?.src" :src="detail.logo.src" :alt="detail.logo.alt" class="size-full object-contain p-1" loading="lazy" />
+                <UIcon v-else :name="organizationTypeIcon[detail.type]" class="size-8 text-primary-900" />
+              </span>
+              <div class="min-w-0">
+                <h1 class="text-2xl font-bold leading-tight text-white sm:text-3xl drop-shadow">
+                  {{ detail.name }}
+                </h1>
+                <div class="mt-1 flex flex-wrap items-center gap-2">
+                  <UBadge size="sm" variant="soft" color="neutral">{{ organizationTypeLabel[detail.type] }}</UBadge>
+                  <UBadge v-if="!orgAllowsOnline" size="sm" variant="soft" color="neutral">仅引流</UBadge>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="p-5 sm:p-7">
             <div class="flex items-start gap-4">
                 <span
-                  class="grid size-16 shrink-0 place-items-center rounded-card bg-white/10"
+                  class="grid size-16 shrink-0 place-items-center overflow-hidden rounded-card bg-white shadow"
                   aria-hidden="true"
                 >
-                <UIcon
-                  :name="organizationTypeIcon[detail.type]"
-                  class="size-8"
-                />
+                <img v-if="detail.logo?.src" :src="detail.logo.src" :alt="detail.logo.alt" class="size-full object-contain p-1" loading="lazy" />
+                <UIcon v-else :name="organizationTypeIcon[detail.type]" class="size-8 text-primary-900" />
               </span>
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-2">

@@ -94,7 +94,7 @@ const heroProfile = computed(() => ({
   nickname: display.value.displayName,
   bio: display.value.bio,
   skills: display.value.skills,
-  grade: display.value.gradeLabel || null,
+  grade: (display.value.gradeLabel ?? '') as string,
 }))
 
 function appStateLabel(state: string) {

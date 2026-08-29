@@ -133,6 +133,8 @@ export interface OrganizationRelatedLink {
 
 /** 组织详情页视图模型（FE-041，PageMap §组织主页）。 */
 export interface OrganizationDetail extends OrganizationSummary {
+  /** 横幅（组织 Banner，16:9） */
+  banner?: HomepageImage | null
   /** 完整介绍（Markdown 源，运行时降级为纯文本）。 */
   descriptionMd: string
   /** 主要方向（以「/」分隔，展示为方向标签）。 */
