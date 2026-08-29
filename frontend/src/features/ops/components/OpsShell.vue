@@ -17,8 +17,8 @@ const drawerOpen = ref(false)
 
 <template>
   <div class="flex min-h-[calc(100dvh-4rem)] bg-canvas">
-    <!-- 桌面侧栏：固定在视口左侧，随内容滚动保持可见 -->
-    <aside class="hidden w-[260px] shrink-0 flex-col border-r border-default bg-default lg:flex lg:sticky lg:top-16 lg:h-[calc(100dvh-4rem)] lg:self-start">
+    <!-- 桌面侧栏：固定在视口左侧，随详细界面滚动保持可见 -->
+    <aside class="hidden w-[260px] shrink-0 flex-col border-r border-default bg-default lg:flex lg:sticky lg:top-0 lg:h-[calc(100dvh-4rem)] lg:self-start">
       <div class="flex-1 overflow-y-auto px-2 py-3">
         <OpsNav />
       </div>
@@ -26,8 +26,8 @@ const drawerOpen = ref(false)
 
     <!-- 主区 -->
     <div class="min-w-0 flex-1">
-      <!-- 顶栏：固定在视口顶部（紧贴全局 AppHeader 下方），随详细界面滚动保持可见 -->
-      <header class="sticky top-[3.25rem] z-20 flex h-14 items-center justify-between gap-3 border-b border-default bg-default px-4 lg:top-16">
+      <!-- 顶栏：固定在视口顶部，随详细界面滚动保持可见 -->
+      <header class="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-default bg-default px-4">
         <div class="flex items-center gap-2">
           <UButton
             class="lg:hidden"
