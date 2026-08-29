@@ -32,7 +32,7 @@ function confirm() {
 <template>
   <UModal
     :open="props.open"
-    :ui="{ content: 'max-w-md' }"
+    :ui="{ content: 'max-w-md', body: 'p-4 sm:p-6', footer: 'shrink-0' }"
     @update:open="close"
   >
     <template #header>
@@ -41,7 +41,7 @@ function confirm() {
       </h2>
     </template>
 
-    <template #content>
+    <template #body>
       <div
         role="radiogroup"
         aria-label="发布动态类型"

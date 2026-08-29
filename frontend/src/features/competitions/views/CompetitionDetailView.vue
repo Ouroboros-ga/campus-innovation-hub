@@ -112,6 +112,7 @@ function onFieldClick(field: string, section: string) {
     <div
       data-editor-section="header"
       data-editor-field="name"
+      class="sticky top-[3.25rem] z-10 -mx-2 bg-canvas px-2 py-2 lg:top-16"
       :class="editorMode ? 'cursor-pointer rounded-md ring-1 ring-transparent hover:ring-primary-300' : ''"
       @click="onFieldClick('name', 'basic')"
     >
@@ -208,7 +209,7 @@ function onFieldClick(field: string, section: string) {
           </div>
         </div>
 
-        <aside class="min-w-0 space-y-8">
+        <aside class="min-w-0 space-y-8 lg:sticky lg:top-[20rem] lg:max-h-[calc(100dvh-20rem)] lg:overflow-y-auto lg:self-start">
           <div
             data-editor-section="timeline"
             data-editor-field="timeline"

@@ -82,7 +82,18 @@ function scrollNext() {
       }"
     >
       <template #default="{ item }">
-        <article class="relative aspect-video overflow-hidden">
+        <component
+          :is="item.link.type === 'EXTERNAL' ? 'a' : item.link.type === 'INTERNAL' ? 'RouterLink' : 'div'"
+          v-bind="
+            item.link.type === 'EXTERNAL'
+              ? { href: item.link.externalUrl ?? undefined, target: '_blank', rel: 'noopener noreferrer' }
+              : item.link.type === 'INTERNAL'
+                ? { to: item.link.internalPath ?? '/' }
+                : {}
+          "
+          :aria-label="item.title"
+          class="block relative aspect-video overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        >
           <div
             v-if="item.image.src"
             class="absolute inset-0"
@@ -91,9 +102,7 @@ function scrollNext() {
               :src="item.image.src"
               :alt="item.image.alt"
               class="size-full object-cover"
-              :style="{
-                objectPosition: item.image.position ?? 'center'
-              }"
+              :style="{ objectPosition: item.image.position ?? 'center' }"
               loading="lazy"
             >
           </div>
@@ -102,57 +111,8 @@ function scrollNext() {
             class="absolute inset-0 bg-neutral-900"
             aria-hidden="true"
           />
-
-          <div
-            class="relative flex h-full flex-col justify-end px-8 py-5 sm:px-16 sm:py-6 md:py-8"
-          >
-            <span
-              v-if="item.categoryLabel"
-              class="w-fit rounded-md bg-white/90 px-2 py-1 text-xs font-semibold text-neutral-900"
-            >
-              {{ item.categoryLabel }}
-            </span>
-            <h2
-              class="mt-3 max-w-md text-xl font-bold leading-snug text-white sm:text-2xl md:text-3xl"
-            >
-              {{ item.title }}
-            </h2>
-            <p
-              v-if="item.subtitle"
-              class="mt-2 max-w-lg text-sm text-white/85 sm:text-base"
-            >
-              {{ item.subtitle }}
-            </p>
-
-            <div
-              v-if="item.link.type !== 'NONE'"
-              class="mt-4"
-            >
-              <UButton
-                :to="
-                  item.link.type === 'EXTERNAL'
-                    ? (item.link.externalUrl ?? undefined)
-                    : (item.link.internalPath ?? undefined)
-                "
-                :target="item.link.type === 'EXTERNAL' ? '_blank' : undefined"
-                :rel="
-                  item.link.type === 'EXTERNAL' ? 'noopener noreferrer' : undefined
-                "
-                size="sm"
-                variant="soft"
-                color="primary"
-                :label="
-                  item.link.type === 'EXTERNAL' ? '访问官网' : '查看详情'
-                "
-                :trailing-icon="
-                  item.link.type === 'EXTERNAL'
-                    ? 'i-lucide-external-link'
-                    : 'i-lucide-arrow-right'
-                "
-              />
-            </div>
-          </div>
-        </article>
+          <span class="sr-only">{{ item.title }}</span>
+        </component>
       </template>
     </UCarousel>
 

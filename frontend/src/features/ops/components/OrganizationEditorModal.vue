@@ -133,7 +133,7 @@ async function save() {
 </script>
 
 <template>
-  <UModal :open="props.open" :ui="{ content: 'max-w-[720px] max-h-[90vh] overflow-hidden flex flex-col' }" @update:open="close">
+  <UModal :open="props.open" :ui="{ content: 'max-w-[720px] w-[calc(100vw-1rem)] sm:w-[calc(100vw-2rem)] max-h-[90vh] flex flex-col overflow-hidden', header: 'shrink-0 border-b border-default', body: 'flex-1 overflow-y-auto min-h-0 p-4 sm:p-6', footer: 'shrink-0 border-t border-default bg-muted/20' }" @update:open="close">
     <template #header>
       <div class="flex items-start gap-3">
         <span class="grid size-9 place-items-center rounded-xl bg-primary-600 text-white shadow-sm">
@@ -146,8 +146,8 @@ async function save() {
       </div>
     </template>
 
-    <template #content>
-      <form class="space-y-6 overflow-y-auto px-1 py-2" novalidate @submit.prevent="save">
+    <template #body>
+      <form class="space-y-6" novalidate @submit.prevent="save">
         <FormSection title="基本信息" description="名称与类型为必填">
           <div class="grid gap-4 sm:grid-cols-2">
             <UFormField label="组织名称" name="name" required :error="errors.name">

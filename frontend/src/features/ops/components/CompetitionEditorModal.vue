@@ -213,7 +213,7 @@ async function save(publish = false) {
 <template>
   <UModal
     :open="props.open"
-    :ui="{ content: 'max-w-[960px] max-h-[90vh] overflow-hidden flex flex-col', header: 'shrink-0 border-b border-default bg-gradient-to-r from-primary-50/50 to-transparent dark:from-primary-950/20' }"
+    :ui="{ content: 'max-w-[960px] w-[calc(100vw-1rem)] sm:w-[calc(100vw-2rem)] max-h-[90vh] flex flex-col overflow-hidden', header: 'shrink-0 border-b border-default bg-gradient-to-r from-primary-50/50 to-transparent dark:from-primary-950/20', body: 'flex-1 overflow-y-auto min-h-0 p-4 sm:p-6', footer: 'shrink-0 border-t border-default bg-muted/20' }"
     @update:open="close"
   >
     <template #header>
@@ -235,7 +235,7 @@ async function save(publish = false) {
       </div>
     </template>
 
-    <template #content>
+    <template #body>
       <form
         class="space-y-6"
         novalidate

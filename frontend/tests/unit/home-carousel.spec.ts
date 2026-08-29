@@ -48,15 +48,19 @@ afterEach(() => {
 })
 
 describe('FE-007 首页校园轮播', () => {
-  it('渲染三张轮播幻灯片，含类别与标题', async () => {
+  it('渲染三张轮播幻灯片，纯图片展示，不在左下角叠加标题/副标题', async () => {
     const wrapper = await mountCarousel()
 
+    // 文字不作为可见叠加：不应出现 CTA 按钮文字
+    expect(wrapper.text()).not.toContain('查看详情')
+    expect(wrapper.text()).not.toContain('访问官网')
+    // 每张幻灯片以图片链接承载，标题通过 aria-label 提供可访问名称
     for (const slide of carouselSlides) {
-      expect(slide.categoryLabel).not.toBeNull()
-      expect(wrapper.text()).toContain(slide.categoryLabel!)
-      expect(wrapper.text()).toContain(slide.title)
-      expect(wrapper.text()).toContain(slide.subtitle!)
+      const link = wrapper.find(`[aria-label="${slide.title}"]`)
+      expect(link.exists()).toBe(true)
     }
+    // 确认旧的文字叠加容器已移除
+    expect(wrapper.html()).not.toContain('bg-white/90')
   })
 
   it('提供可访问的轮播区域与手动控制', async () => {
@@ -70,12 +74,15 @@ describe('FE-007 首页校园轮播', () => {
     expect(wrapper.find('[data-slot="next"]').exists()).toBe(true)
   })
 
-  it('每张幻灯片提供单个 CTA 链接', async () => {
+  it('每张幻灯片提供单个图片链接（可点击跳转），无文字按钮', async () => {
     const wrapper = await mountCarousel()
 
-    expect(wrapper.findAll('a').length).toBeGreaterThanOrEqual(
-      carouselSlides.length
-    )
-    expect(wrapper.text()).toContain('查看详情')
+    const links = wrapper.findAll('[aria-label]')
+    // 至少每张幻灯片一个可点击区域
+    expect(links.length).toBeGreaterThanOrEqual(carouselSlides.length)
+    for (const slide of carouselSlides) {
+      const match = links.find(node => node.attributes('aria-label') === slide.title)
+      expect(match).toBeTruthy()
+    }
   })
 })
