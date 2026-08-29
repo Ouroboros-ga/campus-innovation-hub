@@ -13,7 +13,7 @@ from rest_framework.request import Request
 from apps.activities.models import Activity, Registration
 from apps.competitions.models import Competition, TimelineEvent
 from apps.consultations.models import Consultation, Reply
-from apps.content.models import Announcement, FaqItem, GuideArticle, HomepageBanner
+from apps.content.models import Announcement, FaqItem, GuideArticle, HomepageBanner, SiteDocument
 from apps.media.models import MediaAsset
 from apps.organizations.models import Organization, Recruitment
 from apps.public_api.serializers import (
@@ -71,6 +71,32 @@ class _CompetitionWriteBase(StrictSerializer):
     suitable_grade_max = serializers.IntegerField(min_value=1, max_value=4, required=False, allow_null=True)
     direction = serializers.CharField(max_length=300, required=False, allow_null=True, allow_blank=True)
     summary = serializers.CharField(max_length=300, required=False, allow_null=True, allow_blank=True)
+
+    def validate_direction(self, value: str | None) -> str | None:
+        if not value:
+            return value
+        # 支持多标签：按 、 ， , 分割，去重后校验
+        import re
+
+        raw = value.strip()
+        if not raw:
+            return None
+        parts = [p.strip() for p in re.split(r"[、，,]", raw) if p.strip()]
+        if len(parts) > 10:
+            raise serializers.ValidationError("分类标签最多 10 个。")
+        for tag in parts:
+            if len(tag) > 20:
+                raise serializers.ValidationError(f"标签“{tag}”过长，最多 20 字符。")
+            if len(tag) < 1:
+                raise serializers.ValidationError("标签不能为空。")
+        # 去重保持顺序，重新用 、 拼接
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for tag in parts:
+            if tag not in seen:
+                seen.add(tag)
+                deduped.append(tag)
+        return "、".join(deduped)
     description_md = serializers.CharField(min_length=1, max_length=20000)
     suitable_for_md = serializers.CharField(max_length=10000, required=False, allow_null=True, allow_blank=True)
     preparation_advice_md = serializers.CharField(max_length=10000, required=False, allow_null=True, allow_blank=True)
@@ -457,21 +483,25 @@ class BannerPatchSerializer(_BannerWriteBase):
         return super().validate(attrs)
 
 
-class OrganizationCreateSerializer(StrictSerializer):
+class _OrganizationWriteBase(StrictSerializer):
     name = serializers.CharField(min_length=2, max_length=100)
     organization_type = serializers.ChoiceField(choices=Organization.OrganizationType.choices)
-    short_intro = serializers.CharField(max_length=200, required=False, allow_null=True, allow_blank=True, default=None)
-    description_md = serializers.CharField(max_length=10000, required=False, allow_null=True, allow_blank=True, default=None)
-    logo_asset_id = serializers.UUIDField(required=False, allow_null=True, default=None)
-    banner_asset_id = serializers.UUIDField(required=False, allow_null=True, default=None)
-    public_contact = serializers.CharField(max_length=200, required=False, allow_null=True, allow_blank=True, default=None)
-    qq_group_number = serializers.CharField(max_length=30, required=False, allow_null=True, allow_blank=True, default=None)
-    qq_group_qr_asset_id = serializers.UUIDField(required=False, allow_null=True, default=None)
-    qq_group_join_url = serializers.CharField(max_length=500, required=False, allow_null=True, allow_blank=True, default=None)
-    allow_online_application = serializers.BooleanField(required=False, default=True)
+    short_intro = serializers.CharField(max_length=200, required=False, allow_null=True, allow_blank=True)
+    description_md = serializers.CharField(max_length=10000, required=False, allow_null=True, allow_blank=True)
+    logo_asset_id = serializers.UUIDField(required=False, allow_null=True)
+    banner_asset_id = serializers.UUIDField(required=False, allow_null=True)
+    public_contact = serializers.CharField(max_length=200, required=False, allow_null=True, allow_blank=True)
+    qq_group_number = serializers.CharField(max_length=30, required=False, allow_null=True, allow_blank=True)
+    qq_group_qr_asset_id = serializers.UUIDField(required=False, allow_null=True)
+    qq_group_join_url = serializers.CharField(max_length=500, required=False, allow_null=True, allow_blank=True)
+    allow_online_application = serializers.BooleanField(required=False)
     related_links_json = serializers.ListField(
-        child=serializers.DictField(), required=False, allow_empty=True, default=list, max_length=10
+        child=serializers.DictField(), required=False, allow_empty=True, max_length=10
     )
+    leader_user_id = serializers.UUIDField(required=False, allow_null=True)
+    leader_title = serializers.CharField(max_length=80, required=False, allow_null=True, allow_blank=True)
+    advisor_user_id = serializers.UUIDField(required=False, allow_null=True)
+    advisor_title = serializers.CharField(max_length=80, required=False, allow_null=True, allow_blank=True)
 
     def validate_qq_group_join_url(self, value: Any) -> Any:
         if value in (None, ""):
@@ -523,7 +553,7 @@ class OrganizationCreateSerializer(StrictSerializer):
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         # 空字符串 -> None
-        for field in ("short_intro", "description_md", "public_contact", "qq_group_number", "qq_group_join_url"):
+        for field in ("short_intro", "description_md", "public_contact", "qq_group_number", "qq_group_join_url", "leader_title", "advisor_title"):
             if attrs.get(field) == "":
                 attrs[field] = None
         # MediaAsset 校验
@@ -533,8 +563,48 @@ class OrganizationCreateSerializer(StrictSerializer):
                 id=asset_id, kind=MediaAsset.Kind.IMAGE, status=MediaAsset.Status.ACTIVE
             ).exists():
                 raise serializers.ValidationError({field: ["必须引用可用的图片 MediaAsset。"]})
-        # qq_group_join_url 字符串空白已在 field 校验转 None
+        # 负责人存在性校验（由 service 再作二次权威校验，此处仅前置）
+        from apps.accounts.models import User
+
+        for field, label in (("leader_user_id", "负责人"), ("advisor_user_id", "指导老师")):
+            user_id = attrs.get(field)
+            if user_id is not None and not User.objects.filter(id=user_id, is_active=True).exists():
+                raise serializers.ValidationError({field: [f"{label}账号不存在或已停用。"]})
+            if field == "advisor_user_id" and user_id is not None:
+                user = User.objects.filter(id=user_id).first()
+                if user and getattr(user, "identity_type", None) != User.IdentityType.TEACHER:
+                    raise serializers.ValidationError({field: ["指导老师必须是教师账号。"]})
+                if user:
+                    profile = getattr(user, "profile", None)
+                    # 若 profile 尚未加载，单独查询
+                    if profile is None:
+                        from apps.accounts.models import UserProfile
+
+                        profile = UserProfile.objects.filter(user=user).first()
+                    if profile is None or not getattr(profile, "public_name", None):
+                        raise serializers.ValidationError({field: ["教师的公开姓名必填后才能担任指导老师。"]})
+            if user_id is not None and attrs.get(field.replace("_user_id", "_title")) is not None:
+                # 标题校验已由字段长度保证
+                pass
+        # 同一人不能同时担任两个角色
+        if attrs.get("leader_user_id") is not None and attrs.get("advisor_user_id") is not None and attrs["leader_user_id"] == attrs["advisor_user_id"]:
+            raise serializers.ValidationError({"advisor_user_id": ["负责人与指导老师不能为同一账号。"]})
         return attrs
+
+
+class OrganizationCreateSerializer(_OrganizationWriteBase):
+    pass
+
+
+class OrganizationUpdateSerializer(_OrganizationWriteBase):
+    name = serializers.CharField(min_length=2, max_length=100, required=False)
+    organization_type = serializers.ChoiceField(choices=Organization.OrganizationType.choices, required=False)
+    is_active = serializers.BooleanField(required=False)
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        if not attrs:
+            raise serializers.ValidationError({"non_field_errors": ["至少提供一个可编辑字段。"]})
+        return super().validate(attrs)
 
 
 class ConsultationReplySerializer(StrictSerializer):
@@ -669,4 +739,54 @@ def serialize_consultation_management(consultation: Consultation, request: Reque
         "replies": [serialize_reply_management(reply, request) for reply in consultation.replies.all().order_by("created_at")],
         "created_at": consultation.created_at,
         "updated_at": consultation.updated_at,
+    }
+
+
+class _SiteDocumentWriteBase(StrictSerializer):
+    slug = serializers.SlugField(max_length=80)
+    title = serializers.CharField(min_length=2, max_length=160)
+    category = serializers.ChoiceField(choices=SiteDocument.Category.choices)
+    summary = serializers.CharField(max_length=300, required=False, allow_null=True, allow_blank=True)
+    body_md = serializers.CharField(min_length=1, max_length=50000)
+    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
+    version = serializers.CharField(min_length=1, max_length=20, required=False, default="1.0")
+
+    def validate_slug(self, value: str) -> str:
+        normalized = value.strip().lower()
+        import re
+
+        if not re.match(r"^[a-z0-9]+(?:-[a-z0-9]+)*$", normalized):
+            raise serializers.ValidationError("标识仅允许小写字母、数字与连字符，且不能以连字符开头或结尾。")
+        return normalized
+
+
+class SiteDocumentCreateSerializer(_SiteDocumentWriteBase):
+    pass
+
+
+class SiteDocumentPatchSerializer(_SiteDocumentWriteBase):
+    slug = serializers.SlugField(max_length=80, required=False)
+    title = serializers.CharField(min_length=2, max_length=160, required=False)
+    category = serializers.ChoiceField(choices=SiteDocument.Category.choices, required=False)
+    body_md = serializers.CharField(min_length=1, max_length=50000, required=False)
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        if not attrs:
+            raise serializers.ValidationError({"non_field_errors": ["至少提供一个可编辑字段。"]})
+        return attrs
+
+
+def serialize_site_document_management(document: SiteDocument, request: Request) -> dict[str, Any]:
+    return {
+        "id": str(document.id),
+        "slug": document.slug,
+        "title": document.title,
+        "category": document.category,
+        "summary": document.summary,
+        "body_md": document.body_md,
+        "publication_state": document.publication_state,
+        "published_at": document.published_at,
+        "sort_order": document.sort_order,
+        "version": document.version,
+        **_management_fields(document),
     }

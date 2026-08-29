@@ -18,6 +18,9 @@ class Competition(UUIDTimestampedModel):
         MATHEMATICAL_MODELING = "MATHEMATICAL_MODELING", "数学建模"
         ELECTRONICS = "ELECTRONICS", "电子"
         ROBOTICS = "ROBOTICS", "机器人"
+        CYBERSECURITY = "CYBERSECURITY", "网络安全"
+        ELECTRONIC_DESIGN = "ELECTRONIC_DESIGN", "电子设计"
+        MECHANICAL_DESIGN = "MECHANICAL_DESIGN", "机械设计"
         OTHER = "OTHER", "其他"
 
     class Level(models.TextChoices):

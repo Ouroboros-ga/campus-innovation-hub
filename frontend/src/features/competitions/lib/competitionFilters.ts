@@ -43,7 +43,7 @@ export const competitionStatusOptions: SelectOption[] = [
   { label: '报名已结束', value: 'CLOSED' }
 ]
 
-/** 分类筛选选项。 */
+/** 分类筛选选项（含平台预制多标签）。 */
 export const competitionCategoryOptions: SelectOption[] = (
   [
     'AI',
@@ -51,7 +51,10 @@ export const competitionCategoryOptions: SelectOption[] = (
     'INNOVATION',
     'MATHEMATICAL_MODELING',
     'ELECTRONICS',
-    'ROBOTICS'
+    'ROBOTICS',
+    'CYBERSECURITY',
+    'ELECTRONIC_DESIGN',
+    'MECHANICAL_DESIGN'
   ] as CompetitionCategory[]
 ).map(category => ({
   label: competitionCategoryLabel[category],

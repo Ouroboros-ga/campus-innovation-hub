@@ -195,6 +195,20 @@ export const routes: RouteRecordRaw[] = [
         meta: { mobileShell: 'detail', title: '提交咨询' }
       },
       {
+        path: 'docs',
+        name: 'docs-center',
+        component: () =>
+          import('@/pages/docs/DocumentCenterPage.vue'),
+        meta: { mobileShell: 'detail', title: '文档中心' }
+      },
+      {
+        path: 'docs/:slug',
+        name: 'docs-detail',
+        component: () =>
+          import('@/pages/docs/DocumentDetailPage.vue'),
+        meta: { mobileShell: 'detail', title: '文档详情' }
+      },
+      {
         path: 'me',
         name: 'me',
         component: () =>
@@ -277,6 +291,18 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '竞赛管理' }
           },
           {
+            path: 'competitions/new',
+            name: 'ops-competition-new',
+            component: () => import('@/pages/ops/CompetitionEditorPage.vue'),
+            meta: { title: '新建竞赛' }
+          },
+          {
+            path: 'competitions/:id/edit',
+            name: 'ops-competition-edit',
+            component: () => import('@/pages/ops/CompetitionEditorPage.vue'),
+            meta: { title: '编辑竞赛' }
+          },
+          {
             path: 'activities',
             name: 'ops-activities',
             component: () =>
@@ -324,6 +350,13 @@ export const routes: RouteRecordRaw[] = [
             component: () =>
               import('@/pages/ops/OpsFaqPage.vue'),
             meta: { title: 'FAQ 管理' }
+          },
+          {
+            path: 'documents',
+            name: 'ops-documents',
+            component: () =>
+              import('@/pages/ops/OpsDocumentsPage.vue'),
+            meta: { title: '文档中心' }
           },
           {
             path: 'analytics',
@@ -383,6 +416,18 @@ export const routes: RouteRecordRaw[] = [
         name: 'ops-faq-edit',
         component: () => import('@/pages/ops/FaqEditorPage.vue'),
         meta: { title: '编辑 FAQ', auth: 'operator' }
+      },
+      {
+        path: 'ops/documents/new',
+        name: 'ops-document-new',
+        component: () => import('@/pages/ops/DocumentEditorPage.vue'),
+        meta: { title: '新建文档', auth: 'operator' }
+      },
+      {
+        path: 'ops/documents/:id/edit',
+        name: 'ops-document-edit',
+        component: () => import('@/pages/ops/DocumentEditorPage.vue'),
+        meta: { title: '编辑文档', auth: 'operator' }
       },
       {
         path: 'login',

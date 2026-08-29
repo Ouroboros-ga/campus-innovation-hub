@@ -95,6 +95,9 @@ export const competitionCategoryLabel: Record<CompetitionCategory, string> = {
   MATHEMATICAL_MODELING: '数学建模',
   ELECTRONICS: '电子',
   ROBOTICS: '机器人',
+  CYBERSECURITY: '网络安全',
+  ELECTRONIC_DESIGN: '电子设计',
+  MECHANICAL_DESIGN: '机械设计',
   OTHER: '其他'
 }
 
@@ -109,6 +112,9 @@ export const competitionCategoryIcon: Record<CompetitionCategory, string> = {
   MATHEMATICAL_MODELING: 'i-lucide-sigma',
   ELECTRONICS: 'i-lucide-circuit-board',
   ROBOTICS: 'i-lucide-bot',
+  CYBERSECURITY: 'i-lucide-shield',
+  ELECTRONIC_DESIGN: 'i-lucide-cpu',
+  MECHANICAL_DESIGN: 'i-lucide-cog',
   OTHER: 'i-lucide-award'
 }
 

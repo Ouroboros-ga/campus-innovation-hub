@@ -1249,7 +1249,7 @@ edition = 2026
 | `participation_mode` | varchar(20) | 否 | INDIVIDUAL / TEAM |
 | `suitable_grade_min` | smallint | 是 | |
 | `suitable_grade_max` | smallint | 是 | |
-| `direction` | varchar(300) | 是 | |
+| `direction` | varchar(300) | 是 | 多标签分类（原“面向方向”改“分类”），多个标签以“、”分隔，单个标签 1–20 字符，最多 10 个，预制标签见下 |
 | `summary` | varchar(300) | 是 | |
 | `description_md` | text | 否 | <= 20000 |
 | `suitable_for_md` | text | 是 | <= 10000 |
@@ -1276,14 +1276,19 @@ edition = 2026
 ### category
 
 ```text
-AI
-PROGRAMMING
-INNOVATION
-MATHEMATICAL_MODELING
-ELECTRONICS
-ROBOTICS
-OTHER
+AI                  人工智能
+PROGRAMMING         程序设计
+INNOVATION          创新创业
+MATHEMATICAL_MODELING 数学建模
+ELECTRONICS         电子
+ROBOTICS            机器人
+CYBERSECURITY       网络安全
+ELECTRONIC_DESIGN   电子设计
+MECHANICAL_DESIGN   机械设计
+OTHER               其他
 ```
+
+> `direction` 为多标签扩展：预制标签与 `category` 中文标签对齐，前端以多选芯片输入，最多 10 个，存储为“、”分隔；筛选时 `category` 与 `direction` 均按标签包含匹配，兼容历史单标签数据。
 
 ### level
 

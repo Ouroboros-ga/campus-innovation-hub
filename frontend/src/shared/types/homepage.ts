@@ -30,7 +30,7 @@ export type CompetitionLevel =
 /** 参赛形式（§12.1 competition.participation_mode） */
 export type ParticipationMode = 'INDIVIDUAL' | 'TEAM'
 
-/** 竞赛分类（§12.1 competition.category） */
+/** 竞赛分类（§12.1 competition.category，含平台预制多标签） */
 export type CompetitionCategory =
   | 'AI'
   | 'PROGRAMMING'
@@ -38,6 +38,9 @@ export type CompetitionCategory =
   | 'MATHEMATICAL_MODELING'
   | 'ELECTRONICS'
   | 'ROBOTICS'
+  | 'CYBERSECURITY'
+  | 'ELECTRONIC_DESIGN'
+  | 'MECHANICAL_DESIGN'
   | 'OTHER'
 
 /** 正式内容的发布生命周期（§12.1 publication_state，多个领域共用） */
@@ -165,6 +168,9 @@ export interface CompetitionSummary {
   category: CompetitionCategory
   level: CompetitionLevel
   participationMode: ParticipationMode
+  /** 多标签分类（“面向方向”改“分类”后，支持多个标签，逗号/顿号分隔存储，前端以数组展示） */
+  direction?: string | null
+  directionTags?: string[]
   registrationStartAt: string | null
   registrationEndAt: string | null
   eventStartAt: string | null

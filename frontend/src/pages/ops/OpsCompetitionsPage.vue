@@ -2,8 +2,8 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import CompetitionEditorModal from '@/features/ops/components/CompetitionEditorModal.vue'
 import { archiveCompetition, deleteCompetition, importCompetitions, listCompetitions, type OpsCompetition } from '@/features/ops/api/opsCompetitionApi'
+import { competitionCategoryLabel } from '@/shared/lib/domain-labels'
 import { getCompetitionHealth, getRecentDrafts, getWorkbenchStats } from '@/features/ops/api/opsOverviewApi'
 import { useToast } from '@nuxt/ui/composables'
 import type { CompetitionHealth, WorkbenchStats } from '@/features/ops/api/opsOverviewApi'
@@ -28,8 +28,6 @@ const featured = ref((route.query.featured as string) ?? 'ALL')
 const page = ref(Number(route.query.page ?? 1) || 1)
 const pageSize = 20
 
-const editorOpen = ref(false)
-const editing = ref<OpsCompetition | null>(null)
 const recent = ref<{ drafts: Array<{ title: string; updated_at: string }>; recent: Array<{ title: string; updated_at: string }> } | null>(null)
 const importOpen = ref(false)
 const importFile = ref<File | null>(null)
@@ -134,12 +132,10 @@ function onReset() {
 }
 
 function openCreate() {
-  editing.value = null
-  editorOpen.value = true
+  router.push({ name: 'ops-competition-new' })
 }
 function openEdit(item: OpsCompetition) {
-  editing.value = item
-  editorOpen.value = true
+  router.push({ name: 'ops-competition-edit', params: { id: item.id } })
 }
 const toast = useToast()
 async function onArchive(item: OpsCompetition) {
@@ -348,7 +344,7 @@ async function onImport() {
           />
           <USelect
             v-model="category"
-            :items="[{label:'全部分类',value:'ALL'},{label:'AI',value:'AI'},{label:'编程',value:'PROGRAMMING'},{label:'创新',value:'INNOVATION'}]"
+            :items="[{label:'全部分类',value:'ALL'}, ...Object.entries(competitionCategoryLabel).map(([v,l]) => ({ label: l, value: v }))]"
             size="sm"
             class="w-28"
             @update:model-value="onFilterChange"
@@ -537,12 +533,6 @@ async function onImport() {
       </div>
     </div>
 
-    <CompetitionEditorModal
-      :open="editorOpen"
-      :competition="editing"
-      @update:open="editorOpen=$event"
-      @saved="load"
-    />
     <UModal v-model:open="importOpen" title="批量导入竞赛" :ui="{ content: 'sm:max-w-[520px]' }">
       <template #body>
         <div class="space-y-3">
