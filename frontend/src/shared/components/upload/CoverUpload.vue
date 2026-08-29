@@ -42,13 +42,46 @@ function setAlt(value: string): void {
   emit('update:modelValue', { id: current.id, src: current.src, alt: value })
 }
 
+async function compressImage(file: File): Promise<File> {
+  // 前端预压：最长边 1920，jpeg 0.78，弱网先降体积，服务端仍做权威重编码
+  if (file.size < 300 * 1024) return file
+  try {
+    const bitmap = await createImageBitmap(file)
+    const { width, height } = bitmap
+    const longSide = Math.max(width, height)
+    const maxSide = 1920
+    let w = width, h = height
+    if (longSide > maxSide) {
+      const scale = maxSide / longSide
+      w = Math.round(width * scale)
+      h = Math.round(height * scale)
+    } else if (file.size < 800 * 1024) {
+      bitmap.close?.()
+      return file
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(bitmap, 0, 0, w, h)
+    bitmap.close?.()
+    const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.78))
+    if (!blob || blob.size >= file.size) return file
+    return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' })
+  } catch {
+    return file
+  }
+}
+
 async function onChange(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
   uploading.value = true
   try {
-    const result = await uploadImage(file, 'IMAGE')
+    const compressed = await compressImage(file)
+    const result = await uploadImage(compressed, 'IMAGE')
     emit('update:modelValue', { id: result.id, src: result.url, alt: props.modelValue?.alt ?? '' })
   } catch {
     toast.add({
@@ -71,7 +104,8 @@ async function onDrop(event: globalThis.DragEvent): Promise<void> {
   }
   uploading.value = true
   try {
-    const result = await uploadImage(file, 'IMAGE')
+    const compressed = await compressImage(file)
+    const result = await uploadImage(compressed, 'IMAGE')
     emit('update:modelValue', { id: result.id, src: result.url, alt: props.modelValue?.alt ?? '' })
     toast.add({ title: '图片已上传', color: 'success', icon: 'i-lucide-check-circle' })
   } catch {

@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { carouselSlides } from '@/mocks/fixtures/homepage'
 import type { CarouselSlide } from '@/shared/types/homepage'
+import ProgressiveImage from '@/shared/components/media/ProgressiveImage.vue'
 
 /**
  * 首页校园轮播（FE-007）。
@@ -94,22 +95,14 @@ function scrollNext() {
           :aria-label="item.title"
           class="block relative aspect-video overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
         >
-          <div
-            v-if="item.image.src"
+          <ProgressiveImage
+            :src="item.image.src"
+            :alt="item.image.alt"
+            :preview="false"
+            aspect="aspect-video"
+            rounded="rounded-none"
+            :object-position="item.image.position ?? 'center'"
             class="absolute inset-0"
-          >
-            <img
-              :src="item.image.src"
-              :alt="item.image.alt"
-              class="size-full object-cover"
-              :style="{ objectPosition: item.image.position ?? 'center' }"
-              loading="lazy"
-            >
-          </div>
-          <div
-            v-else
-            class="absolute inset-0 bg-neutral-900"
-            aria-hidden="true"
           />
           <span class="sr-only">{{ item.title }}</span>
         </component>

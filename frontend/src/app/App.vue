@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 
 import { setAuthRedirectHandler } from '@/shared/http/client'
 import { useAuthStore } from '@/stores/auth'
+import ImageLightbox from '@/shared/components/media/ImageLightbox.vue'
 
 // 应用启动即初始化 CSRF 并恢复会话（未登录 fail-open）。
 useAuthStore().init()
@@ -30,5 +31,6 @@ setAuthRedirectHandler(target => {
     :toaster="{ position: 'top-right', expand: false }"
   >
     <RouterView />
+    <ImageLightbox />
   </UApp>
 </template>

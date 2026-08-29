@@ -118,12 +118,19 @@ def inspect_image(file: BinaryIO, declared_content_type: str | None) -> ImageIns
 
 
 def normalise_image_upload(file: BinaryIO, declared_content_type: str | None) -> NormalisedImage:
-    """仅存储服务器重新编码的像素数据，移除客户端附带的元数据与容器内容。"""
+    """仅存储服务器重新编码的像素数据，移除客户端附带的元数据与容器内容；上传时压缩至合理体积。"""
 
     inspection = inspect_image(file, declared_content_type)
     try:
         _reset(file)
         with Image.open(file) as decoded:
+            # 修正 EXIF 方向
+            try:
+                from PIL.ImageOps import exif_transpose
+
+                decoded = exif_transpose(decoded)
+            except Exception:
+                pass
             decoded.load()
             image = decoded.copy()
     except (OSError, SyntaxError, UnidentifiedImageError) as error:
@@ -131,24 +138,65 @@ def normalise_image_upload(file: BinaryIO, declared_content_type: str | None) ->
     finally:
         _reset(file)
 
+    # 压缩：最长边 1920，超出等比缩放（竞赛封面 1200 场景亦在前端裁切，此处统一上限）
+    MAX_LONG_SIDE = 1920
+    w, h = image.size
+    long_side = max(w, h)
+    if long_side > MAX_LONG_SIDE:
+        scale = MAX_LONG_SIDE / long_side
+        new_w, new_h = int(w * scale), int(h * scale)
+        image = image.resize((new_w, new_h), Image.LANCZOS)
+        w, h = new_w, new_h
+
     output = BytesIO()
     try:
         if inspection.mime_type == "image/jpeg":
             if image.mode not in {"RGB", "L"}:
                 image = image.convert("RGB")
-            image.save(output, format="JPEG", quality=90, optimize=True)
+            # 质量 78 平衡体积与清晰度，二次超限自动降质在下方处理
+            image.save(output, format="JPEG", quality=78, optimize=True, progressive=True)
         elif inspection.mime_type == "image/png":
-            image.save(output, format="PNG", optimize=True)
+            # 保留透明通道时仍用 PNG，否则转 WEBP 更小
+            if image.mode in {"RGBA", "LA"}:
+                image.save(output, format="PNG", optimize=True)
+            else:
+                if image.mode not in {"RGB", "L"}:
+                    image = image.convert("RGB")
+                image.save(output, format="WEBP", quality=75, method=4)
+                # 覆盖 mime/extension 以反映实际存储格式
+                inspection = ImageInspection(
+                    mime_type="image/webp",
+                    extension="webp",
+                    size_bytes=inspection.size_bytes,
+                    sha256=inspection.sha256,
+                    width=w,
+                    height=h,
+                )
         elif inspection.mime_type == "image/webp":
-            image.save(output, format="WEBP", quality=90, method=4)
+            image.save(output, format="WEBP", quality=75, method=4)
         elif inspection.mime_type == "image/avif":
-            image.save(output, format="AVIF", quality=60)
+            image.save(output, format="AVIF", quality=50)
         else:
             raise UnsupportedMedia("图片格式不受支持。")
     except (OSError, ValueError) as error:
         raise UnsupportedMedia("图片内容无法重新编码。") from error
 
     payload = output.getvalue()
+    # 二次压缩：目标 ≤500KB（封面/横幅在前端再裁切，服务端控 500KB 内体验最佳）
+    if payload and len(payload) > 500 * 1024 and inspection.mime_type in {"image/jpeg", "image/webp"}:
+        # 尝试降质一次
+        output2 = BytesIO()
+        try:
+            if inspection.mime_type == "image/jpeg":
+                image.save(output2, format="JPEG", quality=68, optimize=True, progressive=True)
+            else:
+                image.save(output2, format="WEBP", quality=65, method=4)
+            payload2 = output2.getvalue()
+            if payload2 and len(payload2) < len(payload) and len(payload2) <= MAX_IMAGE_BYTES:
+                payload = payload2
+                output = output2
+        except Exception:
+            pass
     if not payload or len(payload) > MAX_IMAGE_BYTES:
         raise UnsupportedMedia("重新编码后的图片超过 5 MB 限制。")
     output.seek(0)
@@ -158,8 +206,8 @@ def normalise_image_upload(file: BinaryIO, declared_content_type: str | None) ->
         extension=inspection.extension,
         size_bytes=len(payload),
         sha256=hashlib.sha256(payload).hexdigest(),
-        width=inspection.width,
-        height=inspection.height,
+        width=w,
+        height=h,
     )
 
 

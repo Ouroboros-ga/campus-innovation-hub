@@ -13,6 +13,7 @@ import {
 } from '@/shared/lib/domain-labels'
 import { followCompetition, unfollowCompetition } from '@/features/competitions/api/competitionApi'
 import { AppError } from '@/shared/http/types'
+import ProgressiveImage from '@/shared/components/media/ProgressiveImage.vue'
 import type { CompetitionDetail } from '../types'
 
 /**
@@ -95,14 +96,16 @@ const categoryIcon = computed(() => {
       <div
         class="relative flex aspect-[16/9] items-end overflow-hidden rounded-surface border border-default bg-primary-900 lg:aspect-auto lg:min-h-[15rem]"
       >
-        <img
+        <ProgressiveImage
           v-if="detail.cover.src"
           :src="detail.cover.src"
           :alt="detail.cover.alt"
-          loading="lazy"
-          class="absolute inset-0 size-full object-cover"
-          :style="{ objectPosition: detail.cover.position ?? 'center' }"
-        >
+          :preview="true"
+          aspect="aspect-auto"
+          rounded="rounded-none"
+          :object-position="detail.cover.position ?? 'center'"
+          class="absolute inset-0"
+        />
         <div
           v-else
           class="absolute inset-0"
