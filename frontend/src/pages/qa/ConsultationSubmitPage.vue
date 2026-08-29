@@ -2,6 +2,8 @@
 import { ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 
+import { useRequireAuth } from '@/shared/composables/useRequireAuth'
+
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
 import FormSection from '@/shared/components/form/FormSection.vue'
 
@@ -19,6 +21,7 @@ import type { ConsultationDraft } from '@/features/consultation/types'
  * 必填校验靠近字段，提交含 loading 状态，成功后展示成功态（mock，无真实后端）。
  */
 const toast = useToast()
+const { requireAuth } = useRequireAuth()
 
 const type = ref('')
 const title = ref('')
@@ -39,6 +42,7 @@ function resetForm() {
 }
 
 function submit() {
+  if (!requireAuth('请先登录后再提交咨询')) return
   const draft: ConsultationDraft = {
     type: type.value,
     title: title.value,

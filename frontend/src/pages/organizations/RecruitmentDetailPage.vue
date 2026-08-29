@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
 
+import { useRequireAuth } from '@/shared/composables/useRequireAuth'
+
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
 import {
   formatCompactDate,
@@ -42,6 +44,7 @@ import type {
  */
 const route = useRoute()
 const toast = useToast()
+const { requireAuth } = useRequireAuth()
 
 const recruitmentId = computed(() =>
   String(route.params.recruitmentId ?? '')
@@ -111,6 +114,7 @@ function phaseColor(
 
 /** 打开申请弹窗（可选预选岗位）。 */
 function openApply(positionId?: string) {
+  if (!requireAuth()) return
   defaultPositionId.value = positionId
   modalOpen.value = true
 }
@@ -121,6 +125,7 @@ function openQq() {
 
 /** 提交申请。 */
 function handleSubmit(draft: RecruitmentApplicationDraft) {
+  if (!requireAuth()) return
   const positionName =
     detail.value?.positions.find(position => position.id === draft.positionId)
       ?.name ?? draft.positionId

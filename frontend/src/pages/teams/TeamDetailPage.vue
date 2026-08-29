@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
 
+import { useRequireAuth } from '@/shared/composables/useRequireAuth'
+
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
 import { formatCompactDate } from '@/shared/lib/date'
 
@@ -32,6 +34,7 @@ import type {
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const { requireAuth } = useRequireAuth()
 
 const id = computed(() => String(route.params.id ?? ''))
 
@@ -74,10 +77,12 @@ const modalOpen = ref(false)
 const activeApplication = ref<MyTeamApplication | undefined>(undefined)
 
 function openApply() {
+  if (!requireAuth()) return
   modalOpen.value = true
 }
 
 async function handleSubmit(draft: TeamApplicationDraft) {
+  if (!requireAuth()) return
   // 申请为 LOGIN 写操作；认证冻结前保持本地提交（与 FE-101 follow 相同惯例）。
   activeApplication.value = {
     teamId: id.value,

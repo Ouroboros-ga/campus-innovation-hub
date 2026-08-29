@@ -2,6 +2,8 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
+import { useRequireAuth } from '@/shared/composables/useRequireAuth'
+
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
 import { formatCompactDate, formatDateTimeCompact } from '@/shared/lib/date'
 import {
@@ -38,6 +40,7 @@ import { useToast } from '@nuxt/ui/composables'
  */
 const route = useRoute()
 const auth = useAuthStore()
+const { requireAuth } = useRequireAuth()
 
 const id = computed(() => String(route.params.activityId ?? ''))
 const activity = ref<DynamicsActivity | null>(null)
@@ -88,6 +91,7 @@ const registerLoading = ref(false)
 const toast = useToast()
 
 async function toggleRegistration() {
+  if (!requireAuth()) return
   if (!registerable.value || registerLoading.value) return
   registerLoading.value = true
   try {

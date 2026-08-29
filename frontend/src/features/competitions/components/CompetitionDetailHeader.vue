@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 
+import { useRequireAuth } from '@/shared/composables/useRequireAuth'
+
 import {
   deriveRegistrationState,
   formatDateTimeCompact
@@ -41,8 +43,10 @@ const deadlineText = computed(() =>
 const followed = ref(false)
 const followLoading = ref(false)
 const toast = useToast()
+const { requireAuth } = useRequireAuth()
 
 async function toggleFollow() {
+  if (!requireAuth()) return
   if (followLoading.value) return
   followLoading.value = true
   try {

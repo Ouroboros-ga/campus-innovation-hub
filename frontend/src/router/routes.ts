@@ -192,7 +192,7 @@ export const routes: RouteRecordRaw[] = [
         alias: 'qa/ask',
         component: () =>
           import('@/pages/qa/ConsultationSubmitPage.vue'),
-        meta: { mobileShell: 'detail', title: '提交咨询' }
+        meta: { mobileShell: 'detail', title: '提交咨询', auth: 'auth' }
       },
       {
         path: 'docs',
