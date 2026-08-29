@@ -109,7 +109,7 @@ export const routes: RouteRecordRaw[] = [
         name: 'team-plaza-create',
         component: () =>
           import('@/pages/teams/TeamCreatePage.vue'),
-        meta: { mobileShell: 'form', title: '发布组队' }
+        meta: { mobileShell: 'form', title: '发布组队', auth: 'auth' }
       },
       {
         path: 'teams/:id',

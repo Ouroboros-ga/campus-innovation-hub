@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
+
+import { useAuthStore } from '@/stores/auth'
 
 import PageContainer from '@/shared/components/layout/PageContainer.vue'
 import FormSection from '@/shared/components/form/FormSection.vue'
@@ -23,6 +26,8 @@ import MarkdownEditor from '@/shared/components/editor/MarkdownEditor.vue'
  * 联系方式默认不公开（界面提示）。电话取 form shell（§5 / FrontendArchitecture /teams/create）。
  */
 const toast = useToast()
+const router = useRouter()
+const auth = useAuthStore()
 
 const competitionId = ref('')
 const postType = ref('')
@@ -67,6 +72,18 @@ function splitTags(text: string): string[] {
 }
 
 async function submit() {
+  if (!auth.isAuthenticated) {
+    const redirect = router.currentRoute.value.fullPath
+    await router.push({ name: 'login', query: { redirect } })
+    toast.add({
+      title: '请先登录',
+      description: '发布组队需要登录后操作。',
+      color: 'warning',
+      icon: 'i-lucide-lock'
+    })
+    return
+  }
+
   const draft: TeamPostDraft = {
     competitionId: competitionId.value,
     postType: postType.value as TeamPostType,
