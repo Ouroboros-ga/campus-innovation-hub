@@ -22,6 +22,14 @@ const footerItems = ['关于我们', '联系我们', '使用帮助', '隐私政�
             <span>{{ item }}</span>
           </li>
         </ul>
+        <a
+          href="https://beian.miit.gov.cn"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hover:text-highlighted hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+        >
+          豫ICP备2026040663号
+        </a>
       </div>
     </PageContainer>
   </footer>
