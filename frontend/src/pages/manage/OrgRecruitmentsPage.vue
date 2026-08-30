@@ -3,9 +3,10 @@ import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
 
-import RecruitmentEditorModal from '@/features/organizations/components/RecruitmentEditorModal.vue'
 import {
+  archiveManageRecruitment,
   cancelManageRecruitment,
+  completeManageRecruitment,
   listManageRecruitments,
   publishManageRecruitment,
   type ManageRecruitment
@@ -73,17 +74,11 @@ function onFilterChange() { pushRoute({}, true) }
 function onPageChange(p: number) { pushRoute({ page: String(p) }) }
 function onReset() { status.value = 'ALL'; page.value = 1; router.replace({ query: {} }) }
 
-const editorOpen = ref(false)
-const editing = ref<ManageRecruitment | null>(null)
-
 function openCreate() {
-  editing.value = null
-  editorOpen.value = true
+  void router.push({ name: 'org-manage-recruitment-new', params: { organizationId: orgId } })
 }
 function openEdit(recruitment: ManageRecruitment) {
-  // 映射为 RecruitmentDetail 供编辑器（字段对齐）
-  editing.value = recruitment as unknown as never
-  editorOpen.value = true
+  void router.push({ name: 'org-manage-recruitment-edit', params: { organizationId: orgId, recruitmentId: recruitment.id } })
 }
 
 async function publish(recruitment: ManageRecruitment) {
@@ -101,6 +96,28 @@ async function cancelRecruitment(recruitment: ManageRecruitment) {
   try {
     await cancelManageRecruitment(orgId, recruitment.id)
     toast.add({ title: '已结束', description: '该招新已停止。', color: 'neutral', icon: 'i-lucide-lock' })
+    load()
+  } catch (err) {
+    const msg = err instanceof AppError ? err.message : '操作失败，请稍后重试。'
+    toast.add({ title: '操作失败', description: msg, color: 'error', icon: 'i-lucide-alert-circle' })
+  }
+}
+
+async function completeRecruitment(recruitment: ManageRecruitment) {
+  try {
+    await completeManageRecruitment(orgId, recruitment.id)
+    toast.add({ title: '招新已完成', description: '该招新已结束并保留申请记录。', color: 'success', icon: 'i-lucide-check-circle' })
+    load()
+  } catch (err) {
+    const msg = err instanceof AppError ? err.message : '操作失败，请稍后重试。'
+    toast.add({ title: '操作失败', description: msg, color: 'error', icon: 'i-lucide-alert-circle' })
+  }
+}
+
+async function archiveRecruitment(recruitment: ManageRecruitment) {
+  try {
+    await archiveManageRecruitment(orgId, recruitment.id)
+    toast.add({ title: '已归档', description: '该招新已从日常管理列表归档。', color: 'neutral', icon: 'i-lucide-archive' })
     load()
   } catch (err) {
     const msg = err instanceof AppError ? err.message : '操作失败，请稍后重试。'
@@ -201,6 +218,7 @@ function viewApplications() {
             color="neutral"
             variant="soft"
             icon="i-lucide-pencil"
+            v-if="recruitment.allowedActions.includes('EDIT')"
             @click="openEdit(recruitment)"
           >
             编辑
@@ -215,7 +233,7 @@ function viewApplications() {
             查看申请
           </UButton>
           <UButton
-            v-if="recruitment.publicationState !== 'PUBLISHED'"
+            v-if="recruitment.allowedActions.includes('PUBLISH')"
             size="sm"
             color="primary"
             variant="outline"
@@ -225,7 +243,7 @@ function viewApplications() {
             发布
           </UButton>
           <UButton
-            v-if="recruitment.publicationState === 'PUBLISHED'"
+            v-if="recruitment.allowedActions.includes('CANCEL')"
             size="sm"
             color="neutral"
             variant="ghost"
@@ -233,6 +251,26 @@ function viewApplications() {
             @click="cancelRecruitment(recruitment)"
           >
             结束
+          </UButton>
+          <UButton
+            v-if="recruitment.allowedActions.includes('COMPLETE')"
+            size="sm"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-circle-check"
+            @click="completeRecruitment(recruitment)"
+          >
+            完成
+          </UButton>
+          <UButton
+            v-if="recruitment.allowedActions.includes('ARCHIVE')"
+            size="sm"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-archive"
+            @click="archiveRecruitment(recruitment)"
+          >
+            归档
           </UButton>
         </div>
       </li>
@@ -262,13 +300,5 @@ function viewApplications() {
     >
       共 {{ total }} 条
     </p>
-
-    <RecruitmentEditorModal
-      :open="editorOpen"
-      :org-id="orgId"
-      :recruitment="editing as never"
-      @update:open="editorOpen = $event"
-      @saved="load"
-    />
   </div>
 </template>

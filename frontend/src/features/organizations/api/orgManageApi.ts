@@ -8,7 +8,7 @@
 import { http } from '@/shared/http/client'
 
 interface MediaRefDto {
-  id?: string
+  id: string
   url?: string | null
 }
 
@@ -32,8 +32,8 @@ export interface OrgProfile {
   organizationType: string
   shortIntro: string | null
   descriptionMd: string | null
-  logo: { src: string | null; alt: string } | null
-  banner: { src: string | null; alt: string } | null
+  logo: { id: string | null; src: string | null; alt: string } | null
+  banner: { id: string | null; src: string | null; alt: string } | null
   publicContact: string | null
 }
 
@@ -44,8 +44,8 @@ function toProfile(dto: OrgProfileDto): OrgProfile {
     organizationType: dto.organization_type,
     shortIntro: dto.short_intro ?? null,
     descriptionMd: dto.description_md ?? null,
-    logo: dto.logo ? { alt: dto.name, src: dto.logo.url ?? null } : null,
-    banner: dto.banner ? { alt: dto.name, src: dto.banner.url ?? null } : null,
+    logo: dto.logo ? { id: dto.logo.id, alt: dto.name, src: dto.logo.url ?? null } : null,
+    banner: dto.banner ? { id: dto.banner.id, alt: dto.name, src: dto.banner.url ?? null } : null,
     publicContact: dto.public_contact ?? null
   }
 }
@@ -92,6 +92,8 @@ interface RecruitmentDto {
   target_grade_max: number | null
   notes_md: string | null
   publication_state: string
+  published_at: string | null
+  allowed_actions: string[]
   completed_at: string | null
   positions: RecruitmentPositionDto[]
   application_counts?: { pending_count: number; accepted_count: number; rejected_count: number; withdrawn_count: number }
@@ -109,6 +111,8 @@ export interface ManageRecruitment {
   targetGradeMax: number | null
   notesMd: string | null
   publicationState: string
+  publishedAt: string | null
+  allowedActions: Array<'EDIT' | 'PUBLISH' | 'DELETE_DRAFT' | 'CANCEL' | 'COMPLETE' | 'ARCHIVE'>
   completedAt: string | null
   positions: Array<{ id: string; name: string; headcount: number; description: string | null; requirements: string | null }>
   applicationCounts: { pending: number; accepted: number; rejected: number; withdrawn: number }
@@ -125,6 +129,8 @@ function toManageRecruitment(dto: RecruitmentDto): ManageRecruitment {
     targetGradeMax: dto.target_grade_max,
     notesMd: dto.notes_md,
     publicationState: dto.publication_state,
+    publishedAt: dto.published_at,
+    allowedActions: dto.allowed_actions as ManageRecruitment['allowedActions'],
     completedAt: dto.completed_at,
     positions: (dto.positions ?? []).map(p => ({
       id: p.id ?? '',
@@ -163,6 +169,7 @@ export async function createManageRecruitment(
     target_grade_min: number | null
     target_grade_max: number | null
     notes_md: string | null
+    publish?: boolean
     positions: Array<{ name: string; headcount: number; description_md?: string | null; requirements_md?: string | null; sort_order?: number }>
   }
 ): Promise<ManageRecruitment> {
@@ -191,11 +198,22 @@ export async function updateManageRecruitment(
   return toManageRecruitment(dto)
 }
 
+export async function getManageRecruitment(organizationId: string, recruitmentId: string): Promise<ManageRecruitment> {
+  const dto = await http.get<RecruitmentDto>(`/manage/organizations/${organizationId}/recruitments/${recruitmentId}`)
+  return toManageRecruitment(dto)
+}
+
 export async function publishManageRecruitment(organizationId: string, recruitmentId: string): Promise<void> {
   await http.post(`/manage/organizations/${organizationId}/recruitments/${recruitmentId}/publish`)
 }
 export async function cancelManageRecruitment(organizationId: string, recruitmentId: string): Promise<void> {
   await http.post(`/manage/organizations/${organizationId}/recruitments/${recruitmentId}/cancel`)
+}
+export async function completeManageRecruitment(organizationId: string, recruitmentId: string): Promise<void> {
+  await http.post(`/manage/organizations/${organizationId}/recruitments/${recruitmentId}/complete`)
+}
+export async function archiveManageRecruitment(organizationId: string, recruitmentId: string): Promise<void> {
+  await http.post(`/manage/organizations/${organizationId}/recruitments/${recruitmentId}/archive`)
 }
 
 // ---------------------------------------------------------------------------

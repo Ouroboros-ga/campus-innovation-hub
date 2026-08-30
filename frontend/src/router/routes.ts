@@ -85,6 +85,18 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '招新管理' }
           },
           {
+            path: 'recruitments/new',
+            name: 'org-manage-recruitment-new',
+            component: () => import('@/pages/manage/RecruitmentEditorPage.vue'),
+            meta: { title: '新建招新' }
+          },
+          {
+            path: 'recruitments/:recruitmentId/edit',
+            name: 'org-manage-recruitment-edit',
+            component: () => import('@/pages/manage/RecruitmentEditorPage.vue'),
+            meta: { title: '编辑招新' }
+          },
+          {
             path: 'applications',
             name: 'org-manage-applications',
             component: () =>
