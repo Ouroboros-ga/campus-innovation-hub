@@ -740,3 +740,37 @@ class OperatorApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json()["code"], "INVALID_STATE")
+
+    def test_operator_can_close_open_or_answered_consultation_but_not_close_twice(self) -> None:
+        consultation = Consultation.objects.create(
+            author=self.author,
+            category=Consultation.Category.OTHER,
+            title="如何补充咨询材料？",
+            body_md="我想知道提交咨询后是否还可以补充更多背景材料。",
+            visibility=Consultation.Visibility.PRIVATE,
+        )
+        client, csrf = self.csrf_client(self.operator)
+
+        detail = client.get(f"/api/ops/consultations/{consultation.id}")
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.json()["allowed_actions"], ["REPLY", "CLOSE"])
+        self.assertEqual(detail.json()["visibility"], Consultation.Visibility.PRIVATE)
+        self.assertEqual(detail.json()["replies"], [])
+
+        response = client.post(
+            f"/api/ops/consultations/{consultation.id}/close",
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(response.status_code, 204)
+        consultation.refresh_from_db()
+        self.assertEqual(consultation.status, Consultation.Status.CLOSED)
+        self.assertTrue(AuditLog.objects.filter(action="CONSULTATION_CLOSED", target_id=consultation.id).exists())
+
+        response = client.post(
+            f"/api/ops/consultations/{consultation.id}/close",
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "INVALID_STATE")

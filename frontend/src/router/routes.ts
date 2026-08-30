@@ -353,6 +353,12 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '咨询管理' }
           },
           {
+            path: 'questions/:id',
+            name: 'ops-consultation-task',
+            component: () => import('@/pages/ops/ConsultationTaskPage.vue'),
+            meta: { title: '处理咨询' }
+          },
+          {
             path: 'teams',
             name: 'ops-teams',
             component: () =>

@@ -68,3 +68,32 @@ def reply_to_consultation(*, actor: User, consultation: Consultation, body_md: s
         changes={"consultation_id": str(locked.id), "status": Consultation.Status.ANSWERED},
     )
     return reply
+
+
+def consultation_allowed_actions(*, actor: User, consultation: Consultation) -> list[str]:
+    """运营任务页只把服务端判定后的当前动作用于 UX，不让前端推断状态机。"""
+
+    if not is_operator(actor) or consultation.status == Consultation.Status.CLOSED:
+        return []
+    return ["REPLY", "CLOSE"]
+
+
+@transaction.atomic
+def close_consultation(*, actor: User, consultation: Consultation) -> Consultation:
+    """关闭正式答疑记录；关闭后不允许继续追加回复。"""
+
+    if not is_operator(actor):
+        raise PermissionDenied
+    locked = Consultation.objects.select_for_update().get(pk=consultation.pk)
+    if locked.status == Consultation.Status.CLOSED:
+        raise InvalidState
+    previous_status = locked.status
+    locked.status = Consultation.Status.CLOSED
+    locked.save(update_fields=["status", "updated_at"])
+    record_audit(
+        actor=actor,
+        action="CONSULTATION_CLOSED",
+        target=locked,
+        changes={"status": {"from": previous_status, "to": Consultation.Status.CLOSED}},
+    )
+    return locked

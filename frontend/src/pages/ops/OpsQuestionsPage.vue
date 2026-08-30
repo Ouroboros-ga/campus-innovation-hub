@@ -1,244 +1,56 @@
-﻿<script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useToast } from '@nuxt/ui/composables'
 
-import ReplyConsultationModal from '@/features/ops/components/ReplyConsultationModal.vue'
-import { listConsultations } from '@/features/ops/api/opsConsultationApi'
-import { qaStatusMeta } from '@/features/consultation/lib/consultationLabels'
-import type { ConsultQaPost } from '@/features/consultation/types'
-import { formatDateTimeCompact } from '@/shared/lib/date'
-import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
+import ConsultationDetail from '@/features/ops/consultations/ConsultationDetail.vue'
+import ConsultationQueue from '@/features/ops/consultations/ConsultationQueue.vue'
+import { consultationCategoryLabel, type ConsultationCategory, type ConsultationStatus, type ConsultationVisibility } from '@/features/ops/consultations/types'
+import { useConsultationWorkbench } from '@/features/ops/consultations/useConsultationWorkbench'
 
 const route = useRoute()
 const router = useRouter()
-
-const rawStatus = route.query.status as string | undefined
-const filter = ref<'ALL' | 'PENDING' | 'ANSWERED'>(rawStatus === 'PENDING' || rawStatus === 'ANSWERED' ? rawStatus : 'ALL')
-const q = ref((route.query.q as string) ?? '')
-const page = ref(Number(route.query.page ?? 1) || 1)
+const toast = useToast()
+const workbench = useConsultationWorkbench()
 const pageSize = 20
-const total = ref(0)
+const selectedId = ref(typeof route.query.selected === 'string' ? route.query.selected : '')
+const query = computed(() => ({
+  q: typeof route.query.q === 'string' ? route.query.q : undefined,
+  status: typeof route.query.status === 'string' ? route.query.status as ConsultationStatus : undefined,
+  visibility: typeof route.query.visibility === 'string' ? route.query.visibility as ConsultationVisibility : undefined,
+  category: typeof route.query.category === 'string' ? route.query.category as ConsultationCategory : undefined,
+  page: Math.max(1, Number(route.query.page ?? 1) || 1), pageSize
+}))
+const search = ref(query.value.q ?? '')
 
-const questions = ref<ConsultQaPost[]>([])
-const loading = ref(false)
-const error = ref('')
-
-function syncFromRoute() {
-  const s = route.query.status as string | undefined
-  filter.value = s === 'PENDING' || s === 'ANSWERED' ? s : 'ALL'
-  q.value = (route.query.q as string) ?? ''
-  page.value = Number(route.query.page ?? 1) || 1
+function pushQuery(overrides: Record<string, string | undefined> = {}, resetPage = false): void {
+  const next: Record<string, string> = {}
+  const values = { q: search.value || undefined, status: query.value.status, visibility: query.value.visibility, category: query.value.category, page: String(query.value.page), ...overrides }
+  if (values.q) next.q = values.q
+  if (values.status) next.status = values.status
+  if (values.visibility) next.visibility = values.visibility
+  if (values.category) next.category = values.category
+  const page = resetPage ? 1 : Number(values.page)
+  if (page > 1) next.page = String(page)
+  if (selectedId.value) next.selected = selectedId.value
+  void router.replace({ query: next })
 }
-function pushRoute(overrides: Record<string, string|undefined> = {}, resetPage=false) {
-  const next: Record<string,string> = {}
-  const s = overrides.status !== undefined ? overrides.status : filter.value
-  const qq = overrides.q !== undefined ? overrides.q : q.value
-  const p = resetPage ? '1' : (overrides.page !== undefined ? overrides.page : String(page.value))
-  if (s && s !== 'ALL') next.status = s
-  if (qq) next.q = qq
-  if (Number(p)>1) next.page = String(p)
-  router.replace({ query: next })
-}
+async function refreshQueue(): Promise<void> { await workbench.loadQueue(query.value) }
+async function select(id: string): Promise<void> { selectedId.value = id; pushQuery(); await workbench.loadDetail(id) }
+async function retryDetail(): Promise<void> { if (selectedId.value) await workbench.loadDetail(selectedId.value) }
+async function sendReply(bodyMd: string): Promise<void> { if (await workbench.sendReply(bodyMd)) { toast.add({ title: '正式回复已发送', color: 'success' }); await refreshQueue() } }
+async function closeCurrent(): Promise<void> { if (await workbench.closeCurrent()) { toast.add({ title: '咨询已关闭', color: 'success' }); await refreshQueue() } }
+function reset(): void { selectedId.value = ''; search.value = ''; void router.replace({ query: {} }) }
 
-async function loadQuestions() {
-  loading.value = true
-  error.value = ''
-  try {
-    const result = await listConsultations({
-      status: filter.value === 'ALL' ? undefined : filter.value,
-      q: q.value || undefined,
-      page: page.value,
-      pageSize
-    })
-    questions.value = result.items
-    total.value = result.total
-  } catch {
-    error.value = '咨询列表加载失败，请稍后重试。'
-  } finally {
-    loading.value = false
-  }
-}
-
-watch(() => route.query, () => { syncFromRoute(); loadQuestions() })
-
-// 懒搜索：输入停顿 300ms 后自动写入 URL 触发加载
-const debouncedQ = useDebouncedValue(q, 300)
-watch(debouncedQ, () => pushRoute({}, true))
-
-onMounted(() => { syncFromRoute(); loadQuestions() })
-
-function onFilter(v: 'ALL'|'PENDING'|'ANSWERED') { filter.value = v; pushRoute({ status: v }, true) }
-function onPageChange(p:number) { pushRoute({ page: String(p) }) }
-function onReset() {
-  filter.value='ALL'; q.value=''; page.value=1; router.replace({ query: {} })
-}
-
-const replyOpen = ref(false)
-const replying = ref<ConsultQaPost | null>(null)
-
-function openReply(post: ConsultQaPost) {
-  replying.value = post
-  replyOpen.value = true
-}
-
-const filters = [
-  { value: 'ALL', label: '全部' },
-  { value: 'PENDING', label: '待回复' },
-  { value: 'ANSWERED', label: '已回复' }
-] as const
+watch(() => route.query, async () => { search.value = query.value.q ?? ''; await refreshQueue(); if (selectedId.value && selectedId.value !== workbench.detail.value?.id) await workbench.loadDetail(selectedId.value) })
+onMounted(async () => { await refreshQueue(); if (selectedId.value) await workbench.loadDetail(selectedId.value) })
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="flex items-center justify-between">
-      <div>
-        <h2 class="text-lg font-semibold text-highlighted">
-          咨询与反馈
-        </h2>
-        <p class="text-sm text-muted">
-          查看待回复咨询并进行官方回复
-        </p>
-      </div>
-      <UButton
-        color="neutral"
-        variant="outline"
-        icon="i-lucide-rotate-ccw"
-        @click="onReset"
-      >
-        重置
-      </UButton>
-    </div>
-
-    <div class="flex flex-wrap gap-2">
-      <UInput
-        v-model="q"
-        placeholder="搜索标题、内容"
-        icon="i-lucide-search"
-        size="sm"
-        class="w-64"
-      />
-      <div
-        role="group"
-        aria-label="咨询状态筛选"
-        class="flex flex-wrap gap-2"
-      >
-        <UButton
-          v-for="item in filters"
-          :key="item.value"
-          size="sm"
-          color="neutral"
-          :variant="filter === item.value ? 'solid' : 'outline'"
-          :aria-pressed="filter === item.value"
-          @click="onFilter(item.value)"
-        >
-          {{ item.label }}
-        </UButton>
-      </div>
-    </div>
-
-    <p
-      v-if="loading"
-      class="text-sm text-muted"
-    >
-      正在加载咨询…
-    </p>
-    <p
-      v-else-if="error"
-      class="text-sm text-danger-600 dark:text-danger-400"
-    >
-      {{ error }}
-    </p>
-    <ul
-      v-else-if="questions.length"
-      class="space-y-3"
-    >
-      <li
-        v-for="post in questions"
-        :key="post.id"
-        class="rounded-xl border border-default bg-default p-4"
-      >
-        <div class="flex items-start justify-between gap-4">
-          <div class="min-w-0">
-            <p class="text-sm font-semibold text-highlighted">
-              {{ post.question }}
-            </p>
-            <p class="mt-1 flex flex-wrap gap-1.5 text-xs text-muted">
-              <span
-                v-for="tag in post.tags"
-                :key="tag"
-                class="rounded bg-neutral-100 px-1.5 py-0.5 dark:bg-neutral-800"
-              >
-                {{ tag }}
-              </span>
-            </p>
-            <p class="mt-1 text-xs text-muted">
-              {{ post.authorName }} · {{ post.status === 'PENDING' ? '提问于' : '回答于' }} {{ formatDateTimeCompact(post.status === 'PENDING' ? post.createdAt : post.answeredAt) }}
-            </p>
-          </div>
-          <UBadge
-            size="sm"
-            variant="soft"
-            :color="qaStatusMeta[post.status].color"
-          >
-            {{ qaStatusMeta[post.status].label }}
-          </UBadge>
-        </div>
-
-        <div class="mt-3 flex flex-wrap gap-2">
-          <UButton
-            :to="post.detailPath"
-            size="sm"
-            color="neutral"
-            variant="soft"
-          >
-            查看
-          </UButton>
-          <UButton
-            v-if="post.status === 'PENDING'"
-            size="sm"
-            color="primary"
-            variant="outline"
-            icon="i-lucide-message-circle"
-            @click="openReply(post)"
-          >
-            回复
-          </UButton>
-        </div>
-      </li>
-    </ul>
-
-    <p
-      v-else
-      class="text-sm text-muted"
-    >
-      暂无符合条件的咨询。
-    </p>
-
-    <div
-      v-if="!loading && !error && total > pageSize"
-      class="flex justify-center"
-    >
-      <UPagination
-        :page="page"
-        :total="total"
-        :items-per-page="pageSize"
-        @update:page="onPageChange"
-      />
-    </div>
-    <p
-      v-if="!loading && !error"
-      class="text-center text-xs text-muted"
-    >
-      共 {{ total }} 条
-    </p>
-
-    <ReplyConsultationModal
-      :open="replyOpen"
-      :question="replying"
-      @update:open="replyOpen = $event"
-      @saved="loadQuestions"
-    />
+  <div class="space-y-5">
+    <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="text-lg font-semibold text-highlighted">咨询答疑工作台</h2><p class="mt-1 text-sm text-muted">处理学生咨询、保留完整回复记录，并在处理完成后关闭事项。</p></div><UButton color="neutral" variant="outline" icon="i-lucide-rotate-ccw" @click="reset">重置筛选</UButton></div>
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><UInput v-model="search" placeholder="搜索标题或正文" icon="i-lucide-search" @keyup.enter="pushQuery({}, true)" /><USelect :model-value="query.status ?? 'ALL'" :items="[{ label: '全部状态', value: 'ALL' }, { label: '待回复', value: 'OPEN' }, { label: '已回复', value: 'ANSWERED' }, { label: '已关闭', value: 'CLOSED' }]" @update:model-value="pushQuery({ status: $event === 'ALL' ? undefined : $event }, true)" /><USelect :model-value="query.visibility ?? 'ALL'" :items="[{ label: '全部可见性', value: 'ALL' }, { label: '公开咨询', value: 'PUBLIC' }, { label: '私密咨询', value: 'PRIVATE' }]" @update:model-value="pushQuery({ visibility: $event === 'ALL' ? undefined : $event }, true)" /><USelect :model-value="query.category ?? 'ALL'" :items="[{ label: '全部分类', value: 'ALL' }, ...Object.entries(consultationCategoryLabel).map(([value, label]) => ({ value, label }))]" @update:model-value="pushQuery({ category: $event === 'ALL' ? undefined : $event }, true)" /></div>
+    <div class="grid min-h-[36rem] gap-5 xl:grid-cols-[22rem_minmax(0,1fr)]"><ConsultationQueue :items="workbench.items.value" :selected-id="selectedId" :loading="workbench.queueLoading.value" :error="workbench.queueError.value" @select="select" @retry="refreshQueue" /><div class="min-w-0"><div class="mb-3 flex justify-end"><UButton v-if="selectedId" :to="{ name: 'ops-consultation-task', params: { id: selectedId } }" color="neutral" variant="ghost" size="sm" icon="i-lucide-external-link">在独立页处理</UButton></div><ConsultationDetail :consultation="workbench.detail.value" :loading="workbench.detailLoading.value" :error="workbench.detailError.value" :action-error="workbench.actionError.value" :action-pending="workbench.actionPending.value" @retry="retryDetail" @reply="sendReply" @close="closeCurrent" /></div></div>
+    <div v-if="!workbench.queueLoading.value && !workbench.queueError.value && workbench.total.value > pageSize" class="flex justify-center"><UPagination :page="query.page" :total="workbench.total.value" :items-per-page="pageSize" @update:page="pushQuery({ page: String($event) })" /></div>
   </div>
 </template>
-
-

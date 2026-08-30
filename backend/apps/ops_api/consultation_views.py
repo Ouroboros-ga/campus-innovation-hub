@@ -6,9 +6,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from apps.consultations.models import Consultation
-from apps.consultations.services import reply_to_consultation
+from apps.consultations.services import close_consultation, reply_to_consultation
 from apps.domain_errors import NotFound
-from apps.ops_api.base import OperatorAPIView
+from apps.ops_api.base import OperatorAPIView, require_empty_body
 from apps.ops_api.serializers import ConsultationReplySerializer, serialize_consultation_management, serialize_reply_management
 from apps.public_api.query import filter_text, paginated_response, parse_optional_enum, parse_uuid, validate_query_keys
 
@@ -66,3 +66,13 @@ class ConsultationReplyView(OperatorAPIView):
         )
         reply = reply.__class__.objects.select_related("author", "author__profile", "author__profile__avatar_asset").get(pk=reply.pk)
         return Response(serialize_reply_management(reply, request), status=201)
+
+
+class ConsultationCloseView(OperatorAPIView):
+    agent_access = True
+    agent_scopes = {"POST": {"consultation:reply"}}
+
+    def post(self, request: Request, object_id: str) -> Response:
+        require_empty_body(request)
+        close_consultation(actor=request.user, consultation=_consultation_or_404(object_id))
+        return Response(status=204)

@@ -1,104 +1,37 @@
-/**
- * 咨询运营 API 集成（BE-040 /ops/consultations）。
- *
- * 映射 `docs/api/EndpointReference.md` 运营路由与 `apps/ops_api/serializers.py` 严格 DTO：
- * - GET /ops/consultations（管理列表，含 replies）
- * - POST /ops/consultations/{id}/replies（正式回复，body_md）
- *
- * 客户端 `ConsultQaPost` 面向公开问答展示；运营列表在此归一：`question` 取咨询标题、
- * `tags` 取分类标签、`status` 将 OPEN/CLOSED 归为 PENDING。
- */
+/** 运营咨询工作台 API；与公开问答 DTO 严格分离。 */
 
 import { http } from '@/shared/http/client'
-import { faqCategoryLabel } from '@/shared/lib/domain-labels'
-import type { FaqCategory } from '@/shared/types/homepage'
-import type { ConsultQaPost, ConsultQaStatus } from '@/features/consultation/types'
+import type { ConsultationDetail, ConsultationQuery, ConsultationReply, ConsultationSummary } from '../consultations/types'
 
-// ---------------------------------------------------------------------------
-// 契约 DTO
-// ---------------------------------------------------------------------------
-
-interface ActorDto {
-  id: string
-  nickname?: string | null
-  display_name?: string | null
+interface ActorDto { id: string; nickname?: string | null; display_name?: string | null }
+interface CompetitionDto { id: string; name: string }
+interface ReplyDto { id: string; author: ActorDto; body_md: string; created_at: string; updated_at: string }
+interface ConsultationDto {
+  id: string; author: ActorDto; category: ConsultationDetail['category']; competition: CompetitionDto | null; title: string; body_md: string
+  visibility: ConsultationDetail['visibility']; status: ConsultationDetail['status']; allowed_actions: ConsultationDetail['allowedActions']
+  answered_at: string | null; replies: ReplyDto[]; created_at: string; updated_at: string
 }
 
-interface ReplyDto {
-  id: string
-  body_md?: string | null
-  created_at: string
-}
-
-interface ConsultationMgmtDto {
-  id: string
-  author: ActorDto
-  category: string
-  title: string
-  body_md?: string | null
-  status: string
-  answered_at?: string | null
-  replies?: ReplyDto[]
-  created_at: string
-  updated_at?: string
-}
-
-interface PaginatedDto<T> {
-  count: number
-  next?: string | null
-  previous?: string | null
-  results: T[]
-}
-
-// ---------------------------------------------------------------------------
-// 契约映射
-// ---------------------------------------------------------------------------
-
-function toConsultQaPost(dto: ConsultationMgmtDto): ConsultQaPost {
-  const status: ConsultQaStatus = dto.status === 'ANSWERED' ? 'ANSWERED' : 'PENDING'
-  const lastReply = dto.replies?.at(-1)
-  const answered = dto.answered_at ?? lastReply?.created_at ?? ''
+function actorName(actor: ActorDto): string { return actor.display_name ?? actor.nickname ?? '匿名用户' }
+function toReply(dto: ReplyDto): ConsultationReply { return { id: dto.id, authorName: actorName(dto.author), bodyMd: dto.body_md, createdAt: dto.created_at, updatedAt: dto.updated_at } }
+function toDetail(dto: ConsultationDto): ConsultationDetail {
   return {
-    id: dto.id,
-    question: dto.title,
-    answer: lastReply?.body_md ?? '',
-    tags: dto.category ? [faqCategoryLabel[dto.category as FaqCategory] ?? dto.category] : [],
-    status,
-    authorName: dto.author.display_name ?? dto.author.nickname ?? '',
-    answeredAt: answered || dto.created_at,
-    createdAt: dto.created_at,
-    likes: 0,
-    detailPath: `/qa/questions/${dto.id}`
+    id: dto.id, authorName: actorName(dto.author), category: dto.category, competition: dto.competition,
+    title: dto.title, bodyMd: dto.body_md, visibility: dto.visibility, status: dto.status, replyCount: dto.replies.length, allowedActions: dto.allowed_actions,
+    answeredAt: dto.answered_at, replies: dto.replies.map(toReply), createdAt: dto.created_at, updatedAt: dto.updated_at
   }
 }
+function toSummary(dto: ConsultationDto): ConsultationSummary {
+  const detail = toDetail(dto)
+  return { id: detail.id, title: detail.title, authorName: detail.authorName, category: detail.category, visibility: detail.visibility, status: detail.status, replyCount: detail.replies.length, createdAt: detail.createdAt, answeredAt: detail.answeredAt, allowedActions: detail.allowedActions }
+}
 
-// ---------------------------------------------------------------------------
-// 公开 API
-// ---------------------------------------------------------------------------
-
-/** 运营咨询列表（GET /ops/consultations）。 */
-export async function listConsultations(params: {
-  status?: 'PENDING' | 'ANSWERED'
-  q?: string
-  page?: number
-  pageSize?: number
-}): Promise<{ items: ConsultQaPost[]; total: number; page: number }> {
-  const response = await http.get<PaginatedDto<ConsultationMgmtDto>>('/ops/consultations', {
-    query: {
-      q: params.q,
-      status: params.status === 'PENDING' ? 'OPEN' : params.status,
-      page: params.page,
-      page_size: params.pageSize
-    }
+export async function listConsultations(query: ConsultationQuery): Promise<{ items: ConsultationSummary[]; total: number }> {
+  const response = await http.get<{ count: number; results: ConsultationDto[] }>('/ops/consultations', {
+    query: { q: query.q, status: query.status, visibility: query.visibility, category: query.category, page: query.page, page_size: query.pageSize }
   })
-  return {
-    items: response.results.map(toConsultQaPost),
-    total: response.count,
-    page: params.page ?? 1
-  }
+  return { items: response.results.map(toSummary), total: response.count }
 }
-
-/** 给咨询提交正式回复（POST /ops/consultations/{id}/replies）。 */
-export async function replyConsultation(id: string, bodyMd: string): Promise<void> {
-  await http.post(`/ops/consultations/${id}/replies`, { body_md: bodyMd })
-}
+export async function getConsultation(id: string): Promise<ConsultationDetail> { return toDetail(await http.get<ConsultationDto>(`/ops/consultations/${id}`)) }
+export async function replyConsultation(id: string, bodyMd: string): Promise<ConsultationReply> { return toReply(await http.post<ReplyDto>(`/ops/consultations/${id}/replies`, { body_md: bodyMd })) }
+export async function closeConsultation(id: string): Promise<void> { await http.post(`/ops/consultations/${id}/close`) }

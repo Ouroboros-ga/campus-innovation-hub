@@ -15,6 +15,7 @@ from apps.activities.services import activity_allowed_actions
 from apps.competitions.models import Competition, TimelineEvent
 from apps.competitions.services import competition_allowed_actions
 from apps.consultations.models import Consultation, Reply
+from apps.consultations.services import consultation_allowed_actions
 from apps.core.serializers import CreateIntentMixin
 from apps.content.models import Announcement, FaqItem, GuideArticle, HomepageBanner, SiteDocument
 from apps.content.services import (
@@ -757,10 +758,15 @@ def serialize_consultation_management(consultation: Consultation, request: Reque
         "author": actor_summary(consultation.author, request),
         "category": consultation.category,
         "competition_id": str(consultation.competition_id) if consultation.competition_id else None,
+        "competition": (
+            {"id": str(consultation.competition_id), "name": consultation.competition.name}
+            if consultation.competition_id else None
+        ),
         "title": consultation.title,
         "body_md": consultation.body_md,
         "visibility": consultation.visibility,
         "status": consultation.status,
+        "allowed_actions": consultation_allowed_actions(actor=request.user, consultation=consultation),
         "answered_at": consultation.answered_at,
         "replies": [serialize_reply_management(reply, request) for reply in consultation.replies.all().order_by("created_at")],
         "created_at": consultation.created_at,

@@ -51,6 +51,7 @@ urlpatterns = [
     path("ops/consultations", consultation_views.ConsultationCollectionView.as_view(), name="ops-consultation-collection"),
     path("ops/consultations/<str:object_id>", consultation_views.ConsultationDetailView.as_view(), name="ops-consultation-detail"),
     path("ops/consultations/<str:object_id>/replies", consultation_views.ConsultationReplyView.as_view(), name="ops-consultation-reply"),
+    path("ops/consultations/<str:object_id>/close", consultation_views.ConsultationCloseView.as_view(), name="ops-consultation-close"),
     path("ops/teams", team_views.TeamCollectionView.as_view(), name="ops-team-collection"),
     path("ops/teams/<str:object_id>", team_views.TeamDetailView.as_view(), name="ops-team-detail"),
     path("ops/teams/<str:object_id>/close", team_views.TeamCloseView.as_view(), name="ops-team-close"),
