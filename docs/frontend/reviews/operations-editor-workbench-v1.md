@@ -28,10 +28,12 @@
 
 ## 发布状态
 
-- 已构建但未切换的 release：`/opt/campus-innovation-hub/releases/0b9a6eb6bda5d609211eaea4327f4d73d5b2b9d5`；已验证含 `frontend/dist/index.html`。
-- 发布前线上 release：`c37265eeccc3b1e16f64d5e7d7b7496b7e4f992f`。
-- 新 migration 仅包含可空 `published_at` 字段和竞赛分类 metadata；执行前仍必须备份生产 PostgreSQL 并在实际可达服务器执行 migration plan。
-- 2026-08-30 发布阶段服务器 SSH banner 与 `https://zsitai.xyz/api/health` 均连续连接超时；因此尚未执行备份、生产 migration、`current` symlink 切换、service restart 或线上交互验收。
+- 已发布 release：`0b9a6eb6bda5d609211eaea4327f4d73d5b2b9d5`；`/opt/campus-innovation-hub/current`、Gunicorn 进程工作目录和 Nginx 实际返回的 `frontend/dist/index.html` 哈希均已核对为该 release。
+- 发布前线上 release：`c37265eeccc3b1e16f64d5e7d7b7496b7e4f992f`；保留为可回切目标。
+- 发布前已生成并校验 PostgreSQL custom dump：`pre-0b9a6eb6bda5-20260830T113943Z.dump`，SHA-256 为 `a955573f03a730e49455e05ac015dab08c41acab8476aca9e8a650c7d95f9525`。服务器缺少与 PostgreSQL 16.2 匹配的系统 `pg_dump`，因此复用已缓存的 `postgres:16.2-alpine` 镜像完成导出与 `pg_restore -l` 校验；未下载镜像、未安装数据库服务。
+- 已执行并通过 production migration：`activities.0002_activity_published_at`、`competitions.0002_competition_published_at`、`competitions.0003_alter_competition_category`、`content.0005_faqitem_published_at`、`organizations.0004_recruitment_published_at`。这些变更对旧 release 向后兼容。
+- 发布后 `campus-innovation-hub.service` 为 active，Nginx 回环 `/api/health` 返回 `ok`、`/api/ready` 返回 `ready`；公网首页和 `/api/health` 为 200。公网 `/api/ready` 仍按既有访问策略返回 403，未作为失败处理。
+- 未使用运营人员登录态执行回复、关闭等写操作验收，避免在生产数据上制造测试记录。
 
 ## 未完成的计划范围
 
@@ -39,10 +41,9 @@
 - Task 10 已消除 page -> shared HTTP 边界并拆出 API 模块，但 `OpsHomepagePage.vue` 与 `OpsSystemPage.vue` 尚未完成计划要求的 focused composable / form 级拆分。
 - 因此本记录只确认已提交 slice 的行为，不把整个深度整理计划表述为全部完成。
 
-## 恢复后的验收与回滚
+## 本次发布执行与回滚
 
-1. 先确认 SSH、`/api/health` 与当前 release SHA 恢复可达。
-2. 备份生产 PostgreSQL 并校验 dump 可读；在已构建 release 上执行 `migrate --plan` 与 `migrate --noinput`。
-3. 停止旧 Gunicorn、原子切换 `current` 到目标 SHA、启动服务，防止新前端面对旧后端。
-4. 检查本地和公网 `/api/health`、loopback `/api/ready`、静态入口、运营登录、咨询回复与关闭、Nginx/service 日志。
-5. 如验收失败，在 migration 向后兼容前提下切回 `c37265eeccc3b1e16f64d5e7d7b7496b7e4f992f` 并启动旧服务。
+1. 已确认 SSH、当前 release SHA、Nginx 配置和公网健康接口可达；先执行 migration plan，再执行数据库备份与 migration。
+2. 已停止旧 Gunicorn、通过临时符号链接原子切换 `current` 到目标 SHA 并启动服务，避免新前端面对旧后端。
+3. 首次切换曾因直连 Gunicorn 的错误健康探针得到 403 而自动回切；随后改为同真实流量一致的 HTTPS/Nginx 回环检查，确认新 release 实际运行后完成切换。
+4. 如后续需要回滚，在 migration 向后兼容前提下，将 `current` 原子切回 `c37265eeccc3b1e16f64d5e7d7b7496b7e4f992f` 后重启 `campus-innovation-hub.service`；迁移前备份可用于更高风险的数据库恢复场景。
