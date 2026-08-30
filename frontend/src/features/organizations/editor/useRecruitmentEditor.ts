@@ -46,9 +46,10 @@ export function useRecruitmentEditor(organizationId: Ref<string>, recruitmentId:
   const task = useEditorTask<RecruitmentEditorDraft, ManageRecruitment>({
     initialDraft: emptyRecruitmentDraft(),
     adapter: {
-      async load() {
+      async load(signal) {
         if (!recruitmentId.value) { recruitment.value = null; return emptyRecruitmentDraft() }
-        const loaded = await getManageRecruitment(organizationId.value, recruitmentId.value)
+        const loaded = await getManageRecruitment(organizationId.value, recruitmentId.value, signal)
+        if (signal.aborted) return emptyRecruitmentDraft()
         recruitment.value = loaded
         return toDraft(loaded)
       },

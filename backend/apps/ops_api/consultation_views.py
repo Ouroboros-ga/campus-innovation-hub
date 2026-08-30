@@ -9,7 +9,7 @@ from apps.consultations.models import Consultation
 from apps.consultations.services import close_consultation, reply_to_consultation
 from apps.domain_errors import NotFound
 from apps.ops_api.base import OperatorAPIView, require_empty_body
-from apps.ops_api.serializers import ConsultationReplySerializer, serialize_consultation_management, serialize_reply_management
+from apps.ops_api.serializers import ConsultationReplySerializer, serialize_consultation_management
 from apps.public_api.query import filter_text, paginated_response, parse_optional_enum, parse_uuid, validate_query_keys
 
 
@@ -61,11 +61,10 @@ class ConsultationReplyView(OperatorAPIView):
     def post(self, request: Request, object_id: str) -> Response:
         serializer = ConsultationReplySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        reply = reply_to_consultation(
+        reply_to_consultation(
             actor=request.user, consultation=_consultation_or_404(object_id), body_md=serializer.validated_data["body_md"]
         )
-        reply = reply.__class__.objects.select_related("author", "author__profile", "author__profile__avatar_asset").get(pk=reply.pk)
-        return Response(serialize_reply_management(reply, request), status=201)
+        return Response(serialize_consultation_management(_consultation_or_404(object_id), request))
 
 
 class ConsultationCloseView(OperatorAPIView):
@@ -75,4 +74,4 @@ class ConsultationCloseView(OperatorAPIView):
     def post(self, request: Request, object_id: str) -> Response:
         require_empty_body(request)
         close_consultation(actor=request.user, consultation=_consultation_or_404(object_id))
-        return Response(status=204)
+        return Response(serialize_consultation_management(_consultation_or_404(object_id), request))

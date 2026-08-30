@@ -42,7 +42,7 @@ function recruitment(state: 'DRAFT' | 'PUBLISHED'): ManageRecruitment {
 }
 
 async function mountEditor(path: string) {
-  const { wrapper } = await mountWithAppContext(RouterHost, {
+  const { wrapper, router } = await mountWithAppContext(RouterHost, {
     initialRoute: path,
     routes: [
       { path: '/manage/organizations/:organizationId/recruitments/new', name: 'org-manage-recruitment-new', component: RecruitmentEditorPage },
@@ -53,7 +53,7 @@ async function mountEditor(path: string) {
   })
   mounted.push(wrapper)
   await flushPromises()
-  return wrapper
+  return { wrapper, router }
 }
 
 beforeEach(() => vi.clearAllMocks())
@@ -62,7 +62,7 @@ afterEach(() => { mounted.splice(0).forEach(wrapper => wrapper.unmount()); docum
 describe('Task7 招新编辑任务', () => {
   it('已发布招新显示保存更新，并完整回填岗位', async () => {
     vi.mocked(getManageRecruitment).mockResolvedValue(recruitment('PUBLISHED'))
-    const wrapper = await mountEditor('/manage/organizations/org-1/recruitments/r1/edit')
+    const { wrapper } = await mountEditor('/manage/organizations/org-1/recruitments/r1/edit')
     expect(wrapper.text()).toContain('已发布')
     expect(wrapper.text()).toContain('保存更新')
     expect(wrapper.get('input').element.value).toBe('人工智能协会秋招')
@@ -71,7 +71,7 @@ describe('Task7 招新编辑任务', () => {
 
   it('新建发布只发出一个携带 publish=true 的 create 请求', async () => {
     vi.mocked(createManageRecruitment).mockResolvedValue(recruitment('PUBLISHED'))
-    const wrapper = await mountEditor('/manage/organizations/org-1/recruitments/new')
+    const { wrapper } = await mountEditor('/manage/organizations/org-1/recruitments/new')
     await wrapper.get('[data-test="recruitment-title"]').setValue('人工智能协会秋招')
     await wrapper.get('[data-test="recruitment-apply-end"]').setValue('2026-09-10T10:00')
     await wrapper.get('[data-test="recruitment-markdown"]').setValue('介绍')
@@ -80,5 +80,17 @@ describe('Task7 招新编辑任务', () => {
     await flushPromises()
     expect(createManageRecruitment).toHaveBeenCalledWith('org-1', expect.objectContaining({ title: '人工智能协会秋招', publish: true }))
     expect(updateManageRecruitment).not.toHaveBeenCalled()
+  })
+
+  it('组织路由切换后重新加载目标组织的招新', async () => {
+    vi.mocked(getManageRecruitment).mockImplementation(async organizationId => ({
+      ...recruitment('DRAFT'), title: organizationId === 'org-1' ? '组织一招新' : '组织二招新'
+    }))
+    const { wrapper, router } = await mountEditor('/manage/organizations/org-1/recruitments/r1/edit')
+    expect(wrapper.get('input').element.value).toBe('组织一招新')
+    await router.push('/manage/organizations/org-2/recruitments/r1/edit')
+    await flushPromises()
+    expect(getManageRecruitment).toHaveBeenCalledWith('org-2', 'r1', expect.any(AbortSignal))
+    expect(wrapper.get('input').element.value).toBe('组织二招新')
   })
 })

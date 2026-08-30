@@ -84,12 +84,20 @@ def close_consultation(*, actor: User, consultation: Consultation) -> Consultati
 
     if not is_operator(actor):
         raise PermissionDenied
-    locked = Consultation.objects.select_for_update().get(pk=consultation.pk)
+    locked = Consultation.objects.select_for_update().select_related("author").get(pk=consultation.pk)
     if locked.status == Consultation.Status.CLOSED:
         raise InvalidState
     previous_status = locked.status
     locked.status = Consultation.Status.CLOSED
     locked.save(update_fields=["status", "updated_at"])
+    create_notification(
+        recipient=locked.author,
+        notification_type=Notification.NotificationType.CONSULTATION,
+        title="你的咨询已关闭",
+        body=f"“{locked.title}”已完成处理并关闭。",
+        action_path=f"/consultations/{locked.id}",
+        dedupe_key=f"consultation:{locked.id}:closed",
+    )
     record_audit(
         actor=actor,
         action="CONSULTATION_CLOSED",

@@ -20,7 +20,9 @@ const editor = useRecruitmentEditor(organizationId, recruitmentId)
 const loadError = computed(() => !editor.isNew.value && editor.phase.value === 'FAILED' && !editor.recruitment.value ? editor.formError.value : null)
 
 onMounted(editor.load)
-watch(recruitmentId, (next, previous) => { if (next !== previous) void editor.load() })
+watch([organizationId, recruitmentId], ([nextOrganizationId, nextRecruitmentId], [previousOrganizationId, previousRecruitmentId]) => {
+  if (nextOrganizationId !== previousOrganizationId || nextRecruitmentId !== previousRecruitmentId) void editor.load()
+})
 async function runSubmit(intent: EditorIntent): Promise<void> {
   const wasNew = editor.isNew.value
   const result = await editor.submit(intent)

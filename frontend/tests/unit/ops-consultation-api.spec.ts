@@ -26,11 +26,19 @@ describe('Task8 咨询运营 API', () => {
   })
 
   it('追加回复和关闭分别走领域 action endpoint', async () => {
-    vi.mocked(http.post).mockResolvedValueOnce({ id: 'r1', author: { id: 'op', display_name: '运营同学' }, body_md: '请看竞赛详情页。', created_at: '2026-08-20T10:00:00+08:00', updated_at: '2026-08-20T10:00:00+08:00' }).mockResolvedValueOnce(undefined)
-    const reply = await api.replyConsultation('q1', '请看竞赛详情页。')
-    await api.closeConsultation('q1')
-    expect(reply.authorName).toBe('运营同学')
+    vi.mocked(http.post)
+      .mockResolvedValueOnce({ ...consultationDto, status: 'ANSWERED', replies: [{ id: 'r1', author: { id: 'op', display_name: '运营同学' }, body_md: '请看竞赛详情页。', created_at: '2026-08-20T10:00:00+08:00', updated_at: '2026-08-20T10:00:00+08:00' }] })
+      .mockResolvedValueOnce({ ...consultationDto, status: 'CLOSED', allowed_actions: [] })
+    const afterReply = await api.replyConsultation('q1', '请看竞赛详情页。')
+    const afterClose = await api.closeConsultation('q1')
+    expect(afterReply.replies[0]?.authorName).toBe('运营同学')
+    expect(afterClose.allowedActions).toEqual([])
     expect(http.post).toHaveBeenNthCalledWith(1, '/ops/consultations/q1/replies', { body_md: '请看竞赛详情页。' })
     expect(http.post).toHaveBeenNthCalledWith(2, '/ops/consultations/q1/close')
+  })
+
+  it('拒绝畸形的管理详情，避免按错误动作渲染按钮', async () => {
+    vi.mocked(http.get).mockResolvedValue({ ...consultationDto, allowed_actions: ['REPLY', 'PUBLISH'] })
+    await expect(api.getConsultation('q1')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
   })
 })

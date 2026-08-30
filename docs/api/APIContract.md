@@ -1829,7 +1829,7 @@ POST /api/ops/consultations/{id}/close
 **咨询是正式答疑记录，不是聊天窗口。**
 
 - 回复 **append-only**：`POST /{id}/replies` 只追加，不提供编辑或删除回复的端点。答复有误时追加“更正说明”，保留完整可追溯历史。
-- 回复 body：`{"body_md": "……"}`（1-10000）。首次回复后咨询 `status -> ANSWERED`。
+- 回复 body：`{"body_md": "……"}`（1-10000）。首次回复后咨询 `status -> ANSWERED`。回复与关闭 action 成功时均返回刷新后的 `ConsultationManagementDetail`，前端必须使用其中的 `allowed_actions`，不得自行推断下一状态。
 - `POST /{id}/close`：仅允许 `OPEN / ANSWERED -> CLOSED`，其他状态返回 `409 INVALID_STATE`。关闭后禁止再回复（`409 INVALID_STATE`）。默认**不**开放 `CLOSED -> OPEN`。
 - 状态流转与回复均写 AuditLog 并定向通知提问者。
 

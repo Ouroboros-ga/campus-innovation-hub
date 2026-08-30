@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
 
@@ -15,6 +15,7 @@ async function load(): Promise<void> { await workbench.loadDetail(id.value) }
 async function sendReply(bodyMd: string): Promise<void> { if (await workbench.sendReply(bodyMd)) toast.add({ title: '正式回复已发送', color: 'success' }) }
 async function closeCurrent(): Promise<void> { if (await workbench.closeCurrent()) toast.add({ title: '咨询已关闭', color: 'success' }) }
 onMounted(load)
+watch(id, (next, previous) => { if (next && next !== previous) void load() })
 </script>
 
 <template>

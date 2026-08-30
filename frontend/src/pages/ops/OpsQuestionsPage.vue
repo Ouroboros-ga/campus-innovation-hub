@@ -7,6 +7,7 @@ import ConsultationDetail from '@/features/ops/consultations/ConsultationDetail.
 import ConsultationQueue from '@/features/ops/consultations/ConsultationQueue.vue'
 import { consultationCategoryLabel, type ConsultationCategory, type ConsultationStatus, type ConsultationVisibility } from '@/features/ops/consultations/types'
 import { useConsultationWorkbench } from '@/features/ops/consultations/useConsultationWorkbench'
+import { useBreakpoint } from '@/shared/composables/useBreakpoint'
 import ManagementFilterBar from '@/shared/components/management/ManagementFilterBar.vue'
 import ManagementPageHeader from '@/shared/components/management/ManagementPageHeader.vue'
 
@@ -14,6 +15,7 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const workbench = useConsultationWorkbench()
+const { isPhone } = useBreakpoint()
 const pageSize = 20
 const selectedId = ref(typeof route.query.selected === 'string' ? route.query.selected : '')
 const query = computed(() => ({
@@ -25,7 +27,7 @@ const query = computed(() => ({
 }))
 const search = ref(query.value.q ?? '')
 
-function pushQuery(overrides: Record<string, string | undefined> = {}, resetPage = false): void {
+async function pushQuery(overrides: Record<string, string | undefined> = {}, resetPage = false): Promise<void> {
   const next: Record<string, string> = {}
   const values = { q: search.value || undefined, status: query.value.status, visibility: query.value.visibility, category: query.value.category, page: String(query.value.page), ...overrides }
   if (values.q) next.q = values.q
@@ -35,16 +37,30 @@ function pushQuery(overrides: Record<string, string | undefined> = {}, resetPage
   const page = resetPage ? 1 : Number(values.page)
   if (page > 1) next.page = String(page)
   if (selectedId.value) next.selected = selectedId.value
-  void router.replace({ query: next })
+  await router.replace({ query: next })
 }
 async function refreshQueue(): Promise<void> { await workbench.loadQueue(query.value) }
-async function select(id: string): Promise<void> { selectedId.value = id; pushQuery(); await workbench.loadDetail(id) }
+async function select(id: string): Promise<void> {
+  if (isPhone.value) {
+    await router.push({ name: 'ops-consultation-task', params: { id } })
+    return
+  }
+  const alreadySelected = selectedId.value === id && route.query.selected === id
+  selectedId.value = id
+  if (alreadySelected) await workbench.loadDetail(id)
+  else await pushQuery()
+}
 async function retryDetail(): Promise<void> { if (selectedId.value) await workbench.loadDetail(selectedId.value) }
 async function sendReply(bodyMd: string): Promise<void> { if (await workbench.sendReply(bodyMd)) { toast.add({ title: '正式回复已发送', color: 'success' }); await refreshQueue() } }
 async function closeCurrent(): Promise<void> { if (await workbench.closeCurrent()) { toast.add({ title: '咨询已关闭', color: 'success' }); await refreshQueue() } }
 function reset(): void { selectedId.value = ''; search.value = ''; void router.replace({ query: {} }) }
 
-watch(() => route.query, async () => { search.value = query.value.q ?? ''; await refreshQueue(); if (selectedId.value && selectedId.value !== workbench.detail.value?.id) await workbench.loadDetail(selectedId.value) })
+watch(() => route.query, async () => {
+  search.value = query.value.q ?? ''
+  selectedId.value = typeof route.query.selected === 'string' ? route.query.selected : ''
+  await refreshQueue()
+  if (selectedId.value && selectedId.value !== workbench.detail.value?.id) await workbench.loadDetail(selectedId.value)
+})
 onMounted(async () => { await refreshQueue(); if (selectedId.value) await workbench.loadDetail(selectedId.value) })
 </script>
 

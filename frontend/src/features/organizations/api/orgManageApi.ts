@@ -198,8 +198,8 @@ export async function updateManageRecruitment(
   return toManageRecruitment(dto)
 }
 
-export async function getManageRecruitment(organizationId: string, recruitmentId: string): Promise<ManageRecruitment> {
-  const dto = await http.get<RecruitmentDto>(`/manage/organizations/${organizationId}/recruitments/${recruitmentId}`)
+export async function getManageRecruitment(organizationId: string, recruitmentId: string, signal?: AbortSignal): Promise<ManageRecruitment> {
+  const dto = await http.get<RecruitmentDto>(`/manage/organizations/${organizationId}/recruitments/${recruitmentId}`, { signal })
   return toManageRecruitment(dto)
 }
 

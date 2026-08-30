@@ -801,8 +801,8 @@ IMAGE 仅接受 jpg/jpeg/png/webp/avif，单文件 <= 5 MB；DOCUMENT 在 V0.1 �
 |---|---|---|---|
 | `GET /api/ops/consultations` | `q,status=OPEN|ANSWERED|CLOSED,visibility=PUBLIC|PRIVATE,category,page,page_size` | `200 Page<ConsultationManagementDetail>` | 可读取 PRIVATE；分页/enum 非法 400 |
 | `GET /api/ops/consultations/{id}` | 无 | `200 ConsultationManagementDetail` | 不存在 404 |
-| `POST /api/ops/consultations/{id}/replies` | `ConsultationReplyWrite` | `201 ConsultationReply` | 仅 OPEN/ANSWERED 可追加；CLOSED `409 INVALID_STATE`；写 Reply、answered_at、status=ANSWERED、定向通知作者、审计 |
-| `POST /api/ops/consultations/{id}/close` | 无 | `204` | 仅 OPEN/ANSWERED -> CLOSED；已 CLOSED `409 INVALID_STATE`；审计。关闭后禁止再回复 |
+| `POST /api/ops/consultations/{id}/replies` | `ConsultationReplyWrite` | `200 ConsultationManagementDetail` | 仅 OPEN/ANSWERED 可追加；CLOSED `409 INVALID_STATE`；写 Reply、answered_at、status=ANSWERED、定向通知作者、审计；返回服务端重新计算的 `allowed_actions` |
+| `POST /api/ops/consultations/{id}/close` | 无 | `200 ConsultationManagementDetail` | 仅 OPEN/ANSWERED -> CLOSED；已 CLOSED `409 INVALID_STATE`；定向通知作者、审计；返回服务端重新计算的 `allowed_actions`。关闭后禁止再回复 |
 
 **回复是 append-only。** 本组端点不提供编辑或删除 Reply 的接口；答复有误时追加一条「更正说明」，保留完整可追溯历史。默认不开放 `CLOSED -> OPEN`。
 

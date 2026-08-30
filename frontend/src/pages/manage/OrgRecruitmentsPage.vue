@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
 
@@ -18,7 +18,7 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 
-const orgId = String(route.params.organizationId ?? '')
+const orgId = computed(() => String(route.params.organizationId ?? ''))
 
 const recruitments = ref<ManageRecruitment[]>([])
 const total = ref(0)
@@ -53,7 +53,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const res = await listManageRecruitments(orgId, {
+    const res = await listManageRecruitments(orgId.value, {
       status: status.value === 'ALL' ? undefined : status.value,
       page: page.value,
       pageSize
@@ -67,7 +67,7 @@ async function load() {
   }
 }
 
-watch(() => route.query, () => { syncFromRoute(); load() })
+watch([() => route.params.organizationId, () => route.query], () => { syncFromRoute(); void load() })
 onMounted(() => { syncFromRoute(); load() })
 
 function onFilterChange() { pushRoute({}, true) }
@@ -75,15 +75,15 @@ function onPageChange(p: number) { pushRoute({ page: String(p) }) }
 function onReset() { status.value = 'ALL'; page.value = 1; router.replace({ query: {} }) }
 
 function openCreate() {
-  void router.push({ name: 'org-manage-recruitment-new', params: { organizationId: orgId } })
+  void router.push({ name: 'org-manage-recruitment-new', params: { organizationId: orgId.value } })
 }
 function openEdit(recruitment: ManageRecruitment) {
-  void router.push({ name: 'org-manage-recruitment-edit', params: { organizationId: orgId, recruitmentId: recruitment.id } })
+  void router.push({ name: 'org-manage-recruitment-edit', params: { organizationId: orgId.value, recruitmentId: recruitment.id } })
 }
 
 async function publish(recruitment: ManageRecruitment) {
   try {
-    await publishManageRecruitment(orgId, recruitment.id)
+    await publishManageRecruitment(orgId.value, recruitment.id)
     toast.add({ title: '已发布', description: '该招新已发布。', color: 'success', icon: 'i-lucide-check-circle' })
     load()
   } catch (err) {
@@ -94,7 +94,7 @@ async function publish(recruitment: ManageRecruitment) {
 
 async function cancelRecruitment(recruitment: ManageRecruitment) {
   try {
-    await cancelManageRecruitment(orgId, recruitment.id)
+    await cancelManageRecruitment(orgId.value, recruitment.id)
     toast.add({ title: '已结束', description: '该招新已停止。', color: 'neutral', icon: 'i-lucide-lock' })
     load()
   } catch (err) {
@@ -105,7 +105,7 @@ async function cancelRecruitment(recruitment: ManageRecruitment) {
 
 async function completeRecruitment(recruitment: ManageRecruitment) {
   try {
-    await completeManageRecruitment(orgId, recruitment.id)
+    await completeManageRecruitment(orgId.value, recruitment.id)
     toast.add({ title: '招新已完成', description: '该招新已结束并保留申请记录。', color: 'success', icon: 'i-lucide-check-circle' })
     load()
   } catch (err) {
@@ -116,7 +116,7 @@ async function completeRecruitment(recruitment: ManageRecruitment) {
 
 async function archiveRecruitment(recruitment: ManageRecruitment) {
   try {
-    await archiveManageRecruitment(orgId, recruitment.id)
+    await archiveManageRecruitment(orgId.value, recruitment.id)
     toast.add({ title: '已归档', description: '该招新已从日常管理列表归档。', color: 'neutral', icon: 'i-lucide-archive' })
     load()
   } catch (err) {
@@ -126,7 +126,7 @@ async function archiveRecruitment(recruitment: ManageRecruitment) {
 }
 
 function viewApplications() {
-  void router.push({ name: 'org-manage-applications', params: { organizationId: orgId } })
+  void router.push({ name: 'org-manage-applications', params: { organizationId: orgId.value } })
 }
 </script>
 

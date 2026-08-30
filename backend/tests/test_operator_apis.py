@@ -214,7 +214,10 @@ class OperatorApiTests(TestCase):
         response = client.post(
             "/api/ops/competitions", data=self.competition_payload(), content_type="application/json", HTTP_X_CSRFTOKEN=csrf
         )
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], Consultation.Status.ANSWERED)
+        self.assertEqual(response.json()["allowed_actions"], ["REPLY", "CLOSE"])
+        self.assertEqual(len(response.json()["replies"]), 1)
         competition_id = response.json()["id"]
         self.assertEqual(response.json()["publication_state"], Competition.PublicationState.DRAFT)
         self.assertNotIn("object_key", response.json()["cover"])
@@ -762,10 +765,13 @@ class OperatorApiTests(TestCase):
             content_type="application/json",
             HTTP_X_CSRFTOKEN=csrf,
         )
-        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], Consultation.Status.CLOSED)
+        self.assertEqual(response.json()["allowed_actions"], [])
         consultation.refresh_from_db()
         self.assertEqual(consultation.status, Consultation.Status.CLOSED)
         self.assertTrue(AuditLog.objects.filter(action="CONSULTATION_CLOSED", target_id=consultation.id).exists())
+        self.assertTrue(Notification.objects.filter(recipient=self.author, title="你的咨询已关闭").exists())
 
         response = client.post(
             f"/api/ops/consultations/{consultation.id}/close",
