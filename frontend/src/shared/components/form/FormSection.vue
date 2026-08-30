@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useId } from 'vue'
+
 /**
  * 表单分组区块（FormSection）。
  *
@@ -13,16 +15,21 @@ withDefaults(
   }>(),
   { description: '' }
 )
+
+const titleId = `${useId()}-title`
 </script>
 
 <template>
-  <div class="rounded-xl border border-default bg-default p-5 shadow-sm">
-    <header class="mb-4 flex items-start gap-3">
-      <span class="mt-0.5 grid size-7 place-items-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950">
-        <UIcon name="i-lucide-sparkles" class="size-4" aria-hidden="true" />
-      </span>
-      <div class="min-w-0 flex-1">
-        <h2 class="text-sm font-semibold text-highlighted">
+  <section
+    :aria-labelledby="titleId"
+    class="py-6 first:pt-0 last:pb-0"
+  >
+    <header class="border-b border-default pb-4">
+      <div class="min-w-0">
+        <h2
+          :id="titleId"
+          class="text-base font-semibold text-highlighted"
+        >
           {{ title }}
         </h2>
         <p
@@ -33,8 +40,8 @@ withDefaults(
         </p>
       </div>
     </header>
-    <div class="space-y-4">
+    <div class="mt-5 space-y-4">
       <slot />
     </div>
-  </div>
+  </section>
 </template>

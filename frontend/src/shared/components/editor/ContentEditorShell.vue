@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, useId } from 'vue'
 
 /**
  * 内容编辑预览壳（ContentEditorShell）。
@@ -17,6 +17,24 @@ withDefaults(defineProps<{ previewTitle?: string }>(), { previewTitle: '预览' 
 
 type Tab = 'edit' | 'preview'
 const tab = ref<Tab>('edit')
+const instanceId = useId()
+const editTabId = `${instanceId}-edit-tab`
+const previewTabId = `${instanceId}-preview-tab`
+const editPanelId = `${instanceId}-edit-panel`
+const previewPanelId = `${instanceId}-preview-panel`
+
+function selectTab(nextTab: Tab): void {
+  tab.value = nextTab
+}
+
+function onTabKeydown(event: KeyboardEvent): void {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+  event.preventDefault()
+  const nextTab = event.key === 'ArrowLeft' || event.key === 'Home' ? 'edit' : 'preview'
+  selectTab(nextTab)
+  const targetId = nextTab === 'edit' ? editTabId : previewTabId
+  globalThis.document?.getElementById(targetId)?.focus()
+}
 </script>
 
 <template>
@@ -29,46 +47,76 @@ const tab = ref<Tab>('edit')
         class="grid grid-cols-2 gap-1 rounded-surface border border-default bg-muted p-1"
       >
         <UButton
+          :id="editTabId"
+          type="button"
           color="neutral"
           :variant="tab === 'edit' ? 'soft' : 'ghost'"
           icon="i-lucide-pencil"
           :aria-selected="tab === 'edit'"
+          :aria-controls="editPanelId"
+          :tabindex="tab === 'edit' ? 0 : -1"
           role="tab"
           class="w-full"
-          @click="tab = 'edit'"
+          @click="selectTab('edit')"
+          @keydown="onTabKeydown"
         >
           编辑
         </UButton>
         <UButton
+          :id="previewTabId"
+          type="button"
           color="neutral"
           :variant="tab === 'preview' ? 'soft' : 'ghost'"
           icon="i-lucide-eye"
           :aria-selected="tab === 'preview'"
+          :aria-controls="previewPanelId"
+          :tabindex="tab === 'preview' ? 0 : -1"
           role="tab"
           class="w-full"
-          @click="tab = 'preview'"
+          @click="selectTab('preview')"
+          @keydown="onTabKeydown"
         >
           预览
         </UButton>
       </div>
     </div>
 
-    <!-- 表单 + 预览 主体：桌面双栏，移动收尾为单栏（由段选开关控制显示哪个） -->
-    <div class="lg:grid lg:grid-cols-2 lg:items-start lg:gap-8">
+    <div
+      data-test="content-editor-layout"
+      class="lg:grid lg:grid-cols-[minmax(0,1fr)_22.5rem] lg:items-start lg:gap-6 xl:gap-8"
+      :class="$slots.navigation ? 'xl:grid-cols-[13rem_minmax(0,1fr)_22.5rem]' : 'xl:grid-cols-[minmax(0,1fr)_22.5rem]'"
+    >
+      <aside
+        v-if="$slots.navigation"
+        data-test="content-editor-navigation"
+        class="hidden xl:block"
+        aria-label="编辑小节导航"
+      >
+        <div class="sticky top-4">
+          <slot name="navigation" />
+        </div>
+      </aside>
+
       <div
+        :id="editPanelId"
         data-test="content-editor-edit"
         class="space-y-6 lg:block"
         :class="tab === 'edit' ? 'block' : 'hidden'"
+        role="tabpanel"
+        :aria-labelledby="editTabId"
       >
         <slot name="form" />
       </div>
 
       <div
+        :id="previewPanelId"
         data-test="content-editor-preview"
-        class="rounded-surface border border-default bg-default p-4 sm:p-5 lg:block"
+        class="rounded-surface border border-default bg-default lg:sticky lg:top-4 lg:block"
         :class="tab === 'preview' ? 'block' : 'hidden'"
+        role="tabpanel"
+        :aria-labelledby="previewTabId"
       >
-        <div class="mb-3 flex items-center gap-2">
+        <div class="flex items-center gap-2 border-b border-default px-4 py-3">
           <UIcon
             name="i-lucide-eye"
             class="size-4 text-muted"
@@ -78,7 +126,12 @@ const tab = ref<Tab>('edit')
             {{ previewTitle }}
           </h3>
         </div>
-        <slot name="preview" />
+        <div
+          data-test="content-editor-preview-scroll"
+          class="max-h-[calc(100dvh-12rem)] overflow-y-auto p-4 sm:p-5"
+        >
+          <slot name="preview" />
+        </div>
       </div>
     </div>
   </div>
