@@ -6,6 +6,7 @@ import OpsShell from '@/features/ops/components/OpsShell.vue'
 import OpsOverviewPage from '@/pages/ops/OpsOverviewPage.vue'
 import OpsActivitiesPage from '@/pages/ops/OpsActivitiesPage.vue'
 import { listActivities } from '@/features/ops/api/opsActivityApi'
+import type { OpsActivity } from '@/features/ops/api/opsActivityApi'
 import { listAnnouncements } from '@/features/ops/api/opsAnnouncementApi'
 import {
   getDynamicsStats,
@@ -94,8 +95,18 @@ describe('FE-090 平台运营外壳', () => {
   })
 
   it('校园动态管理：活动/公告独立 tab + 新建内容', async () => {
+    const operatorActivities: OpsActivity[] = dynamicsActivities.map(activity => ({
+      ...activity,
+      publicationState: 'PUBLISHED',
+      cover: { id: null, src: activity.cover.src, alt: activity.cover.alt },
+      organizerOrganizationId: null,
+      publishedAt: activity.startAt,
+      createdAt: null,
+      updatedAt: null,
+      allowedActions: ['EDIT', 'ARCHIVE', 'CANCEL']
+    }))
     vi.mocked(listActivities).mockResolvedValue({
-      items: dynamicsActivities,
+      items: operatorActivities,
       total: dynamicsActivities.length,
       page: 1
     })

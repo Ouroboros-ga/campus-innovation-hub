@@ -422,12 +422,13 @@ async function onImport() {
                 variant="soft"
                 size="xs"
               >
-                {{ item.publicationState==='PUBLISHED'?'已发布':item.publicationState==='DRAFT'?'草稿':'已归档' }}
+                {{ item.publicationState==='PUBLISHED'?'已发布':item.publicationState==='DRAFT'?'草稿':item.publicationState==='CANCELLED'?'已取消':'已归档' }}
               </UBadge>
               <span class="text-xs text-muted">{{ formatCompactDate(item.registrationEndAt) }}</span>
             </div>
             <div class="flex shrink-0 items-center gap-1">
               <UButton
+                v-if="item.allowedActions.includes('EDIT')"
                 size="xs"
                 color="neutral"
                 variant="soft"
@@ -445,8 +446,8 @@ async function onImport() {
               </UButton>
               <UDropdownMenu
                 :items="[
-                  ...(item.publicationState==='DRAFT' ? [{ label: '删除草稿', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => onDelete(item) }] : []),
-                  ...(item.publicationState==='PUBLISHED' || item.publicationState==='CANCELLED' ? [{ label: '归档', icon: 'i-lucide-archive', onSelect: () => onArchive(item) }] : []),
+                  ...(item.allowedActions.includes('DELETE_DRAFT') ? [{ label: '删除草稿', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => onDelete(item) }] : []),
+                  ...(item.allowedActions.includes('ARCHIVE') ? [{ label: '归档', icon: 'i-lucide-archive', onSelect: () => onArchive(item) }] : []),
                   ...(item.publicationState==='ARCHIVED' ? [{ label: '已归档', icon: 'i-lucide-archive', disabled: true }] : [])
                 ]"
               >

@@ -2,14 +2,12 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import ActivityEditorModal from '@/features/ops/components/ActivityEditorModal.vue'
 import PublishDynamicsModal from '@/features/ops/components/PublishDynamicsModal.vue'
-import { exportActivityRegistrations, listActivities } from '@/features/ops/api/opsActivityApi'
+import { exportActivityRegistrations, listActivities, type OpsActivity } from '@/features/ops/api/opsActivityApi'
 import { listAnnouncements } from '@/features/ops/api/opsAnnouncementApi'
 import type { OpsAnnouncement } from '@/features/ops/announcements/types'
 import { getDynamicsStats } from '@/features/ops/api/opsOverviewApi'
 import type { DynamicsStats } from '@/features/ops/api/opsOverviewApi'
-import type { DynamicsActivity } from '@/features/dynamics/types'
 import { formatCompactDate } from '@/shared/lib/date'
 import { useToast } from '@nuxt/ui/composables'
 import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
@@ -21,7 +19,7 @@ const rawTab = route.query.tab as string | undefined
 const tab = ref<'all' | 'activities' | 'announcements'>(rawTab === 'activities' || rawTab === 'announcements' ? rawTab : 'all')
 const stats = ref<DynamicsStats | null>(null)
 
-const activities = ref<DynamicsActivity[]>([])
+const activities = ref<OpsActivity[]>([])
 const announcements = ref<OpsAnnouncement[]>([])
 const loading = ref(false)
 const error = ref('')
@@ -38,9 +36,6 @@ const announcementScope = ref((route.query.publisher_scope as string) ?? 'ALL')
 const announcementStatus = ref((route.query.announcement_status as string) ?? 'ALL')
 
 const publishOpen = ref(false)
-const activityEditorOpen = ref(false)
-const editingActivity = ref<DynamicsActivity | null>(null)
-const syncAnnouncement = ref(false)
 
 function syncFromRoute() {
   const t = route.query.tab as string | undefined
@@ -89,7 +84,7 @@ async function load() {
             page: activityPage.value,
             pageSize
           })
-        : Promise.resolve({ items: [] as DynamicsActivity[], total: 0, page: 1 }),
+        : Promise.resolve({ items: [] as OpsActivity[], total: 0, page: 1 }),
       (tab.value === 'all' || tab.value === 'announcements')
         ? listAnnouncements({
             q: query.value || undefined,
@@ -138,16 +133,20 @@ function onPublishSelect(type: 'ACTIVITY' | 'ANNOUNCEMENT' | 'BOTH') {
   if (type === 'ANNOUNCEMENT') {
     router.push({ name: 'ops-announcement-new' })
   } else {
-    editingActivity.value = null
-    syncAnnouncement.value = type === 'BOTH'
-    activityEditorOpen.value = true
+    router.push({
+      name: 'ops-activity-new',
+      query: type === 'BOTH' ? { withAnnouncement: '1' } : undefined
+    })
   }
 }
-function editActivity(a: DynamicsActivity) { editingActivity.value = a; syncAnnouncement.value = false; activityEditorOpen.value = true }
+function editActivity(a: OpsActivity) { router.push({ name: 'ops-activity-edit', params: { id: a.id } }) }
 function editAnnouncement(a: OpsAnnouncement) { router.push({ name: 'ops-announcement-edit', params: { id: a.id } }) }
 const toast = useToast()
-async function onExport(a: DynamicsActivity) {
+async function onExport(a: OpsActivity) {
   try { await exportActivityRegistrations(a.id); toast.add({ title: '已开始下载', color: 'success' }) } catch (e) { toast.add({ title: e instanceof Error ? e.message : '导出失败', color: 'error' }) }
+}
+function activityStatusLabel(state: OpsActivity['publicationState']): string {
+  return state === 'PUBLISHED' ? '已发布' : state === 'DRAFT' ? '草稿' : state === 'CANCELLED' ? '已取消' : '已归档'
 }
 
 const activityTypeOptions = [
@@ -409,7 +408,7 @@ const scopeOptions = [
                     :color="a.publicationState==='PUBLISHED'?'success':a.publicationState==='DRAFT'?'warning':'neutral'"
                     variant="soft"
                   >
-                    {{ a.publicationState==='PUBLISHED'?'已发布':a.publicationState==='DRAFT'?'草稿':'已归档' }}
+                    {{ activityStatusLabel(a.publicationState) }}
                   </UBadge>
                 </td>
                 <td class="px-3 py-2 text-xs text-muted">
@@ -418,6 +417,7 @@ const scopeOptions = [
                 <td class="px-3 py-2">
                   <div class="flex gap-1">
                     <UButton
+                      v-if="a.allowedActions.includes('EDIT')"
                       size="xs"
                       variant="ghost"
                       color="neutral"
@@ -473,12 +473,12 @@ const scopeOptions = [
                 <p class="truncate text-xs text-muted">{{ a.location }}</p>
                 <div class="mt-1 flex items-center gap-1.5">
                   <UBadge size="xs" variant="soft" color="success">活动</UBadge>
-                  <UBadge size="xs" :color="a.publicationState==='PUBLISHED'?'success':a.publicationState==='DRAFT'?'warning':'neutral'" variant="soft">{{ a.publicationState==='PUBLISHED'?'已发布':a.publicationState==='DRAFT'?'草稿':'已归档' }}</UBadge>
+                  <UBadge size="xs" :color="a.publicationState==='PUBLISHED'?'success':a.publicationState==='DRAFT'?'warning':'neutral'" variant="soft">{{ activityStatusLabel(a.publicationState) }}</UBadge>
                 </div>
               </div>
             </div>
             <div class="mt-3 flex gap-1">
-              <UButton size="xs" variant="ghost" color="neutral" @click="editActivity(a)">编辑</UButton>
+              <UButton v-if="a.allowedActions.includes('EDIT')" size="xs" variant="ghost" color="neutral" @click="editActivity(a)">编辑</UButton>
               <UButton size="xs" variant="ghost" color="neutral" :to="a.detailPath">预览</UButton>
               <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-download" @click="onExport(a)">导出</UButton>
             </div>
@@ -652,13 +652,6 @@ const scopeOptions = [
       :open="publishOpen"
       @update:open="publishOpen=$event"
       @select="onPublishSelect"
-    />
-    <ActivityEditorModal
-      :open="activityEditorOpen"
-      :activity="editingActivity"
-      :sync-announcement="syncAnnouncement"
-      @update:open="activityEditorOpen=$event"
-      @saved="load"
     />
   </div>
 </template>

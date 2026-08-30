@@ -310,6 +310,18 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '校园动态管理' }
           },
           {
+            path: 'activities/new',
+            name: 'ops-activity-new',
+            component: () => import('@/pages/ops/ActivityEditorPage.vue'),
+            meta: { title: '新建活动' }
+          },
+          {
+            path: 'activities/:id/edit',
+            name: 'ops-activity-edit',
+            component: () => import('@/pages/ops/ActivityEditorPage.vue'),
+            meta: { title: '编辑活动' }
+          },
+          {
             path: 'announcements/new',
             name: 'ops-announcement-new',
             component: () => import('@/pages/ops/AnnouncementEditorPage.vue'),

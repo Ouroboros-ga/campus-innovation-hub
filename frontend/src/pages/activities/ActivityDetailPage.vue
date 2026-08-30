@@ -11,7 +11,6 @@ import {
   registrationStateLabel
 } from '@/shared/lib/domain-labels'
 
-import ActivityEditorModal from '@/features/ops/components/ActivityEditorModal.vue'
 import DynamicsDetailSection from '@/features/dynamics/components/DynamicsDetailSection.vue'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -51,7 +50,6 @@ const now = computed(() => new Date())
 
 /** 仅具备平台内容管理权限（operator / superadmin）时显示编辑入口（UX 判断，后端为权威）。 */
 const canEdit = computed(() => auth.isOperator)
-const editorOpen = ref(false)
 
 async function load() {
   loading.value = true
@@ -196,7 +194,7 @@ const relatedAnnouncements = computed(() =>
             variant="soft"
             icon="i-lucide-pencil"
             class="ml-auto"
-            @click="editorOpen = true"
+            :to="{ name: 'ops-activity-edit', params: { id: activity.id } }"
           >
             编辑
           </UButton>
@@ -384,11 +382,5 @@ const relatedAnnouncements = computed(() =>
       </div>
     </div>
 
-    <ActivityEditorModal
-      :open="editorOpen"
-      :activity="activity"
-      @update:open="editorOpen = $event"
-      @saved="load"
-    />
   </section>
 </template>
