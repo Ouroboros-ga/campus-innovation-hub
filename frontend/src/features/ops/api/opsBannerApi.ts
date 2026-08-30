@@ -1,4 +1,5 @@
 import { http } from '@/shared/http/client'
+import { uploadImage } from '@/shared/http/media'
 
 interface BannerDto {
   id: string
@@ -86,4 +87,9 @@ export async function patchOpsBanner(id: string, payload: Partial<{ title: strin
 export async function createOpsBanner(payload: { title: string; subtitle?: string | null; category_label?: string | null; image_asset_id: string; alt_text?: string | null; link_type: string; internal_path?: string | null; external_url?: string | null; start_at?: string | null; end_at?: string | null; is_active: boolean; sort_order: number }) {
   const res = await http.post<BannerDto>('/ops/banners', payload)
   return toOpsBanner(res as unknown as BannerDto)
+}
+
+/** Banner 图片上传统一收敛在 feature API，页面不直接访问 shared HTTP。 */
+export function uploadOpsBannerImage(file: File) {
+  return uploadImage(file, 'IMAGE')
 }

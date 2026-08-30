@@ -34,5 +34,16 @@ export default tseslint.config(
     rules: {
       'no-undef': 'off'
     }
+  },
+  {
+    files: ['src/pages/**/*.{ts,vue}'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['@/shared/http/client'],
+          message: '页面只能组合 feature/composable，HTTP 调用必须位于 feature API 模块。'
+        }]
+      }]
+    }
   }
 )

@@ -2,10 +2,9 @@
 import { onMounted, reactive, ref } from 'vue'
 
 import { getCompetitionHealth } from '@/features/ops/api/opsOverviewApi'
-import { createOpsBanner, listOpsBanners, patchOpsBanner } from '@/features/ops/api/opsBannerApi'
+import { createOpsBanner, listOpsBanners, patchOpsBanner, uploadOpsBannerImage } from '@/features/ops/api/opsBannerApi'
 import type { OpsBanner } from '@/features/ops/api/opsBannerApi'
-import { http } from '@/shared/http/client'
-import { uploadImage } from '@/shared/http/media'
+import { getOpsSystemHealth } from '@/features/ops/system/opsSystemApi'
 import type { FieldErrors } from '@/shared/http/types'
 import { firstFieldErrors } from '@/shared/lib/form-errors'
 
@@ -66,14 +65,7 @@ const systemHealthLoading = ref(false)
 async function loadSystemHealth() {
   systemHealthLoading.value = true
   try {
-    const [a, b] = await Promise.allSettled([
-      http.get<unknown>('/health').then(() => 'ok'),
-      http.get<unknown>('/ready').then(() => 'ready')
-    ])
-    systemHealth.value = {
-      api: a.status === 'fulfilled' ? String(a.value) : 'error',
-      db: b.status === 'fulfilled' ? String(b.value) : 'error'
-    }
+    systemHealth.value = await getOpsSystemHealth()
   } catch {
     systemHealth.value = { api: 'error', db: 'error' }
   } finally { systemHealthLoading.value = false }
@@ -113,7 +105,7 @@ async function onEditFileChange(e: Event) {
   if (!file) return
   uploading.value = true
   try {
-    const res = await uploadImage(file, 'IMAGE')
+    const res = await uploadOpsBannerImage(file)
     form.image_asset_id = res.id
     toast.value = { show: true, msg: '图片已上传，保存后生效', color: 'success' }
   } catch (err: unknown) {
@@ -189,7 +181,7 @@ async function onCreateFileChange(e: Event) {
   if (!file) return
   uploading.value = true
   try {
-    const res = await uploadImage(file, 'IMAGE')
+    const res = await uploadOpsBannerImage(file)
     createForm.image_asset_id = res.id
     toast.value = { show: true, msg: '图片已上传', color: 'success' }
   } catch (err: unknown) {
@@ -809,5 +801,4 @@ onMounted(async () => {
     </div>
   </div>
 </template>
-
 

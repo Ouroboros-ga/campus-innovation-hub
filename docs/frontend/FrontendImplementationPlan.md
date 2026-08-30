@@ -1750,6 +1750,19 @@ dist/
 
 ---
 
+# 运营编辑工作台落地记录（2026-08-30）
+
+已完成 `docs/superpowers/plans/2026-08-29-operations-editor-workbench-deep-cleanup.md` 的编辑底座、发布型内容、组织招新与咨询答疑切片：
+
+- 共享 `EditorTaskShell`、`useEditorTask`、字段错误映射和离开保护；竞赛、活动、公告、指南、FAQ、站点文档、组织资料与招新使用领域 Draft/API，不使用万能 schema form。
+- 发布型内容通过 `publish` create intent 原子创建发布；列表/编辑页按后端 `allowed_actions` 改善 UX，PUBLISHED 保存会立即生效并保留 audit。
+- 咨询使用运营 DTO、队列与完整正式回复历史；回复 append-only，`CLOSED` 后禁止继续回复。
+- 页面不再直接 import `@/shared/http/client`；ESLint 已建立该边界，HTTP 仅在 feature API 内调用。
+
+验证基线：`pnpm check`、相关 Vitest、远程 PostgreSQL 临时测试库中的 Django 运营 API 测试。完整线上验收与实际发布 SHA 记录在 `docs/frontend/reviews/operations-editor-workbench-v1.md`。
+
+---
+
 # Codex 任务模板（Codex Task Template）
 
 将此模板用于实际的 coding agent 任务分配。

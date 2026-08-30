@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useToast } from '@nuxt/ui/composables'
 
 import AccountSubPage from '@/features/account/components/AccountSubPage.vue'
-import { http } from '@/shared/http/client'
+import { getAccountProfile, updateAccountProfile } from '@/features/account/api/accountProfileApi'
 import { AppError } from '@/shared/http/types'
 import { useAuthStore } from '@/stores/auth'
 
@@ -35,25 +35,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const data = await http.get<{
-      real_name: string
-      identity_type: string
-      student_no: string | null
-      employee_no: string | null
-      nickname: string | null
-      public_name: string | null
-      major: string | null
-      grade: number | null
-      bio: string | null
-      skills: string[]
-      department: string | null
-      academic_title: string | null
-      public_email: string | null
-      office_location: string | null
-      research_interests: string[]
-      class_name: string | null
-      avatar: unknown
-    }>('/me/profile')
+    const data = await getAccountProfile()
     realName.value = data.real_name ?? ''
     nickname.value = data.nickname ?? ''
     major.value = data.major ?? ''
@@ -122,7 +104,7 @@ async function save() {
   if (isTeacher.value && 'research_interests' in payload) filtered.research_interests = payload.research_interests
   if (!isTeacher.value && 'skills' in payload) filtered.skills = payload.skills
   try {
-    await http.patch('/me/profile', filtered)
+    await updateAccountProfile(filtered)
     toast.add({
       title: '已保存',
       description: '个人资料已更新。',

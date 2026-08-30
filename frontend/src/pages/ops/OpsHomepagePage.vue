@@ -2,12 +2,11 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { createOpsBanner, listOpsBanners, patchOpsBanner } from '@/features/ops/api/opsBannerApi'
+import { createOpsBanner, listOpsBanners, patchOpsBanner, uploadOpsBannerImage } from '@/features/ops/api/opsBannerApi'
 import type { OpsBanner } from '@/features/ops/api/opsBannerApi'
 import { fetchTitlesByIds, getHomepageCuration, patchHomepageCuration, searchAnnouncements, searchCompetitions, searchFaqs, searchGuides } from '@/features/ops/api/opsHomepageApi'
 import type { HomepageCuration, PickerOption } from '@/features/ops/api/opsHomepageApi'
 import HomePage from '@/pages/home/HomePage.vue'
-import { uploadImage } from '@/shared/http/media'
 import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 import type { FieldErrors } from '@/shared/http/types'
 import { firstFieldErrors } from '@/shared/lib/form-errors'
@@ -201,7 +200,7 @@ async function onEditFileChange(e: Event) {
   if (!file) return
   uploading.value = true
   try {
-    const res = await uploadImage(file, 'IMAGE')
+    const res = await uploadOpsBannerImage(file)
     form.image_asset_id = res.id
     showToast('图片已上传，保存后生效')
   } catch (err: unknown) {
@@ -216,7 +215,7 @@ async function onCreateFileChange(e: Event) {
   if (!file) return
   uploading.value = true
   try {
-    const res = await uploadImage(file, 'IMAGE')
+    const res = await uploadOpsBannerImage(file)
     createForm.image_asset_id = res.id
     showToast('图片已上传')
   } catch (err: unknown) {
@@ -235,7 +234,7 @@ async function handleDropEdit(e: globalThis.DragEvent) {
   }
   uploading.value = true
   try {
-    const res = await uploadImage(file, 'IMAGE')
+    const res = await uploadOpsBannerImage(file)
     form.image_asset_id = res.id
     showToast('图片已上传，保存后生效')
   } catch (err: unknown) {
@@ -254,7 +253,7 @@ async function handleDropCreate(e: globalThis.DragEvent) {
   }
   uploading.value = true
   try {
-    const res = await uploadImage(file, 'IMAGE')
+    const res = await uploadOpsBannerImage(file)
     createForm.image_asset_id = res.id
     showToast('图片已上传')
   } catch (err: unknown) {
@@ -925,4 +924,3 @@ function openPreview(mode: 'desktop' | 'mobile' = 'desktop') {
     <div v-if="toast" class="fixed bottom-4 right-4 rounded-md border border-default bg-default px-3 py-2 text-sm shadow" :class="toast.color==='success' ? 'text-success-700' : 'text-danger-600'">{{ toast.msg }}</div>
   </div>
 </template>
-
