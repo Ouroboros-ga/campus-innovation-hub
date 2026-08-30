@@ -1,32 +1,43 @@
-import ui from '@nuxt/ui/vue-plugin'
-import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
+import { flushPromises, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import type { Component } from 'vue'
 
 import AccountOverviewPage from '@/pages/me/AccountOverviewPage.vue'
 import AccountFollowsPage from '@/pages/me/AccountFollowsPage.vue'
 import AccountApplicationsPage from '@/pages/me/AccountApplicationsPage.vue'
 import { follows, applications } from '@/features/account/lib/account'
 import { accountGames, accountApplications } from '@/mocks/fixtures/account'
+import { useAuthStore } from '@/stores/auth'
+import { mountWithAppContext } from '../utils/mountWithAppContext'
 
-const mounted: ReturnType<typeof mount>[] = []
+const mounted: VueWrapper[] = []
 
-async function mountComponent(component: unknown, pattern: string, url: string) {
-  setActivePinia(createPinia())
-  const pinia = createPinia()
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [{ path: pattern, component: component as never }]
-  })
-  await router.push(url)
-  await router.isReady()
-
-  const wrapper = mount(component as never, {
-    attachTo: document.body,
-    global: {
-      plugins: [router, ui, pinia],
-      stubs: { RouterLink: true }
+async function mountComponent(component: Component, pattern: string, url: string) {
+  const { wrapper } = await mountWithAppContext(component, {
+    initialRoute: url,
+    routes: [{ path: pattern, component }],
+    stubs: { RouterLink: true },
+    beforeMount: () => {
+      const auth = useAuthStore()
+      auth.status = 'authenticated'
+      auth.user = {
+        id: 'student-1',
+        username: 'student',
+        identity_type: 'STUDENT',
+        student_no: '20260001',
+        employee_no: null,
+        real_name: '张同学',
+        platform_role: 'USER',
+        is_superuser: false,
+        profile: {
+          nickname: '张同学',
+          major: '人工智能',
+          grade: 2023,
+          bio: '关注人工智能与科创实践',
+          skills: ['Python']
+        }
+      }
+      auth.permissions = { platform_role: 'USER', organization_memberships: [] }
     }
   })
   mounted.push(wrapper)

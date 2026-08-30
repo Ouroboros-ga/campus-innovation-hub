@@ -57,6 +57,9 @@ importers:
       eslint-plugin-vue:
         specifier: ^10.10.0
         version: 10.10.0(@typescript-eslint/parser@8.68.0(eslint@10.9.1(jiti@2.7.0))(typescript@5.9.3))(eslint@10.9.1(jiti@2.7.0))(vue-eslint-parser@10.4.1(eslint@10.9.1(jiti@2.7.0)))
+      globals:
+        specifier: ^17.11.0
+        version: 17.11.0
       happy-dom:
         specifier: ^20.8.3
         version: 20.11.6
@@ -1708,6 +1711,10 @@ packages:
     resolution: {integrity: sha512-r8hpEjiQEYlF2QU0df3dS+nxxSIreXQS1qRhMJM0Q5NDdR386C7jb7Hwwod8Fgiuex+k0GFjgft18yvxm5XoCQ==}
     engines: {node: '>=12'}
     deprecated: Glob versions prior to v9 are no longer supported
+
+  globals@17.11.0:
+    resolution: {integrity: sha512-Z2I8hM+PbJDXQDq3Icgpzv+mPdwr68iZUU9d5WW4FuXfDUQfkZaZuvjMv42/5crNyw154+9+VWXbYrUgDXbxNw==}
+    engines: {node: '>=18'}
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
@@ -4615,6 +4622,8 @@ snapshots:
       inherits: 2.0.4
       minimatch: 5.1.9
       once: 1.4.0
+
+  globals@17.11.0: {}
 
   graceful-fs@4.2.11: {}
 

@@ -1,14 +1,12 @@
-import { execFile } from 'node:child_process'
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { promisify } from 'node:util'
 
 import { afterEach, describe, expect, it } from 'vitest'
+import { build } from 'vite'
 
 const frontendRoot = path.resolve(import.meta.dirname, '../..')
 const temporaryDirectories: string[] = []
-const execFileAsync = promisify(execFile)
 
 async function readBuildText(directory: string): Promise<string> {
   const entries = await readdir(directory, { withFileTypes: true })
@@ -43,25 +41,22 @@ describe('生产路由边界', () => {
       path.join(tmpdir(), 'campus-innovation-hub-production-')
     )
     temporaryDirectories.push(outDir)
-    const pnpmCli = process.env.npm_execpath
+    const previousNodeEnv = process.env.NODE_ENV
 
-    if (!pnpmCli) {
-      throw new Error('生产构建测试需要通过 pnpm 运行')
+    process.env.NODE_ENV = 'production'
+    try {
+      await build({
+        root: frontendRoot,
+        mode: 'production',
+        build: { outDir, emptyOutDir: true }
+      })
+    } finally {
+      process.env.NODE_ENV = previousNodeEnv
     }
-
-    await execFileAsync(
-      process.execPath,
-      [pnpmCli, 'exec', 'vite', 'build', '--outDir', outDir, '--emptyOutDir'],
-      {
-        cwd: frontendRoot,
-        env: { ...process.env, NODE_ENV: 'production' },
-        maxBuffer: 5 * 1024 * 1024
-      }
-    )
 
     const buildText = await readBuildText(outDir)
 
     expect(buildText).not.toContain('/dev/design-system')
     expect(buildText).not.toContain('设计系统活体参考')
-  })
+  }, 30_000)
 })

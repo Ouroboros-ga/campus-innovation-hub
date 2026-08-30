@@ -1,7 +1,6 @@
-import ui from '@nuxt/ui/vue-plugin'
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import type { Component } from 'vue'
 
 import OrganizationDetailPage from '@/pages/organizations/OrganizationDetailPage.vue'
 import RecruitmentDetailPage from '@/pages/organizations/RecruitmentDetailPage.vue'
@@ -14,6 +13,7 @@ import {
   organizationDetails,
   recruitmentDetails
 } from '@/mocks/fixtures/organizations'
+import { mountWithAppContext } from '../utils/mountWithAppContext'
 
 vi.mock('@/features/organizations/api/organizationApi', () => ({
   getOrganization: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock('@nuxt/ui/composables', () => ({
   useToast: () => ({ add: vi.fn() })
 }))
 
-const mounted: ReturnType<typeof mount>[] = []
+const mounted: VueWrapper[] = []
 
 beforeEach(() => {
   vi.mocked(getOrganization).mockImplementation(async id => {
@@ -41,25 +41,15 @@ beforeEach(() => {
 })
 
 async function mountPage(
-  component: typeof OrganizationDetailPage | typeof RecruitmentDetailPage,
+  component: Component,
   path: string
 ) {
-  const router = createRouter({
-    history: createMemoryHistory(),
+  const { wrapper } = await mountWithAppContext(component, {
+    initialRoute: path,
     routes
-  })
-  await router.push(path)
-  await router.isReady()
-
-  const wrapper = mount(component, {
-    attachTo: document.body,
-    global: {
-      plugins: [router, ui]
-    }
   })
   mounted.push(wrapper)
   await flushPromises()
-  await wrapper.vm.$nextTick()
   return wrapper
 }
 
@@ -85,16 +75,16 @@ describe('FE-041 组织详情页（FE-103 API 驱动）', () => {
     expect(wrapper.text()).toContain('机器学习')
     expect(wrapper.text()).toContain('指导老师')
     expect(wrapper.text()).toContain('负责人')
-    expect(wrapper.text()).toContain('公开联系方式')
+    expect(wrapper.text()).toContain('联系与入群')
     expect(wrapper.text()).toContain('张同学')
     // 近期活动（关联真实活动，标题以 fixtures 为准）
     expect(wrapper.text()).toContain('近期活动')
     expect(wrapper.text()).toContain('AI 前沿技术分享会（第 4 期）')
-    // 当前招新（含岗位 + 申请加入）
+    // 当前招新（含岗位 + 入群 / 在线申请入口）
     expect(wrapper.text()).toContain('当前招新')
     expect(wrapper.text()).toContain('人工智能协会 2026 秋季招新')
     expect(wrapper.text()).toContain('机器学习方向')
-    expect(wrapper.text()).toContain('申请加入')
+    expect(wrapper.text()).toContain('在线申请（试点）')
   })
 
   it('未知组织显示未找到', async () => {
@@ -115,7 +105,7 @@ describe('FE-042 招新详情页（FE-103 API 驱动）', () => {
     expect(wrapper.text()).toContain('招新中')
     expect(wrapper.text()).toContain('机器学习方向')
     expect(wrapper.text()).toContain('招 12 人')
-    expect(wrapper.text()).toContain('申请加入')
+    expect(wrapper.text()).toContain('申请此岗位')
     expect(wrapper.text()).toContain('查看组织主页')
   })
 

@@ -1,16 +1,19 @@
-import ui from '@nuxt/ui/vue-plugin'
-import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import { flushPromises, type VueWrapper } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Component } from 'vue'
 
 import OpsShell from '@/features/ops/components/OpsShell.vue'
 import OpsOverviewPage from '@/pages/ops/OpsOverviewPage.vue'
 import OpsActivitiesPage from '@/pages/ops/OpsActivitiesPage.vue'
 import { listActivities } from '@/features/ops/api/opsActivityApi'
 import { listAnnouncements } from '@/features/ops/api/opsAnnouncementApi'
-import { listCompetitions } from '@/features/ops/api/opsCompetitionApi'
-import { listConsultations } from '@/features/ops/api/opsConsultationApi'
+import {
+  getDynamicsStats,
+  getRecentDrafts,
+  getWorkbenchStats
+} from '@/features/ops/api/opsOverviewApi'
 import { dynamicsActivities, dynamicsAnnouncements } from '@/mocks/fixtures/dynamics'
+import { mountWithAppContext } from '../utils/mountWithAppContext'
 
 vi.mock('@/features/ops/api/opsActivityApi', () => ({
   listActivities: vi.fn()
@@ -18,37 +21,45 @@ vi.mock('@/features/ops/api/opsActivityApi', () => ({
 vi.mock('@/features/ops/api/opsAnnouncementApi', () => ({
   listAnnouncements: vi.fn()
 }))
-vi.mock('@/features/ops/api/opsCompetitionApi', () => ({
-  listCompetitions: vi.fn()
-}))
-vi.mock('@/features/ops/api/opsConsultationApi', () => ({
-  listConsultations: vi.fn()
-}))
 vi.mock('@/features/ops/api/opsGuideApi', () => ({
   listGuides: vi.fn()
 }))
+vi.mock('@/features/ops/api/opsOverviewApi', () => ({
+  getDynamicsStats: vi.fn(),
+  getRecentDrafts: vi.fn(),
+  getWorkbenchStats: vi.fn()
+}))
 
-const mounted: ReturnType<typeof mount>[] = []
+const mounted: VueWrapper[] = []
+
+beforeEach(() => {
+  vi.mocked(getWorkbenchStats).mockResolvedValue({
+    pending: { applications: 2, consultations: 3, pending_publish: 4, missing: 0 },
+    overview: { total: 20, published: 12, draft: 6, archived: 2 },
+    health: { missing_cover: 1, missing_official_url: 2, near_deadline: 3 }
+  })
+  vi.mocked(getRecentDrafts).mockResolvedValue({ recent: [], drafts: [] })
+  vi.mocked(getDynamicsStats).mockResolvedValue({
+    total: 8,
+    published: 5,
+    draft: 2,
+    archived: 1,
+    cancelled: 0,
+    activities: { total: 4, published: 3, draft: 1 },
+    announcements: { total: 4, published: 2, draft: 1 }
+  })
+})
 
 async function mountComponent(
-  component: unknown,
+  component: Component,
   pattern: string,
   url: string,
   meta: Record<string, unknown> = {}
 ) {
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [{ path: pattern, component: component as never, meta }]
-  })
-  await router.push(url)
-  await router.isReady()
-
-  const wrapper = mount(component as never, {
-    attachTo: document.body,
-    global: {
-      plugins: [router, ui],
-      stubs: { RouterLink: true, RouterView: true }
-    }
+  const { wrapper } = await mountWithAppContext(component, {
+    initialRoute: url,
+    routes: [{ path: pattern, component, meta }],
+    stubs: { RouterLink: true, RouterView: true }
   })
   mounted.push(wrapper)
   return wrapper
@@ -68,24 +79,20 @@ describe('FE-090 平台运营外壳', () => {
       { title: '校园动态管理' }
     )
     expect(wrapper.text()).toContain('校园动态管理')
-    for (const label of ['工作台', '竞赛管理', '校园动态管理', '咨询管理', '指南管理']) {
+    for (const label of ['工作台', '竞赛管理', '校园动态', '咨询列表', '指南管理']) {
       expect(wrapper.text()).toContain(label)
     }
   })
 
   it('工作台展示真实数据统计卡', async () => {
-    vi.mocked(listCompetitions).mockResolvedValue({ items: [], total: 0, page: 1 })
-    vi.mocked(listActivities).mockResolvedValue({ items: [], total: 0, page: 1 })
-    vi.mocked(listConsultations).mockResolvedValue({ items: [], total: 0, page: 1 })
-
     const wrapper = await mountComponent(OpsOverviewPage, '/ops', '/ops')
     await flushPromises()
-    for (const label of ['报名中的竞赛', '进行中的活动', '待回复咨询', '当前招新']) {
+    for (const label of ['待审核申请', '待回复咨询', '内容待发布', '内容待完善']) {
       expect(wrapper.text()).toContain(label)
     }
   })
 
-  it('校园动态管理：活动/公告独立 tab + 发布动态', async () => {
+  it('校园动态管理：活动/公告独立 tab + 新建内容', async () => {
     vi.mocked(listActivities).mockResolvedValue({
       items: dynamicsActivities,
       total: dynamicsActivities.length,
@@ -100,7 +107,7 @@ describe('FE-090 平台运营外壳', () => {
     const wrapper = await mountComponent(OpsActivitiesPage, '/ops/activities', '/ops/activities')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('发布动态')
+    expect(wrapper.text()).toContain('新建内容')
     expect(wrapper.text()).toContain('AI 前沿技术分享会（第 4 期）')
 
     const announcementTab = wrapper

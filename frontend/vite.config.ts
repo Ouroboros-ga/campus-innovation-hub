@@ -6,7 +6,7 @@ import ui from '@nuxt/ui/vite'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 
-import { uiTheme } from './src/shared/theme/config'
+import { uiTheme } from './src/shared/theme/config.ts'
 
 export default defineConfig({
   plugins: [

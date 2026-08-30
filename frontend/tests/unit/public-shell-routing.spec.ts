@@ -1,13 +1,70 @@
 import ui from '@nuxt/ui/vue-plugin'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import App from '@/app/App.vue'
+import { getCompetition, listCompetitions } from '@/features/competitions/api/competitionApi'
+import { getActivity, listActivities, listAnnouncements } from '@/features/dynamics/api/dynamicsApi'
+import { getHome, type HomeData } from '@/features/homepage/api/homeApi'
+import { getOrganization, getRecruitment, listOrganizations } from '@/features/organizations/api/organizationApi'
+import { listTeams } from '@/features/teams/api/teamApi'
+import { competitionDetails } from '@/mocks/fixtures/competitions-detail'
+import { competitions } from '@/mocks/fixtures/competitions'
+import { dynamicsActivities, dynamicsAnnouncements } from '@/mocks/fixtures/dynamics'
+import { organizationDetails, organizations, recruitmentDetails } from '@/mocks/fixtures/organizations'
 import { routes } from '@/router/routes'
 
+vi.mock('@/features/auth/api/authApi', () => ({
+  initCsrf: vi.fn().mockResolvedValue(undefined),
+  fetchCurrentUser: vi.fn().mockResolvedValue(null),
+  login: vi.fn(),
+  logout: vi.fn(),
+  register: vi.fn()
+}))
+vi.mock('@/features/homepage/api/homeApi', () => ({ getHome: vi.fn() }))
+vi.mock('@/features/competitions/api/competitionApi', () => ({
+  getCompetition: vi.fn(),
+  listCompetitions: vi.fn(),
+  followCompetition: vi.fn(),
+  unfollowCompetition: vi.fn()
+}))
+vi.mock('@/features/organizations/api/organizationApi', () => ({
+  getOrganization: vi.fn(),
+  getRecruitment: vi.fn(),
+  listOrganizations: vi.fn(),
+  applyToRecruitment: vi.fn(),
+  withdrawRecruitmentApplication: vi.fn()
+}))
+vi.mock('@/features/teams/api/teamApi', () => ({ listTeams: vi.fn() }))
+vi.mock('@/features/dynamics/api/dynamicsApi', () => ({
+  getActivity: vi.fn(),
+  listActivities: vi.fn(),
+  listAnnouncements: vi.fn(),
+  registerActivity: vi.fn(),
+  cancelActivityRegistration: vi.fn()
+}))
+
+const emptyHome: HomeData = {
+  banners: [], deadlines: [], featuredCompetitions: [], announcements: [],
+  featuredGuides: [], teamPosts: [], recruitingOrganizations: [], activities: [], faqs: []
+}
+
 const mountedWrappers: ReturnType<typeof mount>[] = []
+
+beforeEach(() => {
+  vi.mocked(getHome).mockResolvedValue(emptyHome)
+  vi.mocked(listCompetitions).mockResolvedValue({ items: competitions, total: competitions.length, page: 1 })
+  vi.mocked(getCompetition).mockImplementation(async id => competitionDetails[id]!)
+  vi.mocked(listOrganizations).mockResolvedValue({ items: organizations, total: organizations.length, page: 1 })
+  vi.mocked(getOrganization).mockImplementation(async id => organizationDetails.find(item => item.id === id)!)
+  vi.mocked(getRecruitment).mockImplementation(async id => recruitmentDetails.find(item => item.id === id)!)
+  vi.mocked(listTeams).mockResolvedValue({ items: [], total: 0, page: 1 })
+  vi.mocked(listActivities).mockResolvedValue({ items: dynamicsActivities, total: dynamicsActivities.length, page: 1 })
+  vi.mocked(listAnnouncements).mockResolvedValue({ items: dynamicsAnnouncements, total: dynamicsAnnouncements.length, page: 1 })
+  vi.mocked(getActivity).mockImplementation(async id => dynamicsActivities.find(item => item.id === id)!)
+})
 
 /** 设置视口宽度（px），用于驱动 `useBreakpoint` 响应式外壳的确定性测试。 */
 function setViewportWidth(width: number) {

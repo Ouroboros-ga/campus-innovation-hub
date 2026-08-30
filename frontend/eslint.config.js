@@ -1,5 +1,6 @@
 import js from '@eslint/js'
 import pluginVue from 'eslint-plugin-vue'
+import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
@@ -15,31 +16,23 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],
   {
+    files: ['src/**/*.{ts,vue}'],
+    languageOptions: {
+      globals: globals.browser
+    }
+  },
+  {
     files: ['**/*.vue'],
     languageOptions: {
-      globals: {
-        document: 'readonly',
-        window: 'readonly',
-        HTMLElement: 'readonly',
-        HTMLDivElement: 'readonly',
-        HTMLImageElement: 'readonly',
-        HTMLAnchorElement: 'readonly',
-        HTMLInputElement: 'readonly',
-        Node: 'readonly',
-        NodeListOf: 'readonly',
-        KeyboardEvent: 'readonly',
-        Event: 'readonly',
-        AbortSignal: 'readonly',
-        MutationObserver: 'readonly',
-        FileReader: 'readonly',
-        File: 'readonly'
-      },
       parserOptions: {
         parser: tseslint.parser,
         extraFileExtensions: ['.vue'],
         ecmaVersion: 'latest',
         sourceType: 'module'
       }
+    },
+    rules: {
+      'no-undef': 'off'
     }
   }
 )

@@ -1,18 +1,17 @@
-import ui from '@nuxt/ui/vue-plugin'
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
 
 import CompetitionDetailPage from '@/pages/competitions/CompetitionDetailPage.vue'
 import { routes } from '@/router/routes'
 import { getCompetition } from '@/features/competitions/api/competitionApi'
 import { competitionDetails } from '@/mocks/fixtures/competitions-detail'
+import { mountWithAppContext } from '../utils/mountWithAppContext'
 
 vi.mock('@/features/competitions/api/competitionApi', () => ({
   getCompetition: vi.fn()
 }))
 
-const mounted: ReturnType<typeof mount>[] = []
+const mounted: VueWrapper[] = []
 
 beforeEach(() => {
   vi.mocked(getCompetition).mockImplementation(async id => {
@@ -23,23 +22,13 @@ beforeEach(() => {
 })
 
 async function mountDetail(path: string) {
-  const router = createRouter({
-    history: createMemoryHistory(),
+  const { wrapper } = await mountWithAppContext(CompetitionDetailPage, {
+    initialRoute: path,
     routes
-  })
-  await router.push(path)
-  await router.isReady()
-
-  const wrapper = mount(CompetitionDetailPage, {
-    attachTo: document.body,
-    global: {
-      plugins: [router, ui]
-    }
   })
   mounted.push(wrapper)
 
   await flushPromises()
-  await wrapper.vm.$nextTick()
 
   return wrapper
 }

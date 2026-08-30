@@ -34,6 +34,7 @@
     "@vue/test-utils": "^2.4.11",
     "eslint": "^10.9.1",
     "eslint-plugin-vue": "^10.10.0",
+    "globals": "^17.11.0",
     "happy-dom": "^20.8.3",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.68.0",

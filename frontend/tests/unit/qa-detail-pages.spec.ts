@@ -1,32 +1,21 @@
-import ui from '@nuxt/ui/vue-plugin'
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, type VueWrapper } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
 import type { Component } from 'vue'
 
 import FaqFullListPage from '@/pages/qa/FaqFullListPage.vue'
 import GuideDetailPage from '@/pages/qa/GuideDetailPage.vue'
 import QuestionDetailPage from '@/pages/qa/QuestionDetailPage.vue'
 import ConsultationSubmitPage from '@/pages/qa/ConsultationSubmitPage.vue'
+import { useAuthStore } from '@/stores/auth'
+import { mountWithAppContext } from '../utils/mountWithAppContext'
 
-const mounted: ReturnType<typeof mount>[] = []
+const mounted: VueWrapper[] = []
 
 async function mountAt(pattern: string, url: string, component: Component) {
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [{ path: pattern, component }]
-  })
-  await router.push(url)
-  await router.isReady()
-
-  const wrapper = mount(component, {
-    attachTo: document.body,
-    global: {
-      plugins: [router, ui],
-      stubs: {
-        RouterLink: true
-      }
-    }
+  const { wrapper } = await mountWithAppContext(component, {
+    initialRoute: url,
+    routes: [{ path: pattern, component }],
+    stubs: { RouterLink: true }
   })
   mounted.push(wrapper)
   return wrapper
@@ -115,6 +104,26 @@ describe('咨询详情 / 列表 / 表单页', () => {
 
   it('提交咨询校验必填字段', async () => {
     const wrapper = await mountAt('/qa/submit', '/qa/submit', ConsultationSubmitPage)
+    const auth = useAuthStore()
+    auth.status = 'authenticated'
+    auth.user = {
+      id: 'student-1',
+      username: 'student',
+      identity_type: 'STUDENT',
+      student_no: '20260001',
+      employee_no: null,
+      real_name: '测试学生',
+      platform_role: 'USER',
+      is_superuser: false,
+      profile: {
+        nickname: '测试学生',
+        major: '人工智能',
+        grade: 2,
+        bio: '',
+        skills: []
+      }
+    }
+    auth.permissions = { platform_role: 'USER', organization_memberships: [] }
 
     const submitButton = wrapper
       .findAll('button')

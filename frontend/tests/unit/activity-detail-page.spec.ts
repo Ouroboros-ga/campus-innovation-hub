@@ -23,6 +23,7 @@ vi.mock('@/features/dynamics/api/dynamicsApi', () => ({
 const mounted: ReturnType<typeof mount>[] = []
 
 beforeEach(() => {
+  vi.setSystemTime(new Date('2026-08-25T12:00:00+08:00'))
   vi.mocked(getActivity).mockImplementation(async id => {
     const activity = dynamicsActivities.find(item => item.id === id)
     if (!activity) throw new Error('not found')
@@ -56,6 +57,7 @@ async function mountPage(activityId: string) {
 }
 
 afterEach(() => {
+  vi.useRealTimers()
   mounted.splice(0).forEach(wrapper => wrapper.unmount())
   document.body.innerHTML = ''
 })

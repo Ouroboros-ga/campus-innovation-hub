@@ -1,7 +1,5 @@
-import ui from '@nuxt/ui/vue-plugin'
-import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import { flushPromises, type VueWrapper } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import OrgManageShell from '@/features/organizations/components/OrgManageShell.vue'
 import OrgApplicationsPage from '@/pages/manage/OrgApplicationsPage.vue'
@@ -13,23 +11,51 @@ import {
   setRecruitmentState,
   validateRecruitEditor
 } from '@/features/organizations/lib/orgManagement'
+import {
+  acceptManageApplication,
+  listManageApplications,
+  rejectManageApplication
+} from '@/features/organizations/api/orgManageApi'
+import { mountWithAppContext } from '../utils/mountWithAppContext'
 
-const mounted: ReturnType<typeof mount>[] = []
+vi.mock('@/features/organizations/api/orgManageApi', () => ({
+  acceptManageApplication: vi.fn(),
+  listManageApplications: vi.fn(),
+  rejectManageApplication: vi.fn()
+}))
+
+const mounted: VueWrapper[] = []
+let applicationStatus = 'PENDING'
+
+beforeEach(() => {
+  applicationStatus = 'PENDING'
+  vi.mocked(listManageApplications).mockImplementation(async () => ({
+    items: [{
+      id: 'application-1',
+      applicantName: '李同学',
+      positionName: '算法组',
+      recruitmentId: 'recruitment-1',
+      positionId: 'position-1',
+      selfIntro: '希望参与项目',
+      skills: 'Python',
+      experience: null,
+      motivation: '提升工程能力',
+      status: applicationStatus,
+      createdAt: '2026-08-20T08:00:00Z'
+    }],
+    total: 1
+  }))
+  vi.mocked(acceptManageApplication).mockImplementation(async () => {
+    applicationStatus = 'ACCEPTED'
+  })
+  vi.mocked(rejectManageApplication).mockResolvedValue(undefined)
+})
 
 async function mountComponent(component: unknown, pattern: string, url: string) {
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [{ path: pattern, component: component as never }]
-  })
-  await router.push(url)
-  await router.isReady()
-
-  const wrapper = mount(component as never, {
-    attachTo: document.body,
-    global: {
-      plugins: [router, ui],
-      stubs: { RouterLink: true, RouterView: true }
-    }
+  const { wrapper } = await mountWithAppContext(component as never, {
+    initialRoute: url,
+    routes: [{ path: pattern, component: component as never }],
+    stubs: { RouterLink: true, RouterView: true }
   })
   mounted.push(wrapper)
   return wrapper
@@ -111,6 +137,7 @@ describe('FE-080 组织管理', () => {
       '/manage/organizations/:organizationId',
       '/manage/organizations/ai-union'
     )
+    await flushPromises()
     expect(wrapper.text()).toContain('待处理')
 
     const acceptButton = wrapper

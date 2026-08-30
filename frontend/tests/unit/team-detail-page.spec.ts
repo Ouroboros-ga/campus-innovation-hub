@@ -1,18 +1,17 @@
-import ui from '@nuxt/ui/vue-plugin'
-import { flushPromises, mount } from '@vue/test-utils'
+import { flushPromises, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
 
 import TeamDetailPage from '@/pages/teams/TeamDetailPage.vue'
 import { routes } from '@/router/routes'
 import { getTeam } from '@/features/teams/api/teamApi'
 import { teamDetails } from '@/mocks/fixtures/teams'
+import { mountWithAppContext } from '../utils/mountWithAppContext'
 
 vi.mock('@/features/teams/api/teamApi', () => ({
   getTeam: vi.fn()
 }))
 
-const mounted: ReturnType<typeof mount>[] = []
+const mounted: VueWrapper[] = []
 
 beforeEach(() => {
   vi.mocked(getTeam).mockImplementation(async id => {
@@ -23,23 +22,13 @@ beforeEach(() => {
 })
 
 async function mountDetail(path: string) {
-  const router = createRouter({
-    history: createMemoryHistory(),
+  const { wrapper } = await mountWithAppContext(TeamDetailPage, {
+    initialRoute: path,
     routes
-  })
-  await router.push(path)
-  await router.isReady()
-
-  const wrapper = mount(TeamDetailPage, {
-    attachTo: document.body,
-    global: {
-      plugins: [router, ui]
-    }
   })
   mounted.push(wrapper)
 
   await flushPromises()
-  await wrapper.vm.$nextTick()
 
   return wrapper
 }

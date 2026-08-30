@@ -1,13 +1,42 @@
 import ui from '@nuxt/ui/vue-plugin'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 
 import App from '@/app/App.vue'
+import { getHome, type HomeData } from '@/features/homepage/api/homeApi'
+import { listTeams } from '@/features/teams/api/teamApi'
 import { routes } from '@/router/routes'
 
+vi.mock('@/features/auth/api/authApi', () => ({
+  initCsrf: vi.fn().mockResolvedValue(undefined),
+  fetchCurrentUser: vi.fn().mockResolvedValue(null),
+  login: vi.fn(),
+  logout: vi.fn(),
+  register: vi.fn()
+}))
+vi.mock('@/features/homepage/api/homeApi', () => ({ getHome: vi.fn() }))
+vi.mock('@/features/teams/api/teamApi', () => ({ listTeams: vi.fn() }))
+
+const emptyHome: HomeData = {
+  banners: [],
+  deadlines: [],
+  featuredCompetitions: [],
+  announcements: [],
+  featuredGuides: [],
+  teamPosts: [],
+  recruitingOrganizations: [],
+  activities: [],
+  faqs: []
+}
+
 const mountedWrappers: ReturnType<typeof mount>[] = []
+
+beforeEach(() => {
+  vi.mocked(getHome).mockResolvedValue(emptyHome)
+  vi.mocked(listTeams).mockResolvedValue({ items: [], total: 0, page: 1 })
+})
 
 async function mountAppAt(path: string) {
   const router = createRouter({

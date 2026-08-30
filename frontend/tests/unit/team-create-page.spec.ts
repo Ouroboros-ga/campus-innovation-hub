@@ -1,28 +1,50 @@
-import ui from '@nuxt/ui/vue-plugin'
-import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
-import { createMemoryHistory, createRouter } from 'vue-router'
+import { flushPromises, type VueWrapper } from '@vue/test-utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import TeamCreatePage from '@/pages/teams/TeamCreatePage.vue'
+import { listCompetitions } from '@/features/competitions/api/competitionApi'
+import { useAuthStore } from '@/stores/auth'
+import { mountWithAppContext } from '../utils/mountWithAppContext'
 
-const mounted: ReturnType<typeof mount>[] = []
+vi.mock('@/features/competitions/api/competitionApi', () => ({
+  listCompetitions: vi.fn()
+}))
+
+const mounted: VueWrapper[] = []
 
 async function mountPage() {
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [{ path: '/teams/create', component: TeamCreatePage }]
+  vi.mocked(listCompetitions).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1
   })
-  await router.push('/teams/create')
-  await router.isReady()
-
-  const wrapper = mount(TeamCreatePage, {
-    attachTo: document.body,
-    global: {
-      plugins: [router, ui],
-      stubs: { RouterLink: true }
-    }
+  const { wrapper } = await mountWithAppContext(TeamCreatePage, {
+    initialRoute: '/teams/create',
+    routes: [{ path: '/teams/create', component: TeamCreatePage }],
+    stubs: { RouterLink: true }
   })
   mounted.push(wrapper)
+  const auth = useAuthStore()
+  auth.status = 'authenticated'
+  auth.user = {
+    id: 'student-1',
+    username: 'student',
+    identity_type: 'STUDENT',
+    student_no: '20260001',
+    employee_no: null,
+    real_name: '测试学生',
+    platform_role: 'USER',
+    is_superuser: false,
+    profile: {
+      nickname: '测试学生',
+      major: '人工智能',
+      grade: 2,
+      bio: '',
+      skills: []
+    }
+  }
+  auth.permissions = { platform_role: 'USER', organization_memberships: [] }
+  await flushPromises()
   return wrapper
 }
 
