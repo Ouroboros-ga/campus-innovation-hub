@@ -4,7 +4,7 @@ import { consultationCategoryLabel, consultationStatusLabel, consultationVisibil
 import RichContent from '@/shared/components/reader/RichContent.vue'
 import { formatDateTimeCompact } from '@/shared/lib/date'
 
-const props = withDefaults(defineProps<{ consultation: Detail | null; loading?: boolean; error?: string | null; actionError?: string | null; actionPending?: boolean }>(), { loading: false, error: null, actionError: null, actionPending: false })
+withDefaults(defineProps<{ consultation: Detail | null; loading?: boolean; error?: string | null; actionError?: string | null; actionPending?: boolean }>(), { loading: false, error: null, actionError: null, actionPending: false })
 const emit = defineEmits<{ retry: []; reply: [bodyMd: string]; close: [] }>()
 </script>
 
