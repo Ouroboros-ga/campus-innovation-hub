@@ -33,6 +33,12 @@
 - 新 migration 仅包含可空 `published_at` 字段和竞赛分类 metadata；执行前仍必须备份生产 PostgreSQL 并在实际可达服务器执行 migration plan。
 - 2026-08-30 发布阶段服务器 SSH banner 与 `https://zsitai.xyz/api/health` 均连续连接超时；因此尚未执行备份、生产 migration、`current` symlink 切换、service restart 或线上交互验收。
 
+## 未完成的计划范围
+
+- Task 9 的五个既有队列页面尚未全部迁移到 `ManagementPageHeader`、`ManagementFilterBar`、`ManagementState`；咨询队列已采用该结构，但招新申请、组织申请、组队、活动、组织列表仍保留历史页面编排。
+- Task 10 已消除 page -> shared HTTP 边界并拆出 API 模块，但 `OpsHomepagePage.vue` 与 `OpsSystemPage.vue` 尚未完成计划要求的 focused composable / form 级拆分。
+- 因此本记录只确认已提交 slice 的行为，不把整个深度整理计划表述为全部完成。
+
 ## 恢复后的验收与回滚
 
 1. 先确认 SSH、`/api/health` 与当前 release SHA 恢复可达。
