@@ -94,6 +94,7 @@ class Recruitment(UUIDTimestampedModel):
     target_grade_max = models.SmallIntegerField(null=True, blank=True)
     notes_md = models.TextField(null=True, blank=True, validators=[MaxLengthValidator(5000)])
     publication_state = models.CharField(max_length=20, choices=PublicationState.choices, default=PublicationState.DRAFT)
+    published_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     qq_group_number = models.CharField(max_length=30, null=True, blank=True)
     qq_group_qr_asset = models.ForeignKey(

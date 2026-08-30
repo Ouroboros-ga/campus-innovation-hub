@@ -12,6 +12,7 @@ from apps.audit.models import AuditLog
 from apps.media.models import MediaAsset
 from apps.notifications.models import Notification
 from apps.organizations.models import Organization, OrganizationMembership, Recruitment, RecruitmentApplication, RecruitmentPosition
+from apps.organizations.services import recruitment_allowed_actions
 
 
 class OrganizationLeaderApiTests(TestCase):
@@ -251,6 +252,107 @@ class OrganizationLeaderApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json()["code"], "INVALID_STATE")
+
+    def test_recruitment_create_intent_publishes_in_one_transaction(self) -> None:
+        """`publish: true` 与创建同事务；岗位缺失时整体回滚，不留空壳招新。"""
+
+        client, csrf_token = self.csrf_client(self.leader)
+        collection = f"/api/manage/organizations/{self.organization.id}/recruitments"
+        before = Recruitment.objects.count()
+
+        response = client.post(
+            collection,
+            data={**self.recruitment_payload(title="无岗位招新"), "positions": [], "publish": True},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json()["code"], "PUBLICATION_INCOMPLETE")
+        self.assertEqual(response.json()["fieldErrors"], {"positions": ["发布招新前至少需要一个岗位。"]})
+        self.assertEqual(Recruitment.objects.count(), before)
+
+        response = client.post(
+            collection,
+            data={**self.recruitment_payload(title="原子发布招新"), "publish": True},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["publication_state"], Recruitment.PublicationState.PUBLISHED)
+        self.assertIsNotNone(response.json()["published_at"])
+        self.assertIn("EDIT", response.json()["allowed_actions"])
+        self.assertEqual(Recruitment.objects.count(), before + 1)
+
+    def test_published_recruitment_is_editable_and_keeps_position_guards(self) -> None:
+        """已发布招新可直接改并写审计，但有申请的岗位依然删不掉。"""
+
+        client, csrf_token = self.csrf_client(self.leader)
+        collection = f"/api/manage/organizations/{self.organization.id}/recruitments"
+        response = client.post(
+            collection,
+            data={**self.recruitment_payload(title="已发布可改招新"), "publish": True},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(response.status_code, 201)
+        recruitment_id = response.json()["id"]
+        response = client.patch(
+            f"{collection}/{recruitment_id}",
+            data={"notes_md": "发布后补充说明。"},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["notes_md"], "发布后补充说明。")
+        audit = AuditLog.objects.filter(action="RECRUITMENT_UPDATED", target_id=recruitment_id).order_by("-created_at").first()
+        self.assertIsNotNone(audit)
+        self.assertTrue(audit.changes_json.get("published_edit"))
+
+        # setUp 的招新已发布且带申请：位置保护必须仍然生效。
+        response = client.patch(
+            f"{collection}/{self.recruitment.id}",
+            data={"positions": []},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "INVALID_STATE")
+
+    def test_recruitment_allowed_actions_follow_state_window_and_actor(self) -> None:
+        """COMPLETE 只在申请窗口结束后出现；已结束只剩 ARCHIVE；归档后没有任何动作。"""
+
+        client, csrf_token = self.csrf_client(self.leader)
+        collection = f"/api/manage/organizations/{self.organization.id}/recruitments"
+        response = client.post(collection, data=self.recruitment_payload(title="动作矩阵招新"), content_type="application/json", HTTP_X_CSRFTOKEN=csrf_token)
+        self.assertEqual(response.status_code, 201)
+        recruitment_id = response.json()["id"]
+        self.assertEqual(response.json()["allowed_actions"], ["EDIT", "PUBLISH"])
+
+        self.assertEqual(client.post(f"{collection}/{recruitment_id}/publish", HTTP_X_CSRFTOKEN=csrf_token).status_code, 204)
+        body = client.get(f"{collection}/{recruitment_id}").json()
+        self.assertIsNotNone(body["published_at"])
+        self.assertEqual(body["allowed_actions"], ["EDIT", "CANCEL", "ARCHIVE"])
+
+        closed = client.post(
+            collection,
+            data={**self.recruitment_payload(title="已截止招新", apply_end_at=timezone.now() - timedelta(minutes=1)), "publish": True},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(closed.status_code, 201)
+        closed_id = closed.json()["id"]
+        self.assertIn("COMPLETE", closed.json()["allowed_actions"])
+        self.assertEqual(client.post(f"{collection}/{closed_id}/complete", HTTP_X_CSRFTOKEN=csrf_token).status_code, 204)
+        self.assertEqual(client.get(f"{collection}/{closed_id}").json()["allowed_actions"], ["ARCHIVE"])
+        self.assertEqual(client.post(f"{collection}/{closed_id}/archive", HTTP_X_CSRFTOKEN=csrf_token).status_code, 204)
+        self.assertEqual(client.get(f"{collection}/{closed_id}").json()["allowed_actions"], [])
+
+        # 取消态只留归档。
+        self.assertEqual(client.post(f"{collection}/{recruitment_id}/cancel", HTTP_X_CSRFTOKEN=csrf_token).status_code, 204)
+        self.assertEqual(client.get(f"{collection}/{recruitment_id}").json()["allowed_actions"], ["ARCHIVE"])
+
+        # 同一状态下，非负责人拿不到任何动作。
+        self.assertEqual(recruitment_allowed_actions(actor=self.member, recruitment=self.recruitment), [])
 
     def test_complete_requires_closed_window_and_writes_completed_at(self) -> None:
         client, csrf_token = self.csrf_client(self.leader)

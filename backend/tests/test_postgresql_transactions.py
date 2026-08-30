@@ -139,6 +139,7 @@ class TeamApplicationConcurrencyTests(TransactionTestCase):
             level=Competition.Level.SCHOOL,
             participation_mode=Competition.ParticipationMode.TEAM,
             description_md="用于 PostgreSQL 行锁测试。",
+            publication_state=Competition.PublicationState.PUBLISHED,
             created_by=author,
             updated_by=author,
         )

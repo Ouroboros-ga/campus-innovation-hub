@@ -100,7 +100,9 @@ class RecruitmentCollectionView(OrganizationManagementAPIView):
         organization = self.get_organization(request, organization_id)
         serializer = RecruitmentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        recruitment = create_recruitment(actor=request.user, organization=organization, payload=serializer.validated_data)
+        payload = dict(serializer.validated_data)
+        publish = bool(payload.pop("publish", False))
+        recruitment = create_recruitment(actor=request.user, organization=organization, payload=payload, publish=publish)
         recruitment = management_recruitments(
             Recruitment.objects.select_related("organization").prefetch_related("positions").filter(pk=recruitment.pk)
         ).get()

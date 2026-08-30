@@ -4,20 +4,55 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.audit.services import record_audit
 from apps.competitions.models import Competition
-from apps.content.models import Announcement, FaqItem, GuideArticle, GuideCompetition, HomepageBanner, SiteDocument
-from apps.domain_errors import InvalidState, NotFound, PermissionDenied
+from apps.content.models import (
+    Announcement,
+    FaqItem,
+    GuideArticle,
+    GuideCompetition,
+    HomepageBanner,
+    PublicationState,
+    SiteDocument,
+)
+from apps.core.validation import validation_field_errors
+from apps.domain_errors import InvalidState, NotFound, PermissionDenied, PublicationIncomplete
 from apps.permissions import is_operator
 
 
 def _require_operator(actor: User) -> None:
     if not is_operator(actor):
         raise PermissionDenied
+
+
+# 发布型内容的统一可编辑状态：PUBLISHED 下可直接改且保存后立即对学生生效，但仍写 audit。
+EDITABLE_PUBLICATION_STATES = frozenset({PublicationState.DRAFT, PublicationState.PUBLISHED})
+READONLY_STATE_MESSAGE = "仅草稿与已发布可直接编辑，已取消/已归档需重新创建。"
+
+
+def _assert_editable(locked: Any) -> None:
+    if locked.publication_state not in EDITABLE_PUBLICATION_STATES:
+        raise InvalidState(READONLY_STATE_MESSAGE)
+
+
+def _publish_locked(*, actor: User, instance: Any, action: str) -> Any:
+    """推进发布状态并写审计；调用方必须已持行锁且保证当前状态为 DRAFT。"""
+
+    try:
+        instance.full_clean()
+    except DjangoValidationError as error:
+        raise PublicationIncomplete(field_errors=validation_field_errors(error)) from error
+    instance.publication_state = PublicationState.PUBLISHED
+    instance.published_at = instance.published_at or timezone.now()
+    instance.updated_by = actor
+    instance.save(update_fields=["publication_state", "published_at", "updated_by", "updated_at"])
+    record_audit(actor=actor, action=action, target=instance, changes={"publication_state": "PUBLISHED"})
+    return instance
 
 
 def _announcement_values(payload: dict[str, Any]) -> dict[str, Any]:
@@ -29,7 +64,9 @@ def _announcement_values(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 @transaction.atomic
-def create_announcement(*, actor: User, payload: dict[str, Any]) -> Announcement:
+def create_announcement(*, actor: User, payload: dict[str, Any], publish: bool = False) -> Announcement:
+    """创建与可选发布在同一事务内完成；发布校验失败整体回滚，不留半成品。"""
+
     _require_operator(actor)
     announcement = Announcement.objects.create(
         **_announcement_values(payload),
@@ -39,6 +76,8 @@ def create_announcement(*, actor: User, payload: dict[str, Any]) -> Announcement
     )
     announcement.full_clean()
     record_audit(actor=actor, action="ANNOUNCEMENT_CREATED", target=announcement, changes={"publication_state": "DRAFT"})
+    if publish:
+        announcement = _publish_locked(actor=actor, instance=announcement, action="ANNOUNCEMENT_PUBLISHED")
     return announcement
 
 
@@ -46,15 +85,22 @@ def create_announcement(*, actor: User, payload: dict[str, Any]) -> Announcement
 def update_announcement(*, actor: User, announcement: Announcement, payload: dict[str, Any]) -> Announcement:
     _require_operator(actor)
     locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
-    if locked.publication_state != Announcement.PublicationState.DRAFT:
-        raise InvalidState("已发布内容不可直接修改，请通过草稿编辑后发布。")
+    _assert_editable(locked)
     values = _announcement_values(payload)
     for field, value in values.items():
         setattr(locked, field, value)
     locked.updated_by = actor
     locked.full_clean()
     locked.save(update_fields=[*values.keys(), "updated_by", "updated_at"])
-    record_audit(actor=actor, action="ANNOUNCEMENT_UPDATED", target=locked, changes={"fields": sorted(values)})
+    record_audit(
+        actor=actor,
+        action="ANNOUNCEMENT_UPDATED",
+        target=locked,
+        changes={
+            "fields": sorted(values),
+            "published_edit": locked.publication_state == Announcement.PublicationState.PUBLISHED,
+        },
+    )
     return locked
 
 
@@ -64,13 +110,20 @@ def publish_announcement(*, actor: User, announcement: Announcement) -> Announce
     locked = Announcement.objects.select_for_update().get(pk=announcement.pk)
     if locked.publication_state != Announcement.PublicationState.DRAFT:
         raise InvalidState
-    locked.full_clean()
-    locked.publication_state = Announcement.PublicationState.PUBLISHED
-    locked.published_at = locked.published_at or timezone.now()
-    locked.updated_by = actor
-    locked.save(update_fields=["publication_state", "published_at", "updated_by", "updated_at"])
-    record_audit(actor=actor, action="ANNOUNCEMENT_PUBLISHED", target=locked, changes={"publication_state": "PUBLISHED"})
-    return locked
+    return _publish_locked(actor=actor, instance=locked, action="ANNOUNCEMENT_PUBLISHED")
+
+
+def announcement_allowed_actions(*, actor: User, announcement: Announcement) -> list[str]:
+    """管理面可执行动作；公告没有取消态，取消会对外造成已读公告消失。"""
+
+    if not is_operator(actor):
+        return []
+    state = announcement.publication_state
+    if state == Announcement.PublicationState.DRAFT:
+        return ["EDIT", "PUBLISH"]
+    if state == Announcement.PublicationState.PUBLISHED:
+        return ["EDIT", "ARCHIVE"]
+    return []
 
 
 @transaction.atomic
@@ -103,7 +156,9 @@ def _replace_guide_competitions(*, guide: GuideArticle, competition_ids: list[ob
 
 
 @transaction.atomic
-def create_guide(*, actor: User, payload: dict[str, Any]) -> GuideArticle:
+def create_guide(*, actor: User, payload: dict[str, Any], publish: bool = False) -> GuideArticle:
+    """创建与可选发布在同一事务内完成；发布校验失败整体回滚，不留半成品。"""
+
     _require_operator(actor)
     values, competition_ids = _guide_values(payload)
     guide = GuideArticle.objects.create(
@@ -113,6 +168,8 @@ def create_guide(*, actor: User, payload: dict[str, Any]) -> GuideArticle:
     if competition_ids is not None:
         _replace_guide_competitions(guide=guide, competition_ids=competition_ids)
     record_audit(actor=actor, action="GUIDE_CREATED", target=guide, changes={"publication_state": "DRAFT"})
+    if publish:
+        guide = _publish_locked(actor=actor, instance=guide, action="GUIDE_PUBLISHED")
     return guide
 
 
@@ -120,8 +177,7 @@ def create_guide(*, actor: User, payload: dict[str, Any]) -> GuideArticle:
 def update_guide(*, actor: User, guide: GuideArticle, payload: dict[str, Any]) -> GuideArticle:
     _require_operator(actor)
     locked = GuideArticle.objects.select_for_update().get(pk=guide.pk)
-    if locked.publication_state != GuideArticle.PublicationState.DRAFT:
-        raise InvalidState("已发布内容不可直接修改，请通过草稿编辑后发布。")
+    _assert_editable(locked)
     values, competition_ids = _guide_values(payload)
     for field, value in values.items():
         setattr(locked, field, value)
@@ -130,7 +186,15 @@ def update_guide(*, actor: User, guide: GuideArticle, payload: dict[str, Any]) -
     locked.save(update_fields=[*values.keys(), "updated_by", "updated_at"])
     if competition_ids is not None:
         _replace_guide_competitions(guide=locked, competition_ids=competition_ids)
-    record_audit(actor=actor, action="GUIDE_UPDATED", target=locked, changes={"fields": sorted(payload)})
+    record_audit(
+        actor=actor,
+        action="GUIDE_UPDATED",
+        target=locked,
+        changes={
+            "fields": sorted(payload),
+            "published_edit": locked.publication_state == GuideArticle.PublicationState.PUBLISHED,
+        },
+    )
     return locked
 
 
@@ -140,12 +204,20 @@ def publish_guide(*, actor: User, guide: GuideArticle) -> GuideArticle:
     locked = GuideArticle.objects.select_for_update().get(pk=guide.pk)
     if locked.publication_state != GuideArticle.PublicationState.DRAFT:
         raise InvalidState
-    locked.publication_state = GuideArticle.PublicationState.PUBLISHED
-    locked.published_at = locked.published_at or timezone.now()
-    locked.updated_by = actor
-    locked.save(update_fields=["publication_state", "published_at", "updated_by", "updated_at"])
-    record_audit(actor=actor, action="GUIDE_PUBLISHED", target=locked, changes={"publication_state": "PUBLISHED"})
-    return locked
+    return _publish_locked(actor=actor, instance=locked, action="GUIDE_PUBLISHED")
+
+
+def guide_allowed_actions(*, actor: User, guide: GuideArticle) -> list[str]:
+    """管理面可执行动作；精选只在已发布后可用。"""
+
+    if not is_operator(actor):
+        return []
+    state = guide.publication_state
+    if state == GuideArticle.PublicationState.DRAFT:
+        return ["EDIT", "PUBLISH"]
+    if state == GuideArticle.PublicationState.PUBLISHED:
+        return ["EDIT", "FEATURE", "ARCHIVE"]
+    return []
 
 
 @transaction.atomic
@@ -177,11 +249,15 @@ def set_guide_featured(*, actor: User, guide: GuideArticle, payload: dict[str, A
 
 
 @transaction.atomic
-def create_faq(*, actor: User, payload: dict[str, Any]) -> FaqItem:
+def create_faq(*, actor: User, payload: dict[str, Any], publish: bool = False) -> FaqItem:
+    """创建与可选发布在同一事务内完成；发布校验失败整体回滚，不留半成品。"""
+
     _require_operator(actor)
     faq = FaqItem.objects.create(**payload, publication_state=FaqItem.PublicationState.DRAFT, created_by=actor, updated_by=actor)
     faq.full_clean()
     record_audit(actor=actor, action="FAQ_CREATED", target=faq, changes={"publication_state": "DRAFT"})
+    if publish:
+        faq = _publish_locked(actor=actor, instance=faq, action="FAQ_PUBLISHED")
     return faq
 
 
@@ -189,14 +265,21 @@ def create_faq(*, actor: User, payload: dict[str, Any]) -> FaqItem:
 def update_faq(*, actor: User, faq: FaqItem, payload: dict[str, Any]) -> FaqItem:
     _require_operator(actor)
     locked = FaqItem.objects.select_for_update().get(pk=faq.pk)
-    if locked.publication_state != FaqItem.PublicationState.DRAFT:
-        raise InvalidState("已发布内容不可直接修改，请通过草稿编辑后发布。")
+    _assert_editable(locked)
     for field, value in payload.items():
         setattr(locked, field, value)
     locked.updated_by = actor
     locked.full_clean()
     locked.save(update_fields=[*payload.keys(), "updated_by", "updated_at"])
-    record_audit(actor=actor, action="FAQ_UPDATED", target=locked, changes={"fields": sorted(payload)})
+    record_audit(
+        actor=actor,
+        action="FAQ_UPDATED",
+        target=locked,
+        changes={
+            "fields": sorted(payload),
+            "published_edit": locked.publication_state == FaqItem.PublicationState.PUBLISHED,
+        },
+    )
     return locked
 
 
@@ -206,11 +289,20 @@ def publish_faq(*, actor: User, faq: FaqItem) -> FaqItem:
     locked = FaqItem.objects.select_for_update().get(pk=faq.pk)
     if locked.publication_state != FaqItem.PublicationState.DRAFT:
         raise InvalidState
-    locked.publication_state = FaqItem.PublicationState.PUBLISHED
-    locked.updated_by = actor
-    locked.save(update_fields=["publication_state", "updated_by", "updated_at"])
-    record_audit(actor=actor, action="FAQ_PUBLISHED", target=locked, changes={"publication_state": "PUBLISHED"})
-    return locked
+    return _publish_locked(actor=actor, instance=locked, action="FAQ_PUBLISHED")
+
+
+def faq_allowed_actions(*, actor: User, faq: FaqItem) -> list[str]:
+    """管理面可执行动作；FAQ 没有取消态，取消会让学生端的答案凭空消失。"""
+
+    if not is_operator(actor):
+        return []
+    state = faq.publication_state
+    if state == FaqItem.PublicationState.DRAFT:
+        return ["EDIT", "PUBLISH"]
+    if state == FaqItem.PublicationState.PUBLISHED:
+        return ["EDIT", "FEATURE", "ARCHIVE"]
+    return []
 
 
 @transaction.atomic
@@ -407,11 +499,15 @@ def update_banner(*, actor: User, banner: HomepageBanner, payload: dict[str, Any
 
 
 @transaction.atomic
-def create_site_document(*, actor: User, payload: dict[str, Any]) -> SiteDocument:
+def create_site_document(*, actor: User, payload: dict[str, Any], publish: bool = False) -> SiteDocument:
+    """创建与可选发布在同一事务内完成；发布校验失败整体回滚，不留半成品。"""
+
     _require_operator(actor)
     doc = SiteDocument.objects.create(**payload, publication_state=SiteDocument.PublicationState.DRAFT, created_by=actor, updated_by=actor)
     doc.full_clean()
     record_audit(actor=actor, action="SITE_DOCUMENT_CREATED", target=doc, changes={"slug": doc.slug, "publication_state": "DRAFT"})
+    if publish:
+        doc = _publish_locked(actor=actor, instance=doc, action="SITE_DOCUMENT_PUBLISHED")
     return doc
 
 
@@ -419,14 +515,21 @@ def create_site_document(*, actor: User, payload: dict[str, Any]) -> SiteDocumen
 def update_site_document(*, actor: User, document: SiteDocument, payload: dict[str, Any]) -> SiteDocument:
     _require_operator(actor)
     locked = SiteDocument.objects.select_for_update().get(pk=document.pk)
-    if locked.publication_state != SiteDocument.PublicationState.DRAFT:
-        raise InvalidState("已发布文档不可直接修改，请先归档为草稿。")
+    _assert_editable(locked)
     for field, value in payload.items():
         setattr(locked, field, value)
     locked.updated_by = actor
     locked.full_clean()
     locked.save(update_fields=[*payload.keys(), "updated_by", "updated_at"])
-    record_audit(actor=actor, action="SITE_DOCUMENT_UPDATED", target=locked, changes={"fields": sorted(payload)})
+    record_audit(
+        actor=actor,
+        action="SITE_DOCUMENT_UPDATED",
+        target=locked,
+        changes={
+            "fields": sorted(payload),
+            "published_edit": locked.publication_state == SiteDocument.PublicationState.PUBLISHED,
+        },
+    )
     return locked
 
 
@@ -436,12 +539,20 @@ def publish_site_document(*, actor: User, document: SiteDocument) -> SiteDocumen
     locked = SiteDocument.objects.select_for_update().get(pk=document.pk)
     if locked.publication_state != SiteDocument.PublicationState.DRAFT:
         raise InvalidState
-    locked.publication_state = SiteDocument.PublicationState.PUBLISHED
-    locked.published_at = locked.published_at or timezone.now()
-    locked.updated_by = actor
-    locked.save(update_fields=["publication_state", "published_at", "updated_by", "updated_at"])
-    record_audit(actor=actor, action="SITE_DOCUMENT_PUBLISHED", target=locked, changes={"publication_state": "PUBLISHED"})
-    return locked
+    return _publish_locked(actor=actor, instance=locked, action="SITE_DOCUMENT_PUBLISHED")
+
+
+def site_document_allowed_actions(*, actor: User, document: SiteDocument) -> list[str]:
+    """管理面可执行动作；站点文档没有精选态。"""
+
+    if not is_operator(actor):
+        return []
+    state = document.publication_state
+    if state == SiteDocument.PublicationState.DRAFT:
+        return ["EDIT", "PUBLISH"]
+    if state == SiteDocument.PublicationState.PUBLISHED:
+        return ["EDIT", "ARCHIVE"]
+    return []
 
 
 @transaction.atomic

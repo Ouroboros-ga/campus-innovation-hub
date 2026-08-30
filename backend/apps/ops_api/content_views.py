@@ -89,7 +89,9 @@ class AnnouncementCollectionView(OperatorAPIView):
     def post(self, request: Request) -> Response:
         serializer = AnnouncementCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        announcement = create_announcement(actor=request.user, payload=serializer.validated_data)
+        payload = dict(serializer.validated_data)
+        publish = bool(payload.pop("publish", False))
+        announcement = create_announcement(actor=request.user, payload=payload, publish=publish)
         return Response(serialize_announcement_management(announcement, request), status=201)
 
 
@@ -154,7 +156,9 @@ class GuideCollectionView(OperatorAPIView):
     def post(self, request: Request) -> Response:
         serializer = GuideCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        guide = create_guide(actor=request.user, payload=serializer.validated_data)
+        payload = dict(serializer.validated_data)
+        publish = bool(payload.pop("publish", False))
+        guide = create_guide(actor=request.user, payload=payload, publish=publish)
         guide = self._queryset().get(pk=guide.pk)
         return Response(serialize_guide_management(guide, request), status=201)
 
@@ -230,7 +234,9 @@ class FaqCollectionView(OperatorAPIView):
     def post(self, request: Request) -> Response:
         serializer = FaqCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        faq = create_faq(actor=request.user, payload=serializer.validated_data)
+        payload = dict(serializer.validated_data)
+        publish = bool(payload.pop("publish", False))
+        faq = create_faq(actor=request.user, payload=payload, publish=publish)
         return Response(serialize_faq_management(faq, request), status=201)
 
 
@@ -345,7 +351,9 @@ class SiteDocumentCollectionView(OperatorAPIView):
             from rest_framework.exceptions import ValidationError as DRFValidationError
 
             raise DRFValidationError({"slug": ["该标识已存在。"]})
-        document = create_site_document(actor=request.user, payload=serializer.validated_data)
+        payload = dict(serializer.validated_data)
+        publish = bool(payload.pop("publish", False))
+        document = create_site_document(actor=request.user, payload=payload, publish=publish)
         return Response(serialize_site_document_management(document, request), status=201)
 
 

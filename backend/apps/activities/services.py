@@ -10,6 +10,7 @@ from apps.accounts.models import User
 from apps.activities.models import Activity, Registration
 from apps.audit.services import record_audit
 from apps.content.models import Announcement
+from apps.core.validation import validation_field_errors
 from apps.domain_errors import CapacityFull, InvalidState, PermissionDenied, PublicationIncomplete, TimeWindowClosed
 from apps.notifications.models import Notification
 from apps.notifications.services import create_notification
@@ -113,8 +114,28 @@ def _require_operator(actor: User) -> None:
         raise PermissionDenied
 
 
+EDITABLE_PUBLICATION_STATES = frozenset({Activity.PublicationState.DRAFT, Activity.PublicationState.PUBLISHED})
+
+
+def _publish_activity_locked(*, actor: User, activity: Activity) -> Activity:
+    """推进发布状态并写审计；调用方必须已持行锁且保证当前状态为 DRAFT。"""
+
+    try:
+        activity.full_clean()
+    except DjangoValidationError as error:
+        raise PublicationIncomplete(field_errors=validation_field_errors(error)) from error
+    activity.publication_state = Activity.PublicationState.PUBLISHED
+    activity.published_at = activity.published_at or timezone.now()
+    activity.updated_by = actor
+    activity.save(update_fields=["publication_state", "published_at", "updated_by", "updated_at"])
+    record_audit(actor=actor, action="ACTIVITY_PUBLISHED", target=activity, changes={"publication_state": "PUBLISHED"})
+    return activity
+
+
 @transaction.atomic
-def create_activity(*, actor: User, payload: dict[str, Any]) -> Activity:
+def create_activity(*, actor: User, payload: dict[str, Any], publish: bool = False) -> Activity:
+    """创建与可选发布在同一事务内完成；发布校验失败整体回滚，不留半成品。"""
+
     _require_operator(actor)
     values = dict(payload)
     if "organizer_organization_id" in values:
@@ -128,6 +149,8 @@ def create_activity(*, actor: User, payload: dict[str, Any]) -> Activity:
         updated_by=actor,
     )
     record_audit(actor=actor, action="ACTIVITY_CREATED", target=activity, changes={"publication_state": "DRAFT"})
+    if publish:
+        activity = _publish_activity_locked(actor=actor, activity=activity)
     return activity
 
 
@@ -135,8 +158,8 @@ def create_activity(*, actor: User, payload: dict[str, Any]) -> Activity:
 def update_activity(*, actor: User, activity: Activity, payload: dict[str, Any]) -> Activity:
     _require_operator(actor)
     locked = Activity.objects.select_for_update().get(pk=activity.pk)
-    if locked.publication_state != Activity.PublicationState.DRAFT:
-        raise InvalidState("已发布内容不可直接修改，请通过草稿编辑后发布。")
+    if locked.publication_state not in EDITABLE_PUBLICATION_STATES:
+        raise InvalidState("仅草稿与已发布可直接编辑，已取消/已归档需重新创建。")
     values = dict(payload)
     if "organizer_organization_id" in values:
         values["organizer_organization_id"] = values.pop("organizer_organization_id")
@@ -151,7 +174,15 @@ def update_activity(*, actor: User, activity: Activity, payload: dict[str, Any])
     locked.updated_by = actor
     locked.full_clean()
     locked.save(update_fields=[*values.keys(), "updated_by", "updated_at"])
-    record_audit(actor=actor, action="ACTIVITY_UPDATED", target=locked, changes={"fields": sorted(values)})
+    record_audit(
+        actor=actor,
+        action="ACTIVITY_UPDATED",
+        target=locked,
+        changes={
+            "fields": sorted(values),
+            "published_edit": locked.publication_state == Activity.PublicationState.PUBLISHED,
+        },
+    )
     return locked
 
 
@@ -161,15 +192,22 @@ def publish_activity(*, actor: User, activity: Activity) -> Activity:
     locked = Activity.objects.select_for_update().get(pk=activity.pk)
     if locked.publication_state != Activity.PublicationState.DRAFT:
         raise InvalidState
-    try:
-        locked.full_clean()
-    except DjangoValidationError as error:
-        raise PublicationIncomplete from error
-    locked.publication_state = Activity.PublicationState.PUBLISHED
-    locked.updated_by = actor
-    locked.save(update_fields=["publication_state", "updated_by", "updated_at"])
-    record_audit(actor=actor, action="ACTIVITY_PUBLISHED", target=locked, changes={"publication_state": "PUBLISHED"})
-    return locked
+    return _publish_activity_locked(actor=actor, activity=locked)
+
+
+def activity_allowed_actions(*, actor: User, activity: Activity) -> list[str]:
+    """管理面可执行动作；是“当前用户 + 状态 + 数据约束”的结果，不是状态常量映射。"""
+
+    if not is_operator(actor):
+        return []
+    state = activity.publication_state
+    if state == Activity.PublicationState.DRAFT:
+        return ["EDIT", "PUBLISH"]
+    if state == Activity.PublicationState.PUBLISHED:
+        return ["EDIT", "FEATURE", "CANCEL", "ARCHIVE"]
+    if state == Activity.PublicationState.CANCELLED:
+        return ["ARCHIVE"]
+    return []
 
 
 @transaction.atomic
@@ -280,6 +318,7 @@ def create_activity_with_announcement(
     activity = Activity.objects.create(
         **activity_values,
         publication_state=state,
+        published_at=timezone.now() if publish else None,
         created_by=actor,
         updated_by=actor,
     )
@@ -294,6 +333,13 @@ def create_activity_with_announcement(
         created_by=actor,
         updated_by=actor,
     )
+    if publish:
+        # 组合发布同样要先满足发布完整性，否则整体回滚，不留“已发布但内容不全”的组合。
+        for instance in (activity, announcement):
+            try:
+                instance.full_clean()
+            except DjangoValidationError as error:
+                raise PublicationIncomplete(field_errors=validation_field_errors(error)) from error
     record_audit(actor=actor, action="ACTIVITY_CREATED", target=activity, changes={"combined": True, "publication_state": state})
     record_audit(
         actor=actor,

@@ -64,6 +64,7 @@ class Competition(UUIDTimestampedModel):
     official_notice_url = models.URLField(max_length=500, null=True, blank=True)
     cover_asset = models.ForeignKey("media.MediaAsset", null=True, blank=True, on_delete=models.SET_NULL, related_name="competition_covers")
     publication_state = models.CharField(max_length=20, choices=PublicationState.choices, default=PublicationState.DRAFT)
+    published_at = models.DateTimeField(null=True, blank=True)
     is_featured = models.BooleanField(default=False)
     featured_order = models.IntegerField(default=0)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_competitions")

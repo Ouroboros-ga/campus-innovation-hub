@@ -4,20 +4,23 @@ from __future__ import annotations
 
 from datetime import timedelta
 import json
+from unittest import mock
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import DataError
 from django.test import Client, TestCase
 from django.utils import timezone
 
 from apps.accounts.models import User, UserProfile
 from apps.activities.models import Activity, Registration
+from apps.activities.services import create_activity_with_announcement
 from apps.audit.models import AuditLog
 from apps.competitions.models import Competition
+from apps.competitions.services import competition_allowed_actions
 from apps.consultations.models import Consultation
-from apps.content.models import Announcement, FaqItem, GuideArticle, HomepageBanner
+from apps.content.models import Announcement, FaqItem, GuideArticle, HomepageBanner, SiteDocument
 from apps.media.models import MediaAsset
 from apps.notifications.models import Notification
-from apps.activities.services import create_activity_with_announcement
 
 
 class OperatorApiTests(TestCase):
@@ -137,6 +140,45 @@ class OperatorApiTests(TestCase):
             "publisher_scope": Announcement.PublisherScope.ACADEMY,
             "is_pinned": False,
         }
+
+    def guide_payload(self, *, title: str = "BE-040 指南") -> dict[str, object]:
+        return {
+            "title": title,
+            "category": GuideArticle.Category.COMPETITION,
+            "body_md": "该指南用于验证创建即发布的原子性。",
+            "competition_ids": [],
+            "is_featured": False,
+            "featured_order": 0,
+        }
+
+    def faq_payload(self, *, question: str = "如何报名竞赛？") -> dict[str, object]:
+        return {
+            "category": FaqItem.Category.COMPETITION,
+            "question": question,
+            "answer_md": "请在竞赛详情页提交报名。",
+            "sort_order": 0,
+            "is_featured": False,
+        }
+
+    def site_document_payload(self, *, slug: str = "task2-help") -> dict[str, object]:
+        return {
+            "slug": slug,
+            "title": "Task2 使用帮助",
+            "category": SiteDocument.Category.HELP,
+            "body_md": "该文档用于验证创建即发布的原子性。",
+        }
+
+    def publication_cases(self) -> tuple[tuple[str, dict[str, object], type], ...]:
+        """发布型内容的六个 collection：路径、最小合法载荷、模型类。"""
+
+        return (
+            ("/api/ops/competitions", self.competition_payload(name="原子发布竞赛"), Competition),
+            ("/api/ops/activities", self.activity_payload(title="原子发布活动"), Activity),
+            ("/api/ops/announcements", self.announcement_payload(title="原子发布公告"), Announcement),
+            ("/api/ops/guides", self.guide_payload(title="原子发布指南"), GuideArticle),
+            ("/api/ops/faq", self.faq_payload(question="原子发布 FAQ？"), FaqItem),
+            ("/api/ops/documents", self.site_document_payload(slug="task2-published"), SiteDocument),
+        )
 
     def test_permission_csrf_and_invalid_uuid_boundaries(self) -> None:
         anonymous = Client(enforce_csrf_checks=True)
@@ -269,7 +311,176 @@ class OperatorApiTests(TestCase):
             with self.subTest(path=path):
                 response = client.post(path, HTTP_X_CSRFTOKEN=csrf)
                 self.assertEqual(response.status_code, 422)
+                self.assertEqual(response.json()["code"], "PUBLICATION_INCOMPLETE")
+
+    def test_create_intent_publishes_in_one_transaction(self) -> None:
+        """`publish: true` 必须在同一事务内创建并发布，响应直接是已发布的管理详情。"""
+
+        client, csrf = self.csrf_client(self.operator)
+        for path, payload, model in self.publication_cases():
+            with self.subTest(path=path):
+                before = model.objects.count()
+                response = client.post(
+                    path, data={**payload, "publish": True}, content_type="application/json", HTTP_X_CSRFTOKEN=csrf
+                )
+                self.assertEqual(response.status_code, 201)
+                body = response.json()
+                self.assertEqual(body["publication_state"], "PUBLISHED")
+                self.assertIsNotNone(body["published_at"], f"{path} 未回填 published_at")
+                self.assertIn("EDIT", body["allowed_actions"])
+                self.assertNotIn("PUBLISH", body["allowed_actions"])
+                self.assertEqual(model.objects.count(), before + 1)
+
+                draft_payload = dict(payload)
+                if "slug" in draft_payload:
+                    draft_payload["slug"] = f"{draft_payload['slug']}-draft"
+                if path == "/api/ops/competitions":
+                    draft_payload["name"] = f"{draft_payload['name']}（草稿）"
+                response = client.post(path, data=draft_payload, content_type="application/json", HTTP_X_CSRFTOKEN=csrf)
+                self.assertEqual(response.status_code, 201)
+                self.assertEqual(response.json()["publication_state"], "DRAFT")
+                self.assertIsNone(response.json()["published_at"])
+
+    def test_failed_publish_intent_rolls_back_the_whole_creation(self) -> None:
+        """发布完整性校验失败时整体回滚，绝不留“已创建但未发布”的半成品。"""
+
+        client, csrf = self.csrf_client(self.operator)
+        for path, payload, model in self.publication_cases():
+            with self.subTest(path=path):
+                before = model.objects.count()
+                publish_error = DjangoValidationError({"title": ["发布前内容不完整。"]})
+                # 内容类草稿创建会先执行一次模型校验；第二次才是发布完整性校验。
+                side_effect = (
+                    [None, publish_error]
+                    if model in {Announcement, GuideArticle, FaqItem, SiteDocument}
+                    else publish_error
+                )
+                with mock.patch.object(
+                    model, "full_clean", side_effect=side_effect
+                ):
+                    response = client.post(
+                        path, data={**payload, "publish": True}, content_type="application/json", HTTP_X_CSRFTOKEN=csrf
+                    )
+                self.assertEqual(response.status_code, 422)
+                self.assertEqual(response.json()["code"], "PUBLICATION_INCOMPLETE")
+                self.assertEqual(response.json()["fieldErrors"], {"title": ["发布前内容不完整。"]})
+                self.assertEqual(model.objects.count(), before)
+
+    def test_published_content_accepts_patch_and_records_published_edit(self) -> None:
+        """已发布内容可直接改，保存后即时对学生生效，但必须留下审计痕迹。"""
+
+        client, csrf = self.csrf_client(self.operator)
+        cases = (
+            ("/api/ops/competitions", self.competition_payload(name="已发布可改竞赛"), {"summary": "发布后修正摘要。"}, "COMPETITION_UPDATED"),
+            ("/api/ops/activities", self.activity_payload(title="已发布可改活动"), {"speaker": "李老师"}, "ACTIVITY_UPDATED"),
+            ("/api/ops/announcements", self.announcement_payload(title="已发布可改公告"), {"summary": "发布后修正摘要。"}, "ANNOUNCEMENT_UPDATED"),
+            ("/api/ops/guides", self.guide_payload(title="已发布可改指南"), {"summary": "发布后修正摘要。"}, "GUIDE_UPDATED"),
+            ("/api/ops/faq", self.faq_payload(question="已发布可改 FAQ？"), {"answer_md": "发布后修正答案。"}, "FAQ_UPDATED"),
+            ("/api/ops/documents", self.site_document_payload(slug="task2-published-edit"), {"summary": "发布后修正摘要。"}, "SITE_DOCUMENT_UPDATED"),
+        )
+        for path, payload, patch_payload, audit_action in cases:
+            with self.subTest(path=path):
+                response = client.post(
+                    path, data={**payload, "publish": True}, content_type="application/json", HTTP_X_CSRFTOKEN=csrf
+                )
+                self.assertEqual(response.status_code, 201)
+                object_id = response.json()["id"]
+                response = client.patch(
+                    f"{path}/{object_id}", data=patch_payload, content_type="application/json", HTTP_X_CSRFTOKEN=csrf
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()["publication_state"], "PUBLISHED")
+                audit = AuditLog.objects.filter(action=audit_action, target_id=object_id).order_by("-created_at").first()
+                self.assertIsNotNone(audit)
+                self.assertTrue(audit.changes_json.get("published_edit"))
+
+    def test_cancelled_and_archived_content_reject_patch(self) -> None:
+        """CANCELLED / ARCHIVED 只读；PATCH 返回 409 而不是静默保存。"""
+
+        client, csrf = self.csrf_client(self.operator)
+        response = client.post(
+            "/api/ops/competitions",
+            data={**self.competition_payload(name="只读竞赛"), "publish": True},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(response.status_code, 201)
+        competition_id = response.json()["id"]
+        self.assertEqual(client.post(f"/api/ops/competitions/{competition_id}/cancel", HTTP_X_CSRFTOKEN=csrf).status_code, 204)
+        for state in ("CANCELLED", "ARCHIVED"):
+            with self.subTest(state=state):
+                if state == "ARCHIVED":
+                    self.assertEqual(client.post(f"/api/ops/competitions/{competition_id}/archive", HTTP_X_CSRFTOKEN=csrf).status_code, 204)
+                response = client.patch(
+                    f"/api/ops/competitions/{competition_id}",
+                    data={"summary": f"{state} 后仍尝试修改。"},
+                    content_type="application/json",
+                    HTTP_X_CSRFTOKEN=csrf,
+                )
+                self.assertEqual(response.status_code, 409)
                 self.assertEqual(response.json()["code"], "INVALID_STATE")
+
+        # 内容型没有取消态，归档后同样只读。
+        response = client.post(
+            "/api/ops/announcements",
+            data={**self.announcement_payload(title="只读公告"), "publish": True},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(response.status_code, 201)
+        announcement_id = response.json()["id"]
+        self.assertEqual(client.post(f"/api/ops/announcements/{announcement_id}/archive", HTTP_X_CSRFTOKEN=csrf).status_code, 204)
+        response = client.patch(
+            f"/api/ops/announcements/{announcement_id}",
+            data={"summary": "归档后仍尝试修改。"},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["code"], "INVALID_STATE")
+
+    def test_allowed_actions_follow_state_and_actor(self) -> None:
+        """allowed_actions 是后端按状态与数据约束算出来的，前端不得自行推断。"""
+
+        client, csrf = self.csrf_client(self.operator)
+        response = client.post(
+            "/api/ops/competitions", data=self.competition_payload(name="动作矩阵竞赛"), content_type="application/json", HTTP_X_CSRFTOKEN=csrf
+        )
+        self.assertEqual(response.status_code, 201)
+        competition_id = response.json()["id"]
+        self.assertEqual(response.json()["allowed_actions"], ["EDIT", "PUBLISH", "DELETE_DRAFT"])
+
+        superadmin_client, superadmin_csrf = self.csrf_client(self.superadmin)
+        response = superadmin_client.get(f"/api/ops/competitions/{competition_id}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["allowed_actions"], ["EDIT", "PUBLISH", "DELETE_DRAFT"])
+
+        self.assertEqual(client.post(f"/api/ops/competitions/{competition_id}/publish", HTTP_X_CSRFTOKEN=csrf).status_code, 204)
+        self.assertEqual(
+            client.get(f"/api/ops/competitions/{competition_id}").json()["allowed_actions"],
+            ["EDIT", "FEATURE", "CANCEL", "ARCHIVE"],
+        )
+        self.assertEqual(client.post(f"/api/ops/competitions/{competition_id}/cancel", HTTP_X_CSRFTOKEN=csrf).status_code, 204)
+        self.assertEqual(client.get(f"/api/ops/competitions/{competition_id}").json()["allowed_actions"], ["ARCHIVE"])
+        self.assertEqual(client.post(f"/api/ops/competitions/{competition_id}/archive", HTTP_X_CSRFTOKEN=csrf).status_code, 204)
+        self.assertEqual(client.get(f"/api/ops/competitions/{competition_id}").json()["allowed_actions"], [])
+
+        # 列表同样携带 allowed_actions，避免前端在列表页自己猜。
+        self.assertEqual(client.get("/api/ops/competitions?status=ARCHIVED").json()["results"][0]["allowed_actions"], [])
+
+        # FAQ 没有取消态：已发布只给 EDIT / FEATURE / ARCHIVE。
+        response = client.post(
+            "/api/ops/faq",
+            data={**self.faq_payload(question="动作矩阵 FAQ？"), "publish": True},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["allowed_actions"], ["EDIT", "FEATURE", "ARCHIVE"])
+
+        # 同一状态下，无运营身份的调用者拿不到任何动作。
+        competition = Competition.objects.get(pk=competition_id)
+        self.assertEqual(competition_allowed_actions(actor=self.student, competition=competition), [])
 
     def test_activity_registration_export_cancel_notification_and_lifecycle(self) -> None:
         client, csrf = self.csrf_client(self.operator)

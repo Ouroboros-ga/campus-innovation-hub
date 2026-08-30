@@ -125,9 +125,34 @@ def _replace_recruitment_positions(*, recruitment: Recruitment, positions: Seque
         )
 
 
+EDITABLE_PUBLICATION_STATES = frozenset({Recruitment.PublicationState.DRAFT, Recruitment.PublicationState.PUBLISHED})
+
+
+def _publish_recruitment_locked(*, actor: User, recruitment: Recruitment) -> Recruitment:
+    """推进发布状态并写审计；调用方必须已持行锁且保证当前状态为 DRAFT。"""
+
+    if not RecruitmentPosition.objects.filter(recruitment=recruitment).exists():
+        raise PublicationIncomplete(
+            "发布招新前至少需要一个岗位。", field_errors={"positions": ["发布招新前至少需要一个岗位。"]}
+        )
+    recruitment.publication_state = Recruitment.PublicationState.PUBLISHED
+    recruitment.published_at = recruitment.published_at or timezone.now()
+    recruitment.updated_by = actor
+    recruitment.save(update_fields=["publication_state", "published_at", "updated_by", "updated_at"])
+    record_audit(
+        actor=actor,
+        action="RECRUITMENT_PUBLISHED",
+        target=recruitment,
+        changes={"publication_state": {"from": Recruitment.PublicationState.DRAFT, "to": Recruitment.PublicationState.PUBLISHED}},
+    )
+    return recruitment
+
+
 @transaction.atomic
-def create_recruitment(*, actor: User, organization: Organization, payload: Mapping[str, object]) -> Recruitment:
-    """负责人创建 DRAFT 招新；发布状态和审计字段不接收客户端输入。"""
+def create_recruitment(
+    *, actor: User, organization: Organization, payload: Mapping[str, object], publish: bool = False
+) -> Recruitment:
+    """负责人创建招新；`publish=True` 时创建与发布在同一事务内完成，失败整体回滚。"""
 
     locked_organization = _locked_manageable_organization(actor=actor, organization_id=organization.id)
     values = dict(payload)
@@ -147,6 +172,8 @@ def create_recruitment(*, actor: User, organization: Organization, payload: Mapp
         target=recruitment,
         changes={"organization_id": str(locked_organization.id), "position_count": len(positions)},
     )
+    if publish:
+        recruitment = _publish_recruitment_locked(actor=actor, recruitment=recruitment)
     return recruitment
 
 
@@ -160,8 +187,10 @@ def update_recruitment(*, actor: User, organization: Organization, recruitment: 
     locked = Recruitment.objects.select_for_update().filter(pk=recruitment.id, organization_id=organization.id).first()
     if locked is None:
         raise NotFound("招新不存在。")
-    if locked.publication_state != Recruitment.PublicationState.DRAFT:
-        raise InvalidState("已发布内容不可直接修改，请通过草稿编辑后发布。")
+    if locked.publication_state not in EDITABLE_PUBLICATION_STATES:
+        raise InvalidState("仅草稿与已发布可直接编辑，已取消/已归档需重新创建。")
+    if locked.completed_at is not None:
+        raise InvalidState("已结束的招新不可再编辑，请先归档。")
 
     values = dict(payload)
     positions = values.pop("positions", None)
@@ -180,7 +209,10 @@ def update_recruitment(*, actor: User, organization: Organization, recruitment: 
         actor=actor,
         action="RECRUITMENT_UPDATED",
         target=locked,
-        changes={"fields": sorted(audit_fields)},
+        changes={
+            "fields": sorted(audit_fields),
+            "published_edit": locked.publication_state == Recruitment.PublicationState.PUBLISHED,
+        },
     )
     return locked
 
@@ -193,18 +225,28 @@ def publish_recruitment(*, actor: User, organization: Organization, recruitment:
         raise NotFound("招新不存在。")
     if locked.publication_state != Recruitment.PublicationState.DRAFT:
         raise InvalidState
-    if not RecruitmentPosition.objects.filter(recruitment=locked).exists():
-        raise PublicationIncomplete("发布招新前至少需要一个岗位。")
-    locked.publication_state = Recruitment.PublicationState.PUBLISHED
-    locked.updated_by = actor
-    locked.save(update_fields=["publication_state", "updated_by", "updated_at"])
-    record_audit(
-        actor=actor,
-        action="RECRUITMENT_PUBLISHED",
-        target=locked,
-        changes={"publication_state": {"from": Recruitment.PublicationState.DRAFT, "to": Recruitment.PublicationState.PUBLISHED}},
-    )
-    return locked
+    return _publish_recruitment_locked(actor=actor, recruitment=locked)
+
+
+def recruitment_allowed_actions(*, actor: User, recruitment: Recruitment) -> list[str]:
+    """管理面可执行动作；COMPLETE 只在申请窗口结束且尚未结束时出现。"""
+
+    if not can_manage_organization(actor, recruitment.organization_id):
+        return []
+    state = recruitment.publication_state
+    if state == Recruitment.PublicationState.DRAFT:
+        return ["EDIT", "PUBLISH"]
+    if state == Recruitment.PublicationState.PUBLISHED:
+        if recruitment.completed_at is not None:
+            return ["ARCHIVE"]
+        actions = ["EDIT", "CANCEL"]
+        if timezone.now() > recruitment.apply_end_at:
+            actions.append("COMPLETE")
+        actions.append("ARCHIVE")
+        return actions
+    if state == Recruitment.PublicationState.CANCELLED:
+        return ["ARCHIVE"]
+    return []
 
 
 @transaction.atomic

@@ -69,7 +69,9 @@ class ActivityCollectionView(OperatorAPIView):
     def post(self, request: Request) -> Response:
         serializer = ActivityCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        activity = create_activity(actor=request.user, payload=serializer.validated_data)
+        payload = dict(serializer.validated_data)
+        publish = bool(payload.pop("publish", False))
+        activity = create_activity(actor=request.user, payload=payload, publish=publish)
         return Response(serialize_activity_management(_activity_or_404(str(activity.id)), request), status=201)
 
 

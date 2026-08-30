@@ -1,15 +1,45 @@
 """竞赛发布状态与学生关注的事务边界。"""
 
+from typing import Any
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.audit.services import record_audit
-from typing import Any
 
 from apps.competitions.models import Competition, Follow, TimelineEvent
+from apps.core.validation import validation_field_errors
 from apps.domain_errors import AlreadyFollowed, InvalidState, NotFound, PermissionDenied, PublicationIncomplete
 from apps.permissions import is_operator
+
+EDITABLE_PUBLICATION_STATES = frozenset({Competition.PublicationState.DRAFT, Competition.PublicationState.PUBLISHED})
+
+
+def _require_operator(actor: User) -> None:
+    if not is_operator(actor):
+        raise PermissionDenied
+
+
+def _publish_competition_locked(*, actor: User, competition: Competition) -> Competition:
+    """推进发布状态并写审计；调用方必须已持行锁且保证当前状态为 DRAFT。"""
+
+    try:
+        competition.full_clean()
+    except DjangoValidationError as error:
+        raise PublicationIncomplete(field_errors=validation_field_errors(error)) from error
+    competition.publication_state = Competition.PublicationState.PUBLISHED
+    competition.published_at = competition.published_at or timezone.now()
+    competition.updated_by = actor
+    competition.save(update_fields=["publication_state", "published_at", "updated_by", "updated_at"])
+    record_audit(
+        actor=actor,
+        action="COMPETITION_PUBLISHED",
+        target=competition,
+        changes={"publication_state": {"from": Competition.PublicationState.DRAFT, "to": Competition.PublicationState.PUBLISHED}},
+    )
+    return competition
 
 
 @transaction.atomic
@@ -21,29 +51,13 @@ def publish_competition(*, actor: User, competition: Competition) -> Competition
     locked_competition = Competition.objects.select_for_update().get(pk=competition.pk)
     if locked_competition.publication_state != Competition.PublicationState.DRAFT:
         raise InvalidState
-    try:
-        locked_competition.full_clean()
-    except DjangoValidationError as error:
-        raise PublicationIncomplete from error
-    locked_competition.publication_state = Competition.PublicationState.PUBLISHED
-    locked_competition.updated_by = actor
-    locked_competition.save(update_fields=["publication_state", "updated_by", "updated_at"])
-    record_audit(
-        actor=actor,
-        action="COMPETITION_PUBLISHED",
-        target=locked_competition,
-        changes={"publication_state": {"from": Competition.PublicationState.DRAFT, "to": Competition.PublicationState.PUBLISHED}},
-    )
-    return locked_competition
-
-
-def _require_operator(actor: User) -> None:
-    if not is_operator(actor):
-        raise PermissionDenied
+    return _publish_competition_locked(actor=actor, competition=locked_competition)
 
 
 @transaction.atomic
-def create_competition(*, actor: User, payload: dict[str, Any]) -> Competition:
+def create_competition(*, actor: User, payload: dict[str, Any], publish: bool = False) -> Competition:
+    """创建与可选发布在同一事务内完成；发布校验失败整体回滚，不留半成品。"""
+
     _require_operator(actor)
     values = dict(payload)
     if "cover_asset_id" in values:
@@ -58,14 +72,31 @@ def create_competition(*, actor: User, payload: dict[str, Any]) -> Competition:
     except IntegrityError as error:
         raise InvalidState("同一届次的竞赛名称不能重复。") from error
     record_audit(actor=actor, action="COMPETITION_CREATED", target=competition, changes={"publication_state": "DRAFT"})
+    if publish:
+        competition = _publish_competition_locked(actor=actor, competition=competition)
     return competition
+
+
+def competition_allowed_actions(*, actor: User, competition: Competition) -> list[str]:
+    """管理面可执行动作；是“当前用户 + 状态 + 数据约束”的结果，不是状态常量映射。"""
+
+    if not is_operator(actor):
+        return []
+    state = competition.publication_state
+    if state == Competition.PublicationState.DRAFT:
+        return ["EDIT", "PUBLISH", "DELETE_DRAFT"]
+    if state == Competition.PublicationState.PUBLISHED:
+        return ["EDIT", "FEATURE", "CANCEL", "ARCHIVE"]
+    if state == Competition.PublicationState.CANCELLED:
+        return ["ARCHIVE"]
+    return []
 
 
 @transaction.atomic
 def update_competition(*, actor: User, competition: Competition, payload: dict[str, Any]) -> Competition:
     _require_operator(actor)
     locked = Competition.objects.select_for_update().get(pk=competition.pk)
-    if locked.publication_state not in {Competition.PublicationState.DRAFT, Competition.PublicationState.PUBLISHED}:
+    if locked.publication_state not in EDITABLE_PUBLICATION_STATES:
         raise InvalidState("仅草稿与已发布可直接编辑，已归档/已取消需重新创建。")
     values = dict(payload)
     if "cover_asset_id" in values:
@@ -79,7 +110,15 @@ def update_competition(*, actor: User, competition: Competition, payload: dict[s
         locked.save(update_fields=[*changed_fields, "updated_by", "updated_at"])
     except (DjangoValidationError, IntegrityError) as error:
         raise InvalidState("同一届次的竞赛名称不能重复。") from error
-    record_audit(actor=actor, action="COMPETITION_UPDATED", target=locked, changes={"fields": changed_fields})
+    record_audit(
+        actor=actor,
+        action="COMPETITION_UPDATED",
+        target=locked,
+        changes={
+            "fields": changed_fields,
+            "published_edit": locked.publication_state == Competition.PublicationState.PUBLISHED,
+        },
+    )
     return locked
 
 
@@ -145,8 +184,8 @@ def set_competition_featured(*, actor: User, competition: Competition, payload: 
 def create_timeline_event(*, actor: User, competition: Competition, payload: dict[str, Any]) -> TimelineEvent:
     _require_operator(actor)
     locked = Competition.objects.select_for_update().get(pk=competition.pk)
-    if locked.publication_state != Competition.PublicationState.DRAFT:
-        raise InvalidState("已发布竞赛的时间线不可修改，请先回退至草稿。")
+    if locked.publication_state not in EDITABLE_PUBLICATION_STATES:
+        raise InvalidState("仅草稿与已发布竞赛可修改时间线。")
     event = TimelineEvent.objects.create(competition=locked, **payload)
     record_audit(actor=actor, action="COMPETITION_TIMELINE_CREATED", target=event, changes={"competition_id": str(locked.id)})
     return event
@@ -156,8 +195,8 @@ def create_timeline_event(*, actor: User, competition: Competition, payload: dic
 def update_timeline_event(*, actor: User, competition: Competition, event: TimelineEvent, payload: dict[str, Any]) -> TimelineEvent:
     _require_operator(actor)
     locked_competition = Competition.objects.select_for_update().get(pk=competition.pk)
-    if locked_competition.publication_state != Competition.PublicationState.DRAFT:
-        raise InvalidState("已发布竞赛的时间线不可修改，请先回退至草稿。")
+    if locked_competition.publication_state not in EDITABLE_PUBLICATION_STATES:
+        raise InvalidState("仅草稿与已发布竞赛可修改时间线。")
     locked = TimelineEvent.objects.select_for_update().filter(pk=event.pk, competition_id=competition.id).first()
     if locked is None:
         raise NotFound("时间线节点不存在。")
@@ -173,8 +212,8 @@ def update_timeline_event(*, actor: User, competition: Competition, event: Timel
 def delete_timeline_event(*, actor: User, competition: Competition, event: TimelineEvent) -> None:
     _require_operator(actor)
     locked_competition = Competition.objects.select_for_update().get(pk=competition.pk)
-    if locked_competition.publication_state != Competition.PublicationState.DRAFT:
-        raise InvalidState("已发布竞赛的时间线不可修改，请先回退至草稿。")
+    if locked_competition.publication_state not in EDITABLE_PUBLICATION_STATES:
+        raise InvalidState("仅草稿与已发布竞赛可修改时间线。")
     locked = TimelineEvent.objects.select_for_update().filter(pk=event.pk, competition_id=competition.id).first()
     if locked is None:
         raise NotFound("时间线节点不存在。")

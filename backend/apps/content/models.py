@@ -180,6 +180,7 @@ class FaqItem(UUIDTimestampedModel):
     question = models.CharField(max_length=300)
     answer_md = models.TextField(validators=[MaxLengthValidator(20000)])
     publication_state = models.CharField(max_length=20, choices=PublicationState.choices, default=PublicationState.DRAFT)
+    published_at = models.DateTimeField(null=True, blank=True)
     sort_order = models.IntegerField(default=0)
     is_featured = models.BooleanField(default=False)
     featured_order = models.IntegerField(default=0)

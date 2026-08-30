@@ -47,6 +47,7 @@ class Activity(UUIDTimestampedModel):
     notes_md = models.TextField(null=True, blank=True, validators=[MaxLengthValidator(5000)])
     cover_asset = models.ForeignKey("media.MediaAsset", null=True, blank=True, on_delete=models.SET_NULL, related_name="activity_covers")
     publication_state = models.CharField(max_length=20, choices=PublicationState.choices, default=PublicationState.DRAFT)
+    published_at = models.DateTimeField(null=True, blank=True)
     is_featured = models.BooleanField(default=False)
     featured_order = models.IntegerField(default=0)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_activities")

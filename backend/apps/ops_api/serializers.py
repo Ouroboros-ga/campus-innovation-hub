@@ -11,9 +11,18 @@ from rest_framework import serializers
 from rest_framework.request import Request
 
 from apps.activities.models import Activity, Registration
+from apps.activities.services import activity_allowed_actions
 from apps.competitions.models import Competition, TimelineEvent
+from apps.competitions.services import competition_allowed_actions
 from apps.consultations.models import Consultation, Reply
+from apps.core.serializers import CreateIntentMixin
 from apps.content.models import Announcement, FaqItem, GuideArticle, HomepageBanner, SiteDocument
+from apps.content.services import (
+    announcement_allowed_actions,
+    faq_allowed_actions,
+    guide_allowed_actions,
+    site_document_allowed_actions,
+)
 from apps.media.models import MediaAsset
 from apps.organizations.models import Organization, Recruitment
 from apps.public_api.serializers import (
@@ -138,7 +147,7 @@ class _CompetitionWriteBase(StrictSerializer):
         return attrs
 
 
-class CompetitionCreateSerializer(_CompetitionWriteBase):
+class CompetitionCreateSerializer(CreateIntentMixin, _CompetitionWriteBase):
     pass
 
 
@@ -237,6 +246,8 @@ def serialize_competition_management(competition: Competition, request: Request)
     payload.update(
         {
             "publication_state": competition.publication_state,
+            "published_at": competition.published_at,
+            "allowed_actions": competition_allowed_actions(actor=request.user, competition=competition),
             "is_featured": competition.is_featured,
             "featured_order": competition.featured_order,
             "created_at": competition.created_at,
@@ -301,7 +312,7 @@ class _ActivityWriteBase(StrictSerializer):
         return attrs
 
 
-class ActivityCreateSerializer(_ActivityWriteBase):
+class ActivityCreateSerializer(CreateIntentMixin, _ActivityWriteBase):
     pass
 
 
@@ -356,7 +367,7 @@ class _AnnouncementWriteBase(StrictSerializer):
         return attrs
 
 
-class AnnouncementCreateSerializer(_AnnouncementWriteBase):
+class AnnouncementCreateSerializer(CreateIntentMixin, _AnnouncementWriteBase):
     pass
 
 
@@ -386,7 +397,7 @@ class _GuideWriteBase(StrictSerializer):
         return values
 
 
-class GuideCreateSerializer(_GuideWriteBase):
+class GuideCreateSerializer(CreateIntentMixin, _GuideWriteBase):
     pass
 
 
@@ -412,7 +423,7 @@ class _FaqWriteBase(StrictSerializer):
     featured_order = serializers.IntegerField(min_value=0, required=False, default=0)
 
 
-class FaqCreateSerializer(_FaqWriteBase):
+class FaqCreateSerializer(CreateIntentMixin, _FaqWriteBase):
     pass
 
 
@@ -612,8 +623,10 @@ class ConsultationReplySerializer(StrictSerializer):
 
 
 class DynamicActivityAnnouncementSerializer(StrictSerializer):
-    activity = ActivityCreateSerializer()
-    announcement = AnnouncementCreateSerializer()
+    # 组合发布只有最外层的 publish 命令。嵌套对象必须保持为纯领域写入 DTO，
+    # 否则 CreateIntentMixin 的默认值会混入 validated_data 并泄漏到 Model 构造。
+    activity = _ActivityWriteBase()
+    announcement = _AnnouncementWriteBase()
     publish = serializers.BooleanField()
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
@@ -639,6 +652,8 @@ def serialize_activity_management(activity: Activity, request: Request) -> dict[
     payload.update(
         {
             "publication_state": activity.publication_state,
+            "published_at": activity.published_at,
+            "allowed_actions": activity_allowed_actions(actor=request.user, activity=activity),
             "is_featured": activity.is_featured,
             "featured_order": activity.featured_order,
             **_management_fields(activity),
@@ -671,6 +686,8 @@ def serialize_announcement_management(announcement: Announcement, request: Reque
             "organization_id": str(announcement.organization_id) if announcement.organization_id else None,
             "recruitment_id": str(announcement.recruitment_id) if announcement.recruitment_id else None,
             "publication_state": announcement.publication_state,
+            "published_at": announcement.published_at,
+            "allowed_actions": announcement_allowed_actions(actor=request.user, announcement=announcement),
             "publisher_scope": announcement.publisher_scope,
             "source_name": announcement.source_name,
             "external_url": announcement.external_url,
@@ -689,6 +706,8 @@ def serialize_guide_management(guide: GuideArticle, request: Request) -> dict[st
         {
             "competition_ids": [str(link.competition_id) for link in guide.competition_links.all().order_by("sort_order", "created_at")],
             "publication_state": guide.publication_state,
+            "published_at": guide.published_at,
+            "allowed_actions": guide_allowed_actions(actor=request.user, guide=guide),
             **_management_fields(guide),
         }
     )
@@ -697,7 +716,14 @@ def serialize_guide_management(guide: GuideArticle, request: Request) -> dict[st
 
 def serialize_faq_management(faq: FaqItem, request: Request) -> dict[str, Any]:
     payload = serialize_faq(faq, request)
-    payload.update({"publication_state": faq.publication_state, **_management_fields(faq)})
+    payload.update(
+        {
+            "publication_state": faq.publication_state,
+            "published_at": faq.published_at,
+            "allowed_actions": faq_allowed_actions(actor=request.user, faq=faq),
+            **_management_fields(faq),
+        }
+    )
     return payload
 
 
@@ -760,7 +786,7 @@ class _SiteDocumentWriteBase(StrictSerializer):
         return normalized
 
 
-class SiteDocumentCreateSerializer(_SiteDocumentWriteBase):
+class SiteDocumentCreateSerializer(CreateIntentMixin, _SiteDocumentWriteBase):
     pass
 
 
@@ -786,6 +812,7 @@ def serialize_site_document_management(document: SiteDocument, request: Request)
         "body_md": document.body_md,
         "publication_state": document.publication_state,
         "published_at": document.published_at,
+        "allowed_actions": site_document_allowed_actions(actor=request.user, document=document),
         "sort_order": document.sort_order,
         "version": document.version,
         **_management_fields(document),

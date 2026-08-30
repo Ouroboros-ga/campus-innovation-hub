@@ -1,10 +1,16 @@
 """不依赖 HTTP 的领域异常；未来 DRF 层按 code/status 映射统一错误响应。"""
 
+from __future__ import annotations
+
+from collections.abc import Mapping
+
 
 class DomainError(Exception):
     code = "INVALID_STATE"
     status = 409
     default_message = "当前状态不允许此操作。"
+    # 需要把缺失项回传给前端的领域异常覆写该字段，例如 PUBLICATION_INCOMPLETE。
+    field_errors: Mapping[str, list[str]] | None = None
 
     def __init__(self, message: str | None = None) -> None:
         super().__init__(message or self.default_message)
@@ -55,9 +61,13 @@ class TimeWindowClosed(DomainError):
 class PublicationIncomplete(DomainError):
     """资源可保存为草稿，但尚未满足公开发布的业务完整性。"""
 
-    code = "INVALID_STATE"
+    code = "PUBLICATION_INCOMPLETE"
     status = 422
     default_message = "发布资料尚不完整。"
+
+    def __init__(self, message: str | None = None, *, field_errors: Mapping[str, list[str]] | None = None) -> None:
+        super().__init__(message)
+        self.field_errors = field_errors or None
 
 
 class InvalidState(DomainError):

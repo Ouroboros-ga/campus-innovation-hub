@@ -83,7 +83,9 @@ class CompetitionCollectionView(OperatorAPIView):
     def post(self, request: Request) -> Response:
         serializer = CompetitionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        competition = create_competition(actor=request.user, payload=serializer.validated_data)
+        payload = dict(serializer.validated_data)
+        publish = bool(payload.pop("publish", False))
+        competition = create_competition(actor=request.user, payload=payload, publish=publish)
         return Response(serialize_competition_management(_competition_or_404(str(competition.id)), request), status=201)
 
 
@@ -255,8 +257,10 @@ class CompetitionImportView(OperatorAPIView):
                     payload["registration_end_at"] = str(row[idx["registration_end_at"]]).strip()
                 serializer = CompetitionCreateSerializer(data=payload)
                 serializer.is_valid(raise_exception=True)
+                row_payload = dict(serializer.validated_data)
+                row_payload.pop("publish", None)
                 with transaction.atomic():
-                    create_competition(actor=request.user, payload=serializer.validated_data)
+                    create_competition(actor=request.user, payload=row_payload)
                 success += 1
             except Exception as exc:
                 failed += 1

@@ -9,8 +9,10 @@ from django.db.models import Count, Q, QuerySet
 from rest_framework import serializers
 from rest_framework.request import Request
 
+from apps.core.serializers import CreateIntentMixin
 from apps.media.models import MediaAsset
 from apps.organizations.models import Organization, Recruitment, RecruitmentApplication, RecruitmentPosition
+from apps.organizations.services import recruitment_allowed_actions
 from apps.public_api.serializers import actor_summary, media_ref, recruitment_application_state, serialize_recruitment_detail
 
 
@@ -97,7 +99,7 @@ class _RecruitmentWriteBase(StrictSerializer):
         return attrs
 
 
-class RecruitmentCreateSerializer(_RecruitmentWriteBase):
+class RecruitmentCreateSerializer(CreateIntentMixin, _RecruitmentWriteBase):
     pass
 
 
@@ -143,6 +145,8 @@ def serialize_recruitment_management(recruitment: Recruitment, request: Request)
     payload.update(
         {
             "publication_state": recruitment.publication_state,
+            "published_at": recruitment.published_at,
+            "allowed_actions": recruitment_allowed_actions(actor=request.user, recruitment=recruitment),
             "completed_at": recruitment.completed_at,
             "application_counts": {
                 "pending_count": getattr(recruitment, "pending_count", 0),

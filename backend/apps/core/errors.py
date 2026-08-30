@@ -79,11 +79,11 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response |
         headers = None
         if exc.code == "RATE_LIMITED":
             headers = {"Retry-After": str(getattr(exc, "retry_after_seconds", 1))}
-        return Response(
-            {"code": exc.code, "message": str(exc)},
-            status=exc.status,
-            headers=headers,
-        )
+        payload: dict[str, Any] = {"code": exc.code, "message": str(exc)}
+        field_errors = getattr(exc, "field_errors", None)
+        if field_errors:
+            payload["fieldErrors"] = {str(field): [str(item) for item in messages] for field, messages in field_errors.items()}
+        return Response(payload, status=exc.status, headers=headers)
 
     response = exception_handler(exc, context)
     if response is None:
