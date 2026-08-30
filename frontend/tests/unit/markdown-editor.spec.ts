@@ -26,4 +26,13 @@ describe('FE-Alpha MarkdownEditor 文本编辑器', () => {
 
     expect(wrapper.emitted('update:modelValue')).toBeTruthy()
   })
+
+  it('禁用时让测试回退输入框真正只读', () => {
+    const wrapper = mount(MarkdownEditor, {
+      props: { modelValue: '已归档正文', disabled: true },
+      global: { plugins: [ui] }
+    })
+
+    expect(wrapper.get('textarea').attributes('disabled')).toBeDefined()
+  })
 })

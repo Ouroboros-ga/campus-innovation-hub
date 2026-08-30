@@ -77,6 +77,12 @@ function applyTheme(): void {
   editor?.setTheme(isDark() ? 'dark' : 'classic')
 }
 
+function applyDisabled(): void {
+  if (!editor) return
+  if (props.disabled) editor.disabled()
+  else editor.enable()
+}
+
 function onEditorInput(value: string): void {
   emit('update:modelValue', value)
 }
@@ -145,7 +151,8 @@ onMounted(() => {
       lang: 'zh_CN',
       i18n: window.VditorI18n,
       toolbar: TOOLBAR,
-      input: onEditorInput
+      input: onEditorInput,
+      after: applyDisabled
     })
 
     // 随应用暗色模式切换 Vditor 主题
@@ -168,6 +175,8 @@ watch(
   }
 )
 
+watch(() => props.disabled, applyDisabled)
+
 onBeforeUnmount(() => {
   themeObserver?.disconnect()
   editor?.destroy()
@@ -182,6 +191,7 @@ onBeforeUnmount(() => {
       :model-value="modelValue"
       :rows="8"
       :placeholder="placeholder"
+      :disabled="disabled"
       class="w-full"
       @update:model-value="v => emit('update:modelValue', v as string)"
     />

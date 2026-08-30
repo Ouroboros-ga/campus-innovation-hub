@@ -44,8 +44,6 @@ describe('应用路由', () => {
       'ops',
       'ops-announcement-new',
       'ops-announcement-edit',
-      'ops-guide-new',
-      'ops-guide-edit',
       'ops-faq-new',
       'ops-faq-edit',
       'ops-document-new',
@@ -54,6 +52,21 @@ describe('应用路由', () => {
       'notifications',
       'register',
       'not-found'
+    ])
+  })
+
+  it('将指南列表与编辑路由统一承载在运营工作台外壳中', () => {
+    const publicRoute = routes.find(route => route.path === '/')
+    const opsRoute = publicRoute?.children?.find(route => route.name === 'ops')
+    const opsRouteNames = opsRoute?.children?.map(route => route.name)
+
+    expect(opsRouteNames).toContain('ops-guides')
+    expect(opsRouteNames).toContain('ops-guide-new')
+    expect(opsRouteNames).toContain('ops-guide-edit')
+    expect(router.resolve('/ops/guides/new').matched.map(route => route.name)).toEqual([
+      undefined,
+      'ops',
+      'ops-guide-new'
     ])
   })
 

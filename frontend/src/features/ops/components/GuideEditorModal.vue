@@ -75,7 +75,9 @@ async function save(publish = false) {
     category: category.value,
     summary: summary.value,
     bodyMd: bodyMd.value,
-    isFeatured: isFeatured.value
+    competitionIds: props.guide?.competitionIds ?? [],
+    isFeatured: isFeatured.value,
+    featuredOrder: props.guide?.featuredOrder ?? 0
   }
   const formErrors = validateGuide(draft)
   errors.value = formErrors
@@ -92,7 +94,7 @@ async function save(publish = false) {
       await apiUpdateGuide(props.guide.id, draft)
       targetId = props.guide.id
     } else {
-      targetId = await createGuide(draft)
+      targetId = (await createGuide(draft)).id
     }
     if (publish && targetId) {
       await publishGuide(targetId)

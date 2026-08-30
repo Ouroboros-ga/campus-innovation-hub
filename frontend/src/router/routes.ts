@@ -345,6 +345,18 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '指南管理' }
           },
           {
+            path: 'guides/new',
+            name: 'ops-guide-new',
+            component: () => import('@/pages/ops/GuideEditorPage.vue'),
+            meta: { title: '新建指南' }
+          },
+          {
+            path: 'guides/:id/edit',
+            name: 'ops-guide-edit',
+            component: () => import('@/pages/ops/GuideEditorPage.vue'),
+            meta: { title: '编辑指南' }
+          },
+          {
             path: 'faq',
             name: 'ops-faq',
             component: () =>
@@ -392,18 +404,6 @@ export const routes: RouteRecordRaw[] = [
         name: 'ops-announcement-edit',
         component: () => import('@/pages/ops/AnnouncementEditorPage.vue'),
         meta: { title: '编辑公告', auth: 'operator' }
-      },
-      {
-        path: 'ops/guides/new',
-        name: 'ops-guide-new',
-        component: () => import('@/pages/ops/GuideEditorPage.vue'),
-        meta: { title: '新建指南', auth: 'operator' }
-      },
-      {
-        path: 'ops/guides/:id/edit',
-        name: 'ops-guide-edit',
-        component: () => import('@/pages/ops/GuideEditorPage.vue'),
-        meta: { title: '编辑指南', auth: 'operator' }
       },
       {
         path: 'ops/faq/new',

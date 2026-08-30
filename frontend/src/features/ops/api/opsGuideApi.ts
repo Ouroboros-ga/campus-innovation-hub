@@ -1,22 +1,15 @@
-/**
- * 指南运营 API 集成（BE-040 /ops/guides）。
- *
- * 映射 `docs/api/EndpointReference.md` 运营路由与 `apps/ops_api/serializers.py` 严格 DTO：
- * - POST /ops/guides（创建 DRAFT）
- * - PATCH /ops/guides/{id}（更新，保持状态）
- * - POST /ops/guides/{id}/publish（DRAFT → PUBLISHED）
- * - GET /ops/guides（管理列表）
- *
- * 契约要点：`is_featured` 与 `featured_order` 为创建必填；`competition_ids` 关联竞赛，
- * 当前编辑器不涉及关联，发送空数组。
- */
+/** 指南运营 API 适配器：唯一负责管理 DTO 与编辑领域模型的边界。 */
 
+import type {
+  GuideAllowedAction,
+  GuideEditorDraft,
+  GuidePublicationState,
+  GuideRelatedCompetition,
+  OpsGuide
+} from '@/features/ops/guides/types'
 import { http } from '@/shared/http/client'
-import type { GuideCategory, GuideSummary, PublicationState } from '@/shared/types/homepage'
-
-// ---------------------------------------------------------------------------
-// 契约 DTO
-// ---------------------------------------------------------------------------
+import { AppError } from '@/shared/http/types'
+import type { GuideCategory } from '@/shared/types/homepage'
 
 interface GuideWriteDto {
   title: string
@@ -28,108 +21,167 @@ interface GuideWriteDto {
   featured_order: number
 }
 
-interface RelatedGuideDto {
-  id: string
-  title: string
-}
-
-interface GuideMgmtDto {
-  id: string
-  title: string
-  category: GuideCategory
-  summary?: string | null
-  published_at: string
-  body_md?: string | null
-  is_featured?: boolean
-  featured_order?: number
-  competition_ids?: string[] | null
-  publication_state?: string
-  related_competitions?: RelatedGuideDto[]
-}
-
-interface PaginatedDto<T> {
+interface PaginatedDto {
   count: number
-  next?: string | null
-  previous?: string | null
-  results: T[]
+  results: unknown[]
 }
 
-/** 指南编辑器草稿。 */
-export interface GuideEditorDraft {
-  title: string
-  category: GuideCategory
-  summary: string
-  bodyMd: string
-  isFeatured: boolean
+const categories = new Set<GuideCategory>([
+  'COMPETITION',
+  'RESEARCH',
+  'FURTHER_STUDY',
+  'CERTIFICATE',
+  'PROCESS',
+  'EXPERIENCE',
+  'OTHER'
+])
+const publicationStates = new Set<GuidePublicationState>([
+  'DRAFT',
+  'PUBLISHED',
+  'ARCHIVED'
+])
+const allowedActions = new Set<GuideAllowedAction>([
+  'EDIT',
+  'PUBLISH',
+  'ARCHIVE',
+  'DELETE_DRAFT',
+  'FEATURE'
+])
+
+function invalidResponse(): never {
+  throw new AppError('指南管理接口返回了无法识别的数据。', {
+    status: 0,
+    code: 'INVALID_RESPONSE'
+  })
 }
 
-/** 指南管理视图模型（= 列表摘要 + 编辑所需正文 / 关联 / 状态字段）。 */
-export interface OpsGuide extends GuideSummary {
-  bodyMd: string
-  isFeatured: boolean
-  publicationState: PublicationState
+function recordOf(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) invalidResponse()
+  return value as Record<string, unknown>
 }
 
-/** 编辑草稿校验（前端）。 */
+function stringArray(value: unknown): string[] {
+  if (!Array.isArray(value) || value.some(item => typeof item !== 'string')) invalidResponse()
+  return [...value]
+}
+
+function relatedCompetitions(value: unknown): GuideRelatedCompetition[] {
+  if (!Array.isArray(value)) invalidResponse()
+  return value.map(item => {
+    const record = recordOf(item)
+    if (typeof record.id !== 'string' || typeof record.title !== 'string') invalidResponse()
+    return { id: record.id, title: record.title }
+  })
+}
+
+function parseGuide(value: unknown): OpsGuide {
+  const dto = recordOf(value)
+  if (
+    typeof dto.id !== 'string' ||
+    typeof dto.title !== 'string' ||
+    typeof dto.category !== 'string' ||
+    !categories.has(dto.category as GuideCategory) ||
+    typeof dto.body_md !== 'string' ||
+    typeof dto.is_featured !== 'boolean' ||
+    typeof dto.featured_order !== 'number' ||
+    !Number.isFinite(dto.featured_order) ||
+    !Number.isInteger(dto.featured_order) ||
+    dto.featured_order < 0 ||
+    typeof dto.publication_state !== 'string' ||
+    !publicationStates.has(dto.publication_state as GuidePublicationState)
+  ) {
+    invalidResponse()
+  }
+
+  if (dto.summary !== null && typeof dto.summary !== 'string') invalidResponse()
+
+  const actions = stringArray(dto.allowed_actions)
+  if (actions.some(action => !allowedActions.has(action as GuideAllowedAction))) invalidResponse()
+  const publishedAt = dto.published_at
+  const updatedAt = dto.updated_at
+  if (publishedAt !== null && typeof publishedAt !== 'string') invalidResponse()
+  if (updatedAt !== null && typeof updatedAt !== 'string') invalidResponse()
+
+  return {
+    id: dto.id,
+    title: dto.title,
+    category: dto.category as GuideCategory,
+    summary: dto.summary,
+    bodyMd: dto.body_md,
+    competitionIds: stringArray(dto.competition_ids),
+    relatedCompetitions: relatedCompetitions(dto.related_competitions),
+    isFeatured: dto.is_featured,
+    featuredOrder: dto.featured_order,
+    publicationState: dto.publication_state as GuidePublicationState,
+    publishedAt,
+    updatedAt,
+    allowedActions: actions as GuideAllowedAction[],
+    detailPath: `/qa/guides/${dto.id}`
+  }
+}
+
 export function validateGuide(draft: GuideEditorDraft): Record<string, string> {
   const errors: Record<string, string> = {}
-  if (!draft.title.trim()) errors.title = '请填写指南标题'
+  const title = draft.title.trim()
+  if (!title) errors.title = '请填写指南标题'
+  else if (title.length < 2) errors.title = '指南标题至少需要 2 个字符'
   if (!draft.bodyMd.trim()) errors.bodyMd = '请填写指南正文'
+  if (!Number.isInteger(draft.featuredOrder) || draft.featuredOrder < 0) {
+    errors.featuredOrder = '精选排序必须是非负整数'
+  }
+  if (draft.competitionIds.length > 20) errors.competitionIds = '最多关联 20 个竞赛'
+  if (new Set(draft.competitionIds).size !== draft.competitionIds.length) {
+    errors.competitionIds = '关联竞赛不能重复'
+  }
   return errors
 }
 
-// ---------------------------------------------------------------------------
-// 契约映射
-// ---------------------------------------------------------------------------
-
-/** 编辑草稿 → 写请求 DTO。 */
 export function toGuideWriteDto(draft: GuideEditorDraft): GuideWriteDto {
   return {
     title: draft.title.trim(),
     category: draft.category,
     summary: draft.summary.trim() || null,
-    body_md: draft.bodyMd.trim(),
-    competition_ids: [],
+    body_md: draft.bodyMd,
+    competition_ids: [...draft.competitionIds],
     is_featured: draft.isFeatured,
-    featured_order: 0
+    featured_order: draft.featuredOrder
   }
 }
 
-function toOpsGuide(dto: GuideMgmtDto): OpsGuide {
+export function toGuideEditorDraft(guide: OpsGuide): GuideEditorDraft {
   return {
-    id: dto.id,
-    title: dto.title,
-    category: dto.category,
-    summary: dto.summary ?? null,
-    publishedAt: dto.published_at,
-    detailPath: `/qa/guides/${dto.id}`,
-    bodyMd: dto.body_md ?? '',
-    isFeatured: dto.is_featured ?? false,
-    publicationState: (dto.publication_state ?? 'DRAFT') as PublicationState
+    title: guide.title,
+    category: guide.category,
+    summary: guide.summary ?? '',
+    bodyMd: guide.bodyMd,
+    competitionIds: [...guide.competitionIds],
+    isFeatured: guide.isFeatured,
+    featuredOrder: guide.featuredOrder
   }
 }
 
-// ---------------------------------------------------------------------------
-// 公开 API
-// ---------------------------------------------------------------------------
-
-/** 创建指南（落库为 DRAFT，需再 publish 才公开可见）。 */
-export async function createGuide(draft: GuideEditorDraft): Promise<string> {
-  const response = await http.post<GuideMgmtDto>('/ops/guides', toGuideWriteDto(draft))
-  return response.id
+export async function getGuide(id: string, signal?: AbortSignal): Promise<OpsGuide> {
+  return parseGuide(await http.get<unknown>(`/ops/guides/${id}`, { signal }))
 }
 
-/** 更新指南（PATCH，保持当前发布状态）。 */
-export async function updateGuide(id: string, draft: GuideEditorDraft): Promise<void> {
-  await http.patch(`/ops/guides/${id}`, toGuideWriteDto(draft))
+export async function createGuide(
+  draft: GuideEditorDraft,
+  publish = false
+): Promise<OpsGuide> {
+  return parseGuide(await http.post<unknown>('/ops/guides', {
+    ...toGuideWriteDto(draft),
+    publish
+  }))
 }
 
-/** 发布指南（DRAFT → PUBLISHED）。 */
+export async function updateGuide(id: string, draft: GuideEditorDraft): Promise<OpsGuide> {
+  return parseGuide(await http.patch<unknown>(`/ops/guides/${id}`, toGuideWriteDto(draft)))
+}
+
 export async function publishGuide(id: string): Promise<void> {
   await http.post(`/ops/guides/${id}/publish`)
 }
 
-/** 运营指南列表（GET /ops/guides）。 */
 export async function listGuides(params: {
   q?: string
   status?: string
@@ -137,7 +189,7 @@ export async function listGuides(params: {
   page?: number
   pageSize?: number
 }): Promise<{ items: OpsGuide[]; total: number; page: number }> {
-  const response = await http.get<PaginatedDto<GuideMgmtDto>>('/ops/guides', {
+  const response = await http.get<PaginatedDto>('/ops/guides', {
     query: {
       q: params.q,
       status: params.status,
@@ -146,9 +198,14 @@ export async function listGuides(params: {
       page_size: params.pageSize
     }
   })
+  if (!response || typeof response.count !== 'number' || !Array.isArray(response.results)) {
+    invalidResponse()
+  }
   return {
-    items: response.results.map(toOpsGuide),
+    items: response.results.map(parseGuide),
     total: response.count,
     page: params.page ?? 1
   }
 }
+
+export type { GuideEditorDraft, OpsGuide } from '@/features/ops/guides/types'
