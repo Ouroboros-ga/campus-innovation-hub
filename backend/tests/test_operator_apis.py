@@ -214,10 +214,7 @@ class OperatorApiTests(TestCase):
         response = client.post(
             "/api/ops/competitions", data=self.competition_payload(), content_type="application/json", HTTP_X_CSRFTOKEN=csrf
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["status"], Consultation.Status.ANSWERED)
-        self.assertEqual(response.json()["allowed_actions"], ["REPLY", "CLOSE"])
-        self.assertEqual(len(response.json()["replies"]), 1)
+        self.assertEqual(response.status_code, 201)
         competition_id = response.json()["id"]
         self.assertEqual(response.json()["publication_state"], Competition.PublicationState.DRAFT)
         self.assertNotIn("object_key", response.json()["cover"])
@@ -726,7 +723,10 @@ class OperatorApiTests(TestCase):
             content_type="application/json",
             HTTP_X_CSRFTOKEN=csrf,
         )
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], Consultation.Status.ANSWERED)
+        self.assertEqual(response.json()["allowed_actions"], ["REPLY", "CLOSE"])
+        self.assertEqual(len(response.json()["replies"]), 1)
         consultation.refresh_from_db()
         self.assertEqual(consultation.status, Consultation.Status.ANSWERED)
         self.assertTrue(Notification.objects.filter(recipient=self.author, notification_type=Notification.NotificationType.CONSULTATION).exists())
