@@ -51,7 +51,7 @@ function openEdit(doc: OpsDocument) {
 }
 
 async function handlePublish(doc: OpsDocument) {
-  if (doc.publicationState !== 'DRAFT') return
+  if (!doc.allowedActions.includes('PUBLISH')) return
   actionLoading.value = doc.id
   try {
     await publishDocument(doc.id)
@@ -64,7 +64,7 @@ async function handlePublish(doc: OpsDocument) {
 }
 
 async function handleArchive(doc: OpsDocument) {
-  if (doc.publicationState !== 'PUBLISHED') return
+  if (!doc.allowedActions.includes('ARCHIVE')) return
   actionLoading.value = doc.id
   try {
     await archiveDocument(doc.id)
@@ -107,7 +107,7 @@ const publishedCount = computed(() => items.value.filter(i => i.publicationState
       </p>
       <ul class="mt-1 list-disc pl-4">
         <li>每个 <code class="rounded bg-default px-1 py-0.5">slug</code> 唯一（如 privacy / terms / about），对应页脚与站内链接。</li>
-        <li>草稿可编辑，发布后不可直接编辑，如需修改请先归档。</li>
+        <li>草稿与已发布文档可编辑；已发布文档的 slug 保持稳定，保存会立即对学生端生效。</li>
         <li>隐私政策与服务条款建议保持已发布状态，前台在无数据库记录时将自动展示内置版本。</li>
       </ul>
     </div>
@@ -184,17 +184,17 @@ const publishedCount = computed(() => items.value.filter(i => i.publicationState
             预览
           </UButton>
           <UButton
+            v-if="doc.allowedActions.includes('EDIT')"
             size="sm"
             color="neutral"
             variant="ghost"
             icon="i-lucide-pencil"
-            :disabled="doc.publicationState !== 'DRAFT'"
             @click="openEdit(doc)"
           >
             编辑
           </UButton>
           <UButton
-            v-if="doc.publicationState === 'DRAFT'"
+            v-if="doc.allowedActions.includes('PUBLISH')"
             size="sm"
             color="primary"
             variant="soft"
@@ -205,7 +205,7 @@ const publishedCount = computed(() => items.value.filter(i => i.publicationState
             发布
           </UButton>
           <UButton
-            v-if="doc.publicationState === 'PUBLISHED'"
+            v-if="doc.allowedActions.includes('ARCHIVE')"
             size="sm"
             color="neutral"
             variant="soft"

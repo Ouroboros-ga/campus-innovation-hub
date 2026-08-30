@@ -6,9 +6,10 @@ import ActivityEditorModal from '@/features/ops/components/ActivityEditorModal.v
 import PublishDynamicsModal from '@/features/ops/components/PublishDynamicsModal.vue'
 import { exportActivityRegistrations, listActivities } from '@/features/ops/api/opsActivityApi'
 import { listAnnouncements } from '@/features/ops/api/opsAnnouncementApi'
+import type { OpsAnnouncement } from '@/features/ops/announcements/types'
 import { getDynamicsStats } from '@/features/ops/api/opsOverviewApi'
 import type { DynamicsStats } from '@/features/ops/api/opsOverviewApi'
-import type { DynamicsActivity, DynamicsAnnouncement } from '@/features/dynamics/types'
+import type { DynamicsActivity } from '@/features/dynamics/types'
 import { formatCompactDate } from '@/shared/lib/date'
 import { useToast } from '@nuxt/ui/composables'
 import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
@@ -21,7 +22,7 @@ const tab = ref<'all' | 'activities' | 'announcements'>(rawTab === 'activities' 
 const stats = ref<DynamicsStats | null>(null)
 
 const activities = ref<DynamicsActivity[]>([])
-const announcements = ref<DynamicsAnnouncement[]>([])
+const announcements = ref<OpsAnnouncement[]>([])
 const loading = ref(false)
 const error = ref('')
 const totalActivities = ref(0)
@@ -97,7 +98,7 @@ async function load() {
             page: announcementPage.value,
             pageSize
           })
-        : Promise.resolve({ items: [] as DynamicsAnnouncement[], total: 0, page: 1 })
+        : Promise.resolve({ items: [] as OpsAnnouncement[], total: 0, page: 1 })
     ])
     const sRes = results[0]
     const aRes = results[1]
@@ -143,7 +144,7 @@ function onPublishSelect(type: 'ACTIVITY' | 'ANNOUNCEMENT' | 'BOTH') {
   }
 }
 function editActivity(a: DynamicsActivity) { editingActivity.value = a; syncAnnouncement.value = false; activityEditorOpen.value = true }
-function editAnnouncement(a: DynamicsAnnouncement) { router.push({ name: 'ops-announcement-edit', params: { id: a.id } }) }
+function editAnnouncement(a: OpsAnnouncement) { router.push({ name: 'ops-announcement-edit', params: { id: a.id } }) }
 const toast = useToast()
 async function onExport(a: DynamicsActivity) {
   try { await exportActivityRegistrations(a.id); toast.add({ title: '已开始下载', color: 'success' }) } catch (e) { toast.add({ title: e instanceof Error ? e.message : '导出失败', color: 'error' }) }
@@ -577,6 +578,7 @@ const scopeOptions = [
                 <td class="px-3 py-2">
                   <div class="flex gap-1">
                     <UButton
+                      v-if="a.allowedActions.includes('EDIT')"
                       size="xs"
                       variant="ghost"
                       color="neutral"
@@ -626,7 +628,7 @@ const scopeOptions = [
                 </div>
               </div>
               <div class="mt-3 flex gap-1">
-                <UButton size="xs" variant="ghost" color="neutral" @click="editAnnouncement(a)">编辑</UButton>
+                <UButton v-if="a.allowedActions.includes('EDIT')" size="xs" variant="ghost" color="neutral" @click="editAnnouncement(a)">编辑</UButton>
                 <UButton size="xs" variant="ghost" color="neutral" :to="a.detailPath">预览</UButton>
               </div>
             </div>

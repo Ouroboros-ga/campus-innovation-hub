@@ -1,155 +1,196 @@
-/**
- * 公告运营 API 集成（BE-040 /ops/announcements）。
- *
- * 映射 `docs/api/EndpointReference.md` 运营路由与 `apps/ops_api/serializers.py` 严格 DTO：
- * - POST /ops/announcements（创建 DRAFT）
- * - PATCH /ops/announcements/{id}（更新，保持状态）
- * - POST /ops/announcements/{id}/publish（DRAFT → PUBLISHED）
- * - GET /ops/announcements（管理列表）
- *
- * 契约要点：公告最多关联一个核心业务对象，写请求用 `competition_id` / `activity_id` /
- * `organization_id` / `recruitment_id` 之一；前端 `linkedObject.to` 为站内路由，
- * 由此从最后一段路径解析 UUID 作为关联 id（无法解析则视为无关联）。
- */
+/** 公告运营 API 适配器：唯一负责管理 DTO 与编辑领域模型的边界。 */
 
-import { http } from '@/shared/http/client'
-import type { AnnouncementLinkedKind } from '@/features/dynamics/types'
+import type { AnnouncementLinkedKind, AnnouncementPublisherScope } from '@/features/dynamics/types'
 import type {
-  AnnouncementLinkedObject,
-  AnnouncementPublisherScope,
-  DynamicsAnnouncement
-} from '@/features/dynamics/types'
-import type { AnnouncementEditorDraft } from '@/features/ops/lib/opsStore'
-
-// ---------------------------------------------------------------------------
-// 契约 DTO
-// ---------------------------------------------------------------------------
+  AnnouncementAllowedAction,
+  AnnouncementEditorDraft,
+  AnnouncementPublicationState,
+  AnnouncementRelation,
+  OpsAnnouncement
+} from '@/features/ops/announcements/types'
+import { http } from '@/shared/http/client'
+import { AppError } from '@/shared/http/types'
 
 interface AnnouncementWriteDto {
   title: string
+  summary: string | null
   body_md: string
   publisher_scope: AnnouncementPublisherScope
+  source_name: string | null
   external_url: string | null
+  is_pinned: boolean
+  is_home_featured: boolean
   competition_id: string | null
   activity_id: string | null
   organization_id: string | null
   recruitment_id: string | null
 }
 
-interface LinkedObjectDto {
-  type: AnnouncementLinkedKind
-  id: string
-  title: string
-  path: string
-}
-
-interface AnnouncementMgmtDto {
-  id: string
-  title: string
-  summary?: string | null
-  published_at: string
-  publisher_scope: AnnouncementPublisherScope
-  external_url?: string | null
-  linked_object?: LinkedObjectDto | null
-  body_md?: string | null
-  publication_state?: string
-}
-
-interface PaginatedDto<T> {
+interface PaginatedDto {
   count: number
-  next?: string | null
-  previous?: string | null
-  results: T[]
+  results: unknown[]
 }
 
-/** 关联 kind → 后端 `*_id` 字段名。 */
-const LINKED_FIELD: Record<AnnouncementLinkedKind, keyof AnnouncementWriteDto> = {
-  COMPETITION: 'competition_id',
-  ACTIVITY: 'activity_id',
-  ORGANIZATION: 'organization_id',
-  RECRUITMENT: 'recruitment_id'
+const publisherScopes = new Set<AnnouncementPublisherScope>(['ACADEMY', 'UNIVERSITY', 'PLATFORM'])
+const publicationStates = new Set<AnnouncementPublicationState>(['DRAFT', 'PUBLISHED', 'ARCHIVED'])
+const allowedActions = new Set<AnnouncementAllowedAction>(['EDIT', 'PUBLISH', 'ARCHIVE'])
+const relationKinds = new Set<AnnouncementLinkedKind>(['COMPETITION', 'ACTIVITY', 'ORGANIZATION', 'RECRUITMENT'])
+
+function invalidResponse(): never {
+  throw new AppError('公告管理接口返回了无法识别的数据。', {
+    status: 0,
+    code: 'INVALID_RESPONSE'
+  })
 }
 
-/** 从站内路由 `to` 的最后一段尝试解析 UUID（关联对象 id）。 */
-function linkedUuid(to: string): string | null {
-  const segment = to.split('/').filter(Boolean).pop() ?? ''
-  return /^[0-9a-fA-F-]{36}$/.test(segment) ? segment : null
+function recordOf(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) invalidResponse()
+  return value as Record<string, unknown>
 }
 
-// ---------------------------------------------------------------------------
-// 契约映射
-// ---------------------------------------------------------------------------
+function nullableString(value: unknown): string | null {
+  if (value !== null && typeof value !== 'string') invalidResponse()
+  return value
+}
 
-/** 编辑草稿 → 写请求 DTO。 */
-export function toAnnouncementWriteDto(draft: AnnouncementEditorDraft): AnnouncementWriteDto {
-  const linked = draft.linkedObject
-  const id = linked ? linkedUuid(linked.to) : null
-  const field = linked ? LINKED_FIELD[linked.kind] : null
+function stringArray(value: unknown): string[] {
+  if (!Array.isArray(value) || value.some(item => typeof item !== 'string')) invalidResponse()
+  return [...value]
+}
+
+function parseRelation(value: unknown): AnnouncementRelation | null {
+  if (value === null) return null
+  const dto = recordOf(value)
+  if (
+    typeof dto.type !== 'string' ||
+    !relationKinds.has(dto.type as AnnouncementLinkedKind) ||
+    typeof dto.id !== 'string' ||
+    typeof dto.title !== 'string' ||
+    typeof dto.path !== 'string'
+  ) invalidResponse()
   return {
-    title: draft.title.trim(),
-    body_md: draft.bodyMd.trim(),
-    publisher_scope: draft.publisherScope,
-    external_url: draft.externalUrl.trim() || null,
-    competition_id: field === 'competition_id' ? id : null,
-    activity_id: field === 'activity_id' ? id : null,
-    organization_id: field === 'organization_id' ? id : null,
-    recruitment_id: field === 'recruitment_id' ? id : null
+    kind: dto.type as AnnouncementLinkedKind,
+    id: dto.id,
+    title: dto.title,
+    path: dto.path
   }
 }
 
-function toDynamicsAnnouncement(dto: AnnouncementMgmtDto): DynamicsAnnouncement {
-  const linked = dto.linked_object
-  const linkedObject: AnnouncementLinkedObject | null = linked
-    ? { kind: linked.type, label: linked.title, to: linked.path }
-    : null
+function parseAnnouncement(value: unknown): OpsAnnouncement {
+  const dto = recordOf(value)
+  if (
+    typeof dto.id !== 'string' ||
+    typeof dto.title !== 'string' ||
+    typeof dto.body_md !== 'string' ||
+    typeof dto.publisher_scope !== 'string' ||
+    !publisherScopes.has(dto.publisher_scope as AnnouncementPublisherScope) ||
+    typeof dto.is_pinned !== 'boolean' ||
+    typeof dto.is_home_featured !== 'boolean' ||
+    typeof dto.home_featured_order !== 'number' ||
+    !Number.isInteger(dto.home_featured_order) ||
+    dto.home_featured_order < 0 ||
+    typeof dto.publication_state !== 'string' ||
+    !publicationStates.has(dto.publication_state as AnnouncementPublicationState)
+  ) invalidResponse()
+
+  const actions = stringArray(dto.allowed_actions)
+  if (actions.some(action => !allowedActions.has(action as AnnouncementAllowedAction))) invalidResponse()
+
   return {
     id: dto.id,
     title: dto.title,
-    publishedAt: dto.published_at,
-    publisherScope: dto.publisher_scope,
-    bodyMd: dto.body_md ?? null,
-    linkedObject,
-    externalUrl: dto.external_url ?? null,
-    publicationState: dto.publication_state ?? 'DRAFT',
+    summary: nullableString(dto.summary),
+    bodyMd: dto.body_md,
+    publisherScope: dto.publisher_scope as AnnouncementPublisherScope,
+    sourceName: nullableString(dto.source_name),
+    externalUrl: nullableString(dto.external_url),
+    isPinned: dto.is_pinned,
+    isHomeFeatured: dto.is_home_featured,
+    homeFeaturedOrder: dto.home_featured_order,
+    relation: parseRelation(dto.linked_object),
+    publicationState: dto.publication_state as AnnouncementPublicationState,
+    publishedAt: nullableString(dto.published_at),
+    createdAt: nullableString(dto.created_at),
+    updatedAt: nullableString(dto.updated_at),
+    allowedActions: actions as AnnouncementAllowedAction[],
     detailPath: `/activities/announcements/${dto.id}`
   }
 }
 
-// ---------------------------------------------------------------------------
-// 公开 API
-// ---------------------------------------------------------------------------
-
-/** 创建公告（落库为 DRAFT，需再 publish 才公开可见）。 */
-export async function createAnnouncement(draft: AnnouncementEditorDraft): Promise<string> {
-  const response = await http.post<AnnouncementMgmtDto>(
-    '/ops/announcements',
-    toAnnouncementWriteDto(draft)
-  )
-  return response.id
+export function validateAnnouncement(draft: AnnouncementEditorDraft): Record<string, string> {
+  const errors: Record<string, string> = {}
+  const title = draft.title.trim()
+  if (!title) errors.title = '请填写公告标题'
+  else if (title.length < 2) errors.title = '公告标题至少需要 2 个字符'
+  if (!draft.bodyMd.trim()) errors.bodyMd = '请填写公告正文'
+  if (draft.summary.length > 300) errors.summary = '摘要不能超过 300 个字符'
+  if (draft.relation && !draft.relation.id) errors.relation = '关联内容缺少标识，无法保存'
+  return errors
 }
 
-/** 更新公告（PATCH，保持当前发布状态）。 */
-export async function updateAnnouncement(
-  id: string,
-  draft: AnnouncementEditorDraft
-): Promise<void> {
-  await http.patch(`/ops/announcements/${id}`, toAnnouncementWriteDto(draft))
+export function toAnnouncementWriteDto(draft: AnnouncementEditorDraft): AnnouncementWriteDto {
+  const relation = draft.relation
+  return {
+    title: draft.title.trim(),
+    summary: draft.summary.trim() || null,
+    body_md: draft.bodyMd,
+    publisher_scope: draft.publisherScope,
+    source_name: draft.sourceName.trim() || null,
+    external_url: draft.externalUrl.trim() || null,
+    is_pinned: draft.isPinned,
+    is_home_featured: draft.isHomeFeatured,
+    competition_id: relation?.kind === 'COMPETITION' ? relation.id : null,
+    activity_id: relation?.kind === 'ACTIVITY' ? relation.id : null,
+    organization_id: relation?.kind === 'ORGANIZATION' ? relation.id : null,
+    recruitment_id: relation?.kind === 'RECRUITMENT' ? relation.id : null
+  }
 }
 
-/** 发布公告（DRAFT → PUBLISHED）。 */
+export function toAnnouncementEditorDraft(announcement: OpsAnnouncement): AnnouncementEditorDraft {
+  return {
+    title: announcement.title,
+    summary: announcement.summary ?? '',
+    bodyMd: announcement.bodyMd,
+    publisherScope: announcement.publisherScope,
+    sourceName: announcement.sourceName ?? '',
+    externalUrl: announcement.externalUrl ?? '',
+    isPinned: announcement.isPinned,
+    isHomeFeatured: announcement.isHomeFeatured,
+    relation: announcement.relation ? { ...announcement.relation } : null
+  }
+}
+
+export async function getAnnouncement(id: string, signal?: AbortSignal): Promise<OpsAnnouncement> {
+  return parseAnnouncement(await http.get<unknown>(`/ops/announcements/${id}`, { signal }))
+}
+
+export async function createAnnouncement(draft: AnnouncementEditorDraft, publish = false): Promise<OpsAnnouncement> {
+  return parseAnnouncement(await http.post<unknown>('/ops/announcements', {
+    ...toAnnouncementWriteDto(draft),
+    publish
+  }))
+}
+
+export async function updateAnnouncement(id: string, draft: AnnouncementEditorDraft): Promise<OpsAnnouncement> {
+  return parseAnnouncement(await http.patch<unknown>(`/ops/announcements/${id}`, toAnnouncementWriteDto(draft)))
+}
+
 export async function publishAnnouncement(id: string): Promise<void> {
   await http.post(`/ops/announcements/${id}/publish`)
 }
 
-/** 运营公告列表（GET /ops/announcements）。 */
+export async function archiveAnnouncement(id: string): Promise<void> {
+  await http.post(`/ops/announcements/${id}/archive`)
+}
+
 export async function listAnnouncements(params: {
   q?: string
   status?: string
   publisherScope?: string
   page?: number
   pageSize?: number
-}): Promise<{ items: DynamicsAnnouncement[]; total: number; page: number }> {
-  const response = await http.get<PaginatedDto<AnnouncementMgmtDto>>('/ops/announcements', {
+}): Promise<{ items: OpsAnnouncement[]; total: number; page: number }> {
+  const response = await http.get<PaginatedDto>('/ops/announcements', {
     query: {
       q: params.q,
       status: params.status,
@@ -158,9 +199,12 @@ export async function listAnnouncements(params: {
       page_size: params.pageSize
     }
   })
+  if (!response || typeof response.count !== 'number' || !Array.isArray(response.results)) invalidResponse()
   return {
-    items: response.results.map(toDynamicsAnnouncement),
+    items: response.results.map(parseAnnouncement),
     total: response.count,
     page: params.page ?? 1
   }
 }
+
+export type { AnnouncementEditorDraft, OpsAnnouncement } from '@/features/ops/announcements/types'

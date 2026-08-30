@@ -13,6 +13,7 @@ import {
   getWorkbenchStats
 } from '@/features/ops/api/opsOverviewApi'
 import { dynamicsActivities, dynamicsAnnouncements } from '@/mocks/fixtures/dynamics'
+import type { OpsAnnouncement } from '@/features/ops/announcements/types'
 import { mountWithAppContext } from '../utils/mountWithAppContext'
 
 vi.mock('@/features/ops/api/opsActivityApi', () => ({
@@ -98,8 +99,34 @@ describe('FE-090 平台运营外壳', () => {
       total: dynamicsActivities.length,
       page: 1
     })
+    const operatorAnnouncements: OpsAnnouncement[] = dynamicsAnnouncements.map(announcement => ({
+      id: announcement.id,
+      title: announcement.title,
+      summary: null,
+      bodyMd: announcement.bodyMd ?? '',
+      publisherScope: announcement.publisherScope,
+      sourceName: null,
+      externalUrl: announcement.externalUrl,
+      isPinned: false,
+      isHomeFeatured: false,
+      homeFeaturedOrder: 0,
+      relation: announcement.linkedObject
+        ? {
+            kind: announcement.linkedObject.kind,
+            id: announcement.linkedObject.to.split('/').at(-1) ?? announcement.id,
+            title: announcement.linkedObject.label,
+            path: announcement.linkedObject.to
+          }
+        : null,
+      publicationState: 'PUBLISHED',
+      publishedAt: announcement.publishedAt,
+      createdAt: null,
+      updatedAt: null,
+      allowedActions: ['EDIT', 'ARCHIVE'],
+      detailPath: announcement.detailPath
+    }))
     vi.mocked(listAnnouncements).mockResolvedValue({
-      items: dynamicsAnnouncements,
+      items: operatorAnnouncements,
       total: dynamicsAnnouncements.length,
       page: 1
     })

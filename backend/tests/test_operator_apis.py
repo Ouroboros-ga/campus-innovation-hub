@@ -394,6 +394,39 @@ class OperatorApiTests(TestCase):
                 self.assertIsNotNone(audit)
                 self.assertTrue(audit.changes_json.get("published_edit"))
 
+    def test_published_site_document_rejects_slug_change_but_keeps_other_updates_editable(self) -> None:
+        """公开 URL 是稳定契约；已发布文档只能更新内容，不能改 slug。"""
+
+        client, csrf = self.csrf_client(self.operator)
+        created = client.post(
+            "/api/ops/documents",
+            data={**self.site_document_payload(slug="stable-help"), "publish": True},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(created.status_code, 201)
+        document_id = created.json()["id"]
+
+        rejected = client.patch(
+            f"/api/ops/documents/{document_id}",
+            data={"slug": "moved-help"},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(rejected.status_code, 400)
+        self.assertEqual(rejected.json()["code"], "VALIDATION_ERROR")
+        self.assertEqual(rejected.json()["fieldErrors"], {"slug": ["已发布文档的标识不可修改。"]})
+
+        updated = client.patch(
+            f"/api/ops/documents/{document_id}",
+            data={"body_md": "已发布文档允许修订正文。"},
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN=csrf,
+        )
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.json()["slug"], "stable-help")
+        self.assertEqual(updated.json()["body_md"], "已发布文档允许修订正文。")
+
     def test_cancelled_and_archived_content_reject_patch(self) -> None:
         """CANCELLED / ARCHIVED 只读；PATCH 返回 409 而不是静默保存。"""
 

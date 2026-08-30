@@ -369,6 +369,14 @@ class SiteDocumentDetailView(OperatorAPIView):
         doc = _get_or_404(SiteDocument, object_id, "文档")
         serializer = SiteDocumentPatchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if (
+            doc.publication_state == SiteDocument.PublicationState.PUBLISHED
+            and "slug" in serializer.validated_data
+            and serializer.validated_data["slug"] != doc.slug
+        ):
+            from rest_framework.exceptions import ValidationError as DRFValidationError
+
+            raise DRFValidationError({"slug": ["已发布文档的标识不可修改。"]})
         if "slug" in serializer.validated_data and SiteDocument.objects.filter(slug=serializer.validated_data["slug"]).exclude(id=doc.id).exists():
             from rest_framework.exceptions import ValidationError as DRFValidationError
 

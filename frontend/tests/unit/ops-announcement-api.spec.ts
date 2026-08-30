@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as api from '@/features/ops/api/opsAnnouncementApi'
+import type { AnnouncementEditorDraft } from '@/features/ops/announcements/types'
 import { http } from '@/shared/http/client'
-import type { AnnouncementEditorDraft } from '@/features/ops/lib/opsStore'
 
 vi.mock('@/shared/http/client', () => ({
   http: {
@@ -12,46 +12,106 @@ vi.mock('@/shared/http/client', () => ({
   }
 }))
 
+const managementDetail = {
+  id: 'a1',
+  title: '竞赛报名通知',
+  summary: '请在截止日前完成报名。',
+  body_md: '    详细安排\n\n',
+  publisher_scope: 'ACADEMY',
+  source_name: '竞赛官网',
+  external_url: 'https://example.com/notice',
+  is_pinned: true,
+  is_home_featured: true,
+  home_featured_order: 2,
+  linked_object: {
+    type: 'COMPETITION',
+    id: 'c1',
+    title: '蓝桥杯',
+    path: '/competitions/c1'
+  },
+  competition_id: 'c1',
+  activity_id: null,
+  organization_id: null,
+  recruitment_id: null,
+  publication_state: 'DRAFT',
+  published_at: null,
+  allowed_actions: ['EDIT', 'PUBLISH'],
+  created_at: '2026-08-29T08:00:00+08:00',
+  updated_at: '2026-08-29T09:00:00+08:00'
+} as const
+
 const draft: AnnouncementEditorDraft = {
-  title: '测试公告',
+  title: '竞赛报名通知',
+  summary: '请在截止日前完成报名。',
+  bodyMd: '    详细安排\n\n',
   publisherScope: 'ACADEMY',
-  bodyMd: '公告正文',
-  linkedObject: { kind: 'ACTIVITY', label: '测试活动', to: '/activities/a1b2c3d4-e5f6-7890-abcd-ef1234567890' },
-  externalUrl: 'https://example.com'
+  sourceName: '竞赛官网',
+  externalUrl: 'https://example.com/notice',
+  isPinned: true,
+  isHomeFeatured: true,
+  relation: {
+    kind: 'COMPETITION',
+    id: 'c1',
+    title: '蓝桥杯',
+    path: '/competitions/c1'
+  }
 }
 
-const uuid = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
-describe('FE-090 公告运营 API 适配器', () => {
-  it('toAnnouncementWriteDto 映射关联对象 id 与蛇形 DTO', () => {
-    const dto = api.toAnnouncementWriteDto(draft)
-    expect(dto.title).toBe('测试公告')
-    expect(dto.body_md).toBe('公告正文')
-    expect(dto.publisher_scope).toBe('ACADEMY')
-    expect(dto.activity_id).toBe(uuid)
-    expect(dto.competition_id).toBeNull()
-    expect(dto.external_url).toBe('https://example.com')
+describe('Task5 公告运营 API 适配器', () => {
+  it('严格映射管理详情，并在编辑后保留来源、展示设置与关联对象', async () => {
+    vi.mocked(http.get).mockResolvedValue(managementDetail)
+    const announcement = await api.getAnnouncement('a1')
+    const edited = { ...api.toAnnouncementEditorDraft(announcement), title: '更新后的通知' }
+    vi.mocked(http.patch).mockResolvedValue({ ...managementDetail, title: edited.title })
+    await api.updateAnnouncement('a1', edited)
+
+    expect(announcement.allowedActions).toEqual(['EDIT', 'PUBLISH'])
+    expect(announcement.relation?.id).toBe('c1')
+    expect(http.patch).toHaveBeenCalledWith('/ops/announcements/a1', {
+      title: '更新后的通知',
+      summary: '请在截止日前完成报名。',
+      body_md: '    详细安排\n\n',
+      publisher_scope: 'ACADEMY',
+      source_name: '竞赛官网',
+      external_url: 'https://example.com/notice',
+      is_pinned: true,
+      is_home_featured: true,
+      competition_id: 'c1',
+      activity_id: null,
+      organization_id: null,
+      recruitment_id: null
+    })
   })
 
-  it('无关联对象时所有关联 id 为空', () => {
-    const dto = api.toAnnouncementWriteDto({ ...draft, linkedObject: null })
-    expect(dto.activity_id).toBeNull()
-    expect(dto.competition_id).toBeNull()
+  it.each([
+    ['publisher_scope', 'UNKNOWN'],
+    ['home_featured_order', -1],
+    ['linked_object', { type: 'UNKNOWN', id: 'c1', title: 'x', path: '/x' }],
+    ['allowed_actions', ['EDIT', 'FEATURE']],
+    ['updated_at', undefined]
+  ])('拒绝非法管理 DTO 字段 %s=%s', async (field, value) => {
+    vi.mocked(http.get).mockResolvedValue({ ...managementDetail, [field]: value })
+    await expect(api.getAnnouncement('a1')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
   })
 
-  it('createAnnouncement 调用 POST /ops/announcements 并返回 id', async () => {
-    vi.mocked(http.post).mockResolvedValue({ id: 'ann-1' })
-    const id = await api.createAnnouncement(draft)
-    expect(id).toBe('ann-1')
-    expect(http.post).toHaveBeenCalledWith(
-      '/ops/announcements',
-      expect.objectContaining({ title: '测试公告', activity_id: uuid })
-    )
-  })
+  it('新建并发布只发送一次 POST，并携带完整关联字段', async () => {
+    vi.mocked(http.post).mockResolvedValue({ ...managementDetail, publication_state: 'PUBLISHED', published_at: '2026-08-29T10:00:00+08:00', allowed_actions: ['EDIT', 'ARCHIVE'] })
 
-  it('updateAnnouncement 调用 PATCH /ops/announcements/{id}', async () => {
-    vi.mocked(http.patch).mockResolvedValue(undefined)
-    await api.updateAnnouncement('ann-1', draft)
-    expect(http.patch).toHaveBeenCalledWith('/ops/announcements/ann-1', expect.any(Object))
+    const announcement = await api.createAnnouncement(draft, true)
+
+    expect(announcement.publicationState).toBe('PUBLISHED')
+    expect(http.post).toHaveBeenCalledTimes(1)
+    expect(http.post).toHaveBeenCalledWith('/ops/announcements', expect.objectContaining({
+      competition_id: 'c1',
+      activity_id: null,
+      source_name: '竞赛官网',
+      is_pinned: true,
+      is_home_featured: true,
+      publish: true
+    }))
   })
 })

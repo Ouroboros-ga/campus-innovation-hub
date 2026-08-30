@@ -42,12 +42,6 @@ describe('应用路由', () => {
       'me-questions',
       'me-settings',
       'ops',
-      'ops-announcement-new',
-      'ops-announcement-edit',
-      'ops-faq-new',
-      'ops-faq-edit',
-      'ops-document-new',
-      'ops-document-edit',
       'login',
       'notifications',
       'register',
@@ -55,7 +49,7 @@ describe('应用路由', () => {
     ])
   })
 
-  it('将指南列表与编辑路由统一承载在运营工作台外壳中', () => {
+  it('将内容列表与编辑路由统一承载在运营工作台外壳中', () => {
     const publicRoute = routes.find(route => route.path === '/')
     const opsRoute = publicRoute?.children?.find(route => route.name === 'ops')
     const opsRouteNames = opsRoute?.children?.map(route => route.name)
@@ -63,10 +57,21 @@ describe('应用路由', () => {
     expect(opsRouteNames).toContain('ops-guides')
     expect(opsRouteNames).toContain('ops-guide-new')
     expect(opsRouteNames).toContain('ops-guide-edit')
+    expect(opsRouteNames).toContain('ops-announcement-new')
+    expect(opsRouteNames).toContain('ops-announcement-edit')
+    expect(opsRouteNames).toContain('ops-faq-new')
+    expect(opsRouteNames).toContain('ops-faq-edit')
+    expect(opsRouteNames).toContain('ops-document-new')
+    expect(opsRouteNames).toContain('ops-document-edit')
     expect(router.resolve('/ops/guides/new').matched.map(route => route.name)).toEqual([
       undefined,
       'ops',
       'ops-guide-new'
+    ])
+    expect(router.resolve('/ops/faq/new').matched.map(route => route.name)).toEqual([
+      undefined,
+      'ops',
+      'ops-faq-new'
     ])
   })
 

@@ -310,6 +310,18 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '校园动态管理' }
           },
           {
+            path: 'announcements/new',
+            name: 'ops-announcement-new',
+            component: () => import('@/pages/ops/AnnouncementEditorPage.vue'),
+            meta: { title: '新建公告' }
+          },
+          {
+            path: 'announcements/:id/edit',
+            name: 'ops-announcement-edit',
+            component: () => import('@/pages/ops/AnnouncementEditorPage.vue'),
+            meta: { title: '编辑公告' }
+          },
+          {
             path: 'questions',
             name: 'ops-questions',
             component: () =>
@@ -364,11 +376,35 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: 'FAQ 管理' }
           },
           {
+            path: 'faq/new',
+            name: 'ops-faq-new',
+            component: () => import('@/pages/ops/FaqEditorPage.vue'),
+            meta: { title: '新建 FAQ' }
+          },
+          {
+            path: 'faq/:id/edit',
+            name: 'ops-faq-edit',
+            component: () => import('@/pages/ops/FaqEditorPage.vue'),
+            meta: { title: '编辑 FAQ' }
+          },
+          {
             path: 'documents',
             name: 'ops-documents',
             component: () =>
               import('@/pages/ops/OpsDocumentsPage.vue'),
             meta: { title: '文档中心' }
+          },
+          {
+            path: 'documents/new',
+            name: 'ops-document-new',
+            component: () => import('@/pages/ops/DocumentEditorPage.vue'),
+            meta: { title: '新建文档' }
+          },
+          {
+            path: 'documents/:id/edit',
+            name: 'ops-document-edit',
+            component: () => import('@/pages/ops/DocumentEditorPage.vue'),
+            meta: { title: '编辑文档' }
           },
           {
             path: 'analytics',
@@ -392,42 +428,6 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '系统设置' }
           }
         ]
-      },
-      {
-        path: 'ops/announcements/new',
-        name: 'ops-announcement-new',
-        component: () => import('@/pages/ops/AnnouncementEditorPage.vue'),
-        meta: { title: '新建公告', auth: 'operator' }
-      },
-      {
-        path: 'ops/announcements/:id/edit',
-        name: 'ops-announcement-edit',
-        component: () => import('@/pages/ops/AnnouncementEditorPage.vue'),
-        meta: { title: '编辑公告', auth: 'operator' }
-      },
-      {
-        path: 'ops/faq/new',
-        name: 'ops-faq-new',
-        component: () => import('@/pages/ops/FaqEditorPage.vue'),
-        meta: { title: '新建 FAQ', auth: 'operator' }
-      },
-      {
-        path: 'ops/faq/:id/edit',
-        name: 'ops-faq-edit',
-        component: () => import('@/pages/ops/FaqEditorPage.vue'),
-        meta: { title: '编辑 FAQ', auth: 'operator' }
-      },
-      {
-        path: 'ops/documents/new',
-        name: 'ops-document-new',
-        component: () => import('@/pages/ops/DocumentEditorPage.vue'),
-        meta: { title: '新建文档', auth: 'operator' }
-      },
-      {
-        path: 'ops/documents/:id/edit',
-        name: 'ops-document-edit',
-        component: () => import('@/pages/ops/DocumentEditorPage.vue'),
-        meta: { title: '编辑文档', auth: 'operator' }
       },
       {
         path: 'login',

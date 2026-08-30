@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'
 
 import { listFaqs, publishFaq, type OpsFaq } from '@/features/ops/api/opsFaqApi'
-import { faqCategoryLabel } from '@/shared/lib/domain-labels'
+import { guideCategoryLabel } from '@/shared/lib/domain-labels'
 import { useDebouncedValue } from '@/shared/composables/useDebouncedValue'
 
 const router = useRouter()
@@ -17,6 +17,7 @@ const q = ref('')
 const page = ref(1)
 const pageSize = 30
 const total = ref(0)
+const actionError = ref('')
 
 async function load() {
   loading.value = true
@@ -45,8 +46,26 @@ function openEdit(f: OpsFaq) {
   router.push({ name: 'ops-faq-edit', params: { id: f.id } })
 }
 async function onPublish(f: OpsFaq) {
-  try { await publishFaq(f.id); toast.add({ title: '已发布', color: 'success' }); await load() }
-  catch (e: unknown) { toast.add({ title: e instanceof Error ? e.message : '发布失败', color: 'error' }) }
+  actionError.value = ''
+  try {
+    await publishFaq(f.id)
+    toast.add({ title: '已发布', color: 'success' })
+    await load()
+  } catch (e: unknown) {
+    actionError.value = e instanceof Error ? e.message : '发布失败，请稍后重试。'
+  }
+}
+
+function statusLabel(faq: OpsFaq): string {
+  if (faq.publicationState === 'PUBLISHED') return '已发布'
+  if (faq.publicationState === 'ARCHIVED') return '已归档'
+  return '草稿'
+}
+
+function statusColor(faq: OpsFaq): 'success' | 'warning' | 'neutral' {
+  if (faq.publicationState === 'PUBLISHED') return 'success'
+  if (faq.publicationState === 'ARCHIVED') return 'warning'
+  return 'neutral'
 }
 </script>
 
@@ -77,6 +96,14 @@ async function onPublish(f: OpsFaq) {
           新建 FAQ
         </UButton>
       </div>
+    </div>
+
+    <div
+      v-if="actionError"
+      class="rounded-surface border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+      role="alert"
+    >
+      {{ actionError }}
     </div>
 
     <div
@@ -132,29 +159,31 @@ async function onPublish(f: OpsFaq) {
             <tr
               v-for="f in faqs"
               :key="f.id"
+              :data-test="`faq-row-${f.id}`"
               class="hover:bg-muted/20"
             >
               <td class="px-3 py-2 font-mono text-xs">
                 {{ f.sortOrder }}
               </td>
               <td class="px-3 py-2 text-xs">
-                {{ faqCategoryLabel[f.category] ?? f.category }}
+                {{ guideCategoryLabel[f.category] ?? f.category }}
               </td>
               <td class="px-3 py-2 max-w-[400px] truncate font-medium">
                 {{ f.question }}
               </td>
               <td class="px-3 py-2">
                 <UBadge
-                  :color="f.publicationState==='PUBLISHED'?'success':'neutral'"
+                  :color="statusColor(f)"
                   variant="soft"
                   size="xs"
                 >
-                  {{ f.publicationState==='PUBLISHED'?'已发布':'草稿' }}
+                  {{ statusLabel(f) }}
                 </UBadge>
               </td>
               <td class="px-3 py-2">
                 <div class="flex gap-1">
                   <UButton
+                    v-if="f.allowedActions.includes('EDIT')"
                     size="xs"
                     variant="ghost"
                     color="neutral"
@@ -164,7 +193,7 @@ async function onPublish(f: OpsFaq) {
                     编辑
                   </UButton>
                   <UButton
-                    v-if="f.publicationState!=='PUBLISHED'"
+                    v-if="f.allowedActions.includes('PUBLISH')"
                     size="xs"
                     variant="soft"
                     color="primary"
@@ -183,16 +212,17 @@ async function onPublish(f: OpsFaq) {
       <div
         v-for="f in faqs"
         :key="f.id"
+        :data-test="`faq-card-${f.id}`"
         class="rounded-xl border border-default bg-default p-5 shadow-sm"
       >
         <div class="flex items-start justify-between gap-2">
           <p class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">{{ f.question }}</p>
-          <UBadge :color="f.publicationState==='PUBLISHED'?'success':'neutral'" variant="soft" size="xs">{{ f.publicationState==='PUBLISHED'?'已发布':'草稿' }}</UBadge>
+          <UBadge :color="statusColor(f)" variant="soft" size="xs">{{ statusLabel(f) }}</UBadge>
         </div>
-        <p class="mt-1 text-xs text-muted">{{ faqCategoryLabel[f.category] ?? f.category }} · 排序 {{ f.sortOrder }}</p>
+        <p class="mt-1 text-xs text-muted">{{ guideCategoryLabel[f.category] ?? f.category }} · 排序 {{ f.sortOrder }}</p>
         <div class="mt-3 flex gap-1">
-          <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-pencil" @click="openEdit(f)">编辑</UButton>
-          <UButton v-if="f.publicationState!=='PUBLISHED'" size="xs" variant="soft" color="primary" @click="onPublish(f)">发布</UButton>
+          <UButton v-if="f.allowedActions.includes('EDIT')" size="xs" variant="ghost" color="neutral" icon="i-lucide-pencil" @click="openEdit(f)">编辑</UButton>
+          <UButton v-if="f.allowedActions.includes('PUBLISH')" size="xs" variant="soft" color="primary" @click="onPublish(f)">发布</UButton>
         </div>
       </div>
       </div>
